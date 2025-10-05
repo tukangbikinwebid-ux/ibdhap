@@ -72,9 +72,9 @@ export default function Home() {
             <Button
               variant="ghost"
               size="sm"
-              className="w-10 h-10 p-0 rounded-full bg-accent-100 hover:bg-accent-200"
+              className="w-10 h-10 p-0 rounded-full bg-accent-100 hover:bg-accent-200 hover:text-awqaf-primary transition-colors duration-200"
             >
-              <Search className="w-5 h-5 text-awqaf-primary" />
+              <Search className="w-5 h-5 text-awqaf-primary hover:text-awqaf-primary transition-colors duration-200" />
             </Button>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function Home() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-awqaf-foreground-secondary hover:text-awqaf-primary font-comfortaa"
+              className="text-awqaf-foreground-secondary hover:text-awqaf-primary hover:bg-accent-100 font-comfortaa transition-colors duration-200"
             >
               Lihat Semua
             </Button>

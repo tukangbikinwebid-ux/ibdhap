@@ -63,7 +63,7 @@ export default function FeatureNavigation() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-awqaf-foreground-secondary hover:text-awqaf-primary font-comfortaa"
+            className="text-awqaf-foreground-secondary hover:text-awqaf-primary hover:bg-accent-100 font-comfortaa transition-colors duration-200"
           >
             Lihat Semua
             <ChevronRight className="w-4 h-4 ml-1" />
