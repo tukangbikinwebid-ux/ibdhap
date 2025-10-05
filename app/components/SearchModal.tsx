@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -17,7 +17,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import {
-  Clock,
   Compass,
   BookOpen,
   GraduationCap,
@@ -35,7 +34,6 @@ import {
   ListTodo,
   Search,
   FileText,
-  Users,
   Settings,
 } from "lucide-react";
 
@@ -74,7 +72,7 @@ const searchItems: SearchItem[] = [
     title: "Qibla",
     description: "Temukan arah kiblat yang tepat",
     category: "Ibadah",
-    href: "/qibla",
+    href: "/kiblat",
     icon: Compass,
     type: "feature",
   },
