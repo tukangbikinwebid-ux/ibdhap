@@ -4,6 +4,7 @@ import { Search, Clock, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import HijriDate from "./components/HijriDate";
 import WidgetCard from "./components/WidgetCard";
@@ -145,13 +146,15 @@ export default function Home() {
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
               Artikel Terbaru
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-awqaf-foreground-secondary hover:text-awqaf-primary hover:bg-accent-100 font-comfortaa transition-colors duration-200"
-            >
-              Lihat Semua
-            </Button>
+            <Link href="/artikel">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-awqaf-foreground-secondary hover:text-awqaf-primary hover:bg-accent-100 font-comfortaa transition-colors duration-200"
+              >
+                Lihat Semua
+              </Button>
+            </Link>
           </div>
 
           <div className="space-y-3">
