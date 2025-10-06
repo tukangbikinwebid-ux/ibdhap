@@ -106,7 +106,7 @@ const features: Feature[] = [
   {
     id: "halal",
     name: "Halal",
-    description: "Cek kehalalan produk makanan dan minuman",
+    description: "Rekomendasi tempat makan dan restoran yang halal",
     icon: Utensils,
     href: "/halal",
     category: "Kehidupan",

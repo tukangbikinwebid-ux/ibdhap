@@ -8,6 +8,7 @@ import {
   GraduationCap,
   MessageCircle,
   ChevronRight,
+  Target,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -24,6 +25,12 @@ const features: Feature[] = [
     icon: Clock,
     href: "/sholat",
     description: "Waktu sholat",
+  },
+  {
+    name: "Prayer Tracker",
+    icon: Target,
+    href: "/prayer-tracker",
+    description: "Pantau sholat",
   },
   {
     name: "Kiblat",
@@ -70,7 +77,7 @@ export default function FeatureNavigation() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {features.map((feature) => {
           const Icon = feature.icon;
           return (
