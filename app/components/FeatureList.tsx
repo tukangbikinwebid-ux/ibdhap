@@ -21,6 +21,8 @@ import {
   BookA,
   Calendar,
   Book,
+  UserCheck,
+  Notebook,
 } from "lucide-react";
 
 interface Feature {
@@ -177,6 +179,46 @@ const features: Feature[] = [
     icon: Book,
     href: "/ebook",
     category: "Edukasi",
+  },
+  {
+    id: "tasbih",
+    name: "Tasbih Digital",
+    description: "Tasbih digital untuk berdzikir dan kebaikan",
+    icon: UserCheck,
+    href: "/tasbih-digital",
+    category: "Amal",
+  },
+  {
+    id: "surah",
+    name: "Surah",
+    description: "Template surah untuk membaca Al-Qur'an",
+    icon: UserCheck,
+    href: "/template-surat",
+    category: "Template",
+  },
+  {
+    id: "kal-zakat",
+    name: "Kalkulator Zakat",
+    description: "Kalkulator zakat untuk menghitung jumlah zakat",
+    icon: Notebook,
+    href: "/kalkulator/zakat",
+    category: "Kalkulator",
+  },
+  {
+    id: "kal-waris",
+    name: "Kalkulator Waris",
+    description: "Kalkulator waris untuk menghitung jumlah waris",
+    icon: Notebook,
+    href: "/kalkulator/waris",
+    category: "Kalkulator",
+  },
+  {
+    id: "event",
+    name: "Event",
+    description: "Kumpulan event Islam dan keagamaan",
+    icon: Calendar,
+    href: "/event",
+    category: "Kehidupan",
   },
 ];
 

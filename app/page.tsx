@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Clock, BookOpen } from "lucide-react";
+import { Search, Clock, BookOpen, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
@@ -76,8 +76,23 @@ export default function Home() {
                   <HijriDate />
                 </div>
               </div>
+
+              {/* Right Side Actions */}
               <div className="flex items-center gap-2">
+                {/* DIRECT LINK TO STORE */}
+                <Link href="/store">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-10 h-10 p-0 rounded-full bg-accent-100 hover:bg-accent-200 hover:text-awqaf-primary transition-colors duration-200"
+                    title="Store"
+                  >
+                    <ShoppingBag className="w-5 h-5 text-awqaf-primary" />
+                  </Button>
+                </Link>
+
                 <NotificationButton />
+
                 <Button
                   variant="ghost"
                   size="sm"
@@ -174,4 +189,3 @@ export default function Home() {
     </div>
   );
 }
-
