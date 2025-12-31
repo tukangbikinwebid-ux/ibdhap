@@ -3,40 +3,34 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Bookmark, BookmarkCheck, Clock } from "lucide-react";
+import { Bookmark, BookmarkCheck, Clock } from "lucide-react";
 import Link from "next/link";
-
-interface Surah {
-  number: number;
-  name: string;
-  arabic: string;
-  verses: number;
-  juz: number;
-  revelation: "Meccan" | "Medinan";
-  lastRead?: string;
-}
+// Import tipe Surah dari types yang sudah dibuat
+import { Surah } from "@/types/public/quran";
 
 interface SurahCardProps {
   surah: Surah;
-  onBookmark: (surahNumber: number) => void;
+  onBookmark: (surahId: number) => void;
   isBookmarked: boolean;
+  lastRead?: string; // Optional prop tambahan untuk fitur 'last read'
 }
 
 export default function SurahCard({
   surah,
   onBookmark,
   isBookmarked,
+  lastRead,
 }: SurahCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleBookmarkClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onBookmark(surah.number);
+    onBookmark(surah.id);
   };
 
   return (
-    <Link href={`/quran/${surah.number}`}>
+    <Link href={`/quran/${surah.id}`}>
       <Card
         className="border-awqaf-border-light hover:shadow-md transition-all duration-200 cursor-pointer group"
         onMouseEnter={() => setIsHovered(true)}
@@ -48,7 +42,7 @@ export default function SurahCard({
               {/* Surah Number */}
               <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-awqaf-primary font-bold font-comfortaa text-lg">
-                  {surah.number}
+                  {surah.id}
                 </span>
               </div>
 
@@ -56,34 +50,37 @@ export default function SurahCard({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-card-foreground font-comfortaa text-lg truncate">
-                    {surah.name}
+                    {surah.transliteration}{" "}
+                    {/* Ganti name dengan transliteration */}
                   </h3>
-                  <span className="text-xs bg-accent-200 text-awqaf-primary px-2 py-1 rounded-full font-comfortaa">
-                    Juz {surah.juz}
-                  </span>
+                  {/* Badge Juz dihapus sementara jika API list surah tidak menyediakan juz */}
+                  {/* Jika ingin tetap ada, perlu logic mapping manual ID -> Juz atau API yang mendukung */}
                 </div>
 
-                <p className="text-awqaf-primary font-tajawal text-lg mb-1">
-                  {surah.arabic}
+                <p className="text-awqaf-primary font-arabic text-lg mb-1 text-right sm:text-left">
+                  {surah.name} {/* Nama Arab */}
+                </p>
+                <p className="text-xs text-gray-500 mb-1">
+                  {surah.translation} {/* Arti */}
                 </p>
 
                 <div className="flex items-center gap-4 text-xs text-awqaf-foreground-secondary font-comfortaa">
-                  <span>{surah.verses} ayat</span>
+                  <span>{surah.total_verses} ayat</span>
                   <span
-                    className={`px-2 py-1 rounded-full ${
-                      surah.revelation === "Meccan"
+                    className={`px-2 py-1 rounded-full capitalize ${
+                      surah.type === "meccan"
                         ? "bg-accent-100 text-awqaf-primary"
                         : "bg-info/20 text-info"
                     }`}
                   >
-                    {surah.revelation === "Meccan" ? "Makkiyah" : "Madaniyah"}
+                    {surah.type} {/* meccan / medinan */}
                   </span>
                 </div>
 
-                {surah.lastRead && (
+                {lastRead && (
                   <div className="flex items-center gap-1 mt-2 text-xs text-awqaf-foreground-secondary font-comfortaa">
                     <Clock className="w-3 h-3" />
-                    <span>dibaca {surah.lastRead}</span>
+                    <span>dibaca {lastRead}</span>
                   </div>
                 )}
               </div>

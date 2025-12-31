@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,16 +13,14 @@ import {
   MessageCircle,
   Repeat,
   Store,
-  Calendar,
   ChevronRight,
-  Search,
 } from "lucide-react";
 import Link from "next/link";
 
-// --- 1. TIPE DATA ---
+// --- TIPE DATA (Sama dengan StorePage) ---
 type TransactionStatus = "pending" | "completed" | "cancelled";
 
-interface TransactionItem {
+interface LocalHistoryItem {
   id: string;
   date: string;
   productName: string;
@@ -30,62 +28,10 @@ interface TransactionItem {
   quantity: number;
   totalPrice: number;
   status: TransactionStatus;
-  vendor: string; // Shopee, Tokopedia, WhatsApp
+  vendor: string;
   vendorLink: string;
-  imageColor: string; // Simulasi gambar
+  image?: string;
 }
-
-// --- 2. DATA DUMMY ---
-const TRANSACTIONS: TransactionItem[] = [
-  {
-    id: "INV/20240220/MPL/001",
-    date: "2024-02-20 14:30",
-    productName: "Parfum Kasturi Kijang Asli",
-    price: 85000,
-    quantity: 1,
-    totalPrice: 85000,
-    status: "completed",
-    vendor: "Shopee",
-    vendorLink: "https://shopee.co.id",
-    imageColor: "bg-amber-100",
-  },
-  {
-    id: "INV/20240219/WA/005",
-    date: "2024-02-19 09:15",
-    productName: "Madu Yaman Mara'i (1kg)",
-    price: 350000,
-    quantity: 2,
-    totalPrice: 700000,
-    status: "pending",
-    vendor: "WhatsApp",
-    vendorLink: "https://wa.me",
-    imageColor: "bg-yellow-100",
-  },
-  {
-    id: "INV/20240215/TKP/012",
-    date: "2024-02-15 10:00",
-    productName: "Baju Koko Modern Premium",
-    price: 175000,
-    quantity: 1,
-    totalPrice: 175000,
-    status: "cancelled",
-    vendor: "Tokopedia",
-    vendorLink: "https://tokopedia.com",
-    imageColor: "bg-stone-200",
-  },
-  {
-    id: "INV/20240110/MPL/088",
-    date: "2024-01-10 16:45",
-    productName: "Sajadah Travel Waterproof",
-    price: 45000,
-    quantity: 3,
-    totalPrice: 135000,
-    status: "completed",
-    vendor: "Shopee",
-    vendorLink: "https://shopee.co.id",
-    imageColor: "bg-teal-100",
-  },
-];
 
 type FilterType = "all" | TransactionStatus;
 
@@ -98,6 +44,15 @@ const TABS: { id: FilterType; label: string }[] = [
 
 export default function HistoryPage() {
   const [activeTab, setActiveTab] = useState<FilterType>("all");
+  const [transactions, setTransactions] = useState<LocalHistoryItem[]>([]);
+
+  // Load from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("purchase_history");
+    if (saved) {
+      setTransactions(JSON.parse(saved));
+    }
+  }, []);
 
   // Format Rupiah
   const formatRupiah = (num: number) => {
@@ -133,7 +88,7 @@ export default function HistoryPage() {
   };
 
   // Filter Logic
-  const filteredData = TRANSACTIONS.filter((item) => {
+  const filteredData = transactions.filter((item) => {
     if (activeTab === "all") return true;
     return item.status === activeTab;
   });
@@ -197,7 +152,7 @@ export default function HistoryPage() {
                     </span>
                     <span className="text-[10px] text-gray-400">•</span>
                     <span className="text-[10px] font-mono">
-                      {trx.date.split(" ")[0]}
+                      {new Date(trx.date).toLocaleDateString("id-ID")}
                     </span>
                   </div>
                   {getStatusBadge(trx.status)}
@@ -205,11 +160,17 @@ export default function HistoryPage() {
 
                 <CardContent className="p-4">
                   <div className="flex gap-4">
-                    {/* Product Image Placeholder */}
-                    <div
-                      className={`w-16 h-16 rounded-lg ${trx.imageColor} flex-shrink-0 flex items-center justify-center`}
-                    >
-                      <ShoppingBag className="w-8 h-8 text-white/50" />
+                    {/* Product Image Placeholder (Real image if available) */}
+                    <div className="w-16 h-16 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                      {trx.image ? (
+                        <img
+                          src={trx.image}
+                          alt={trx.productName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ShoppingBag className="w-8 h-8 text-gray-300" />
+                      )}
                     </div>
 
                     {/* Product Details */}
@@ -249,8 +210,7 @@ export default function HistoryPage() {
                         className="h-8 text-xs font-comfortaa gap-1.5 bg-awqaf-primary hover:bg-awqaf-primary/90"
                         onClick={() => window.open(trx.vendorLink, "_blank")}
                       >
-                        <MessageCircle className="w-3.5 h-3.5" /> Hubungi
-                        Penjual
+                        <MessageCircle className="w-3.5 h-3.5" /> Lanjut Bayar
                       </Button>
                     ) : (
                       <Button

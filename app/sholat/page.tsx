@@ -27,6 +27,19 @@ interface PrayerTime {
   status: "completed" | "current" | "upcoming";
 }
 
+interface AladhanResponse {
+  data: {
+    timings: {
+      Fajr: string;
+      Dhuhr: string;
+      Asr: string;
+      Maghrib: string;
+      Isha: string;
+      [key: string]: string;
+    };
+  };
+}
+
 export default function SholatPage() {
   const [location, setLocation] = useState<Location | null>(null);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTime[]>([]);
@@ -36,18 +49,97 @@ export default function SholatPage() {
     "granted" | "denied" | "prompt" | "unknown"
   >("unknown");
 
-  // Sample prayer times data (in real app, this would come from an API)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getPrayerTimes = (_lat: number, _lng: number): PrayerTime[] => {
-    // This is sample data - in real implementation, you would call a prayer times API
-    // _lat and _lng would be used to calculate accurate prayer times
-    return [
-      { name: "Subuh", arabic: "الفجر", time: "04:45", status: "completed" },
-      { name: "Dzuhur", arabic: "الظهر", time: "12:15", status: "current" },
-      { name: "Ashar", arabic: "العصر", time: "15:30", status: "upcoming" },
-      { name: "Maghrib", arabic: "المغرب", time: "18:20", status: "upcoming" },
-      { name: "Isya", arabic: "العشاء", time: "19:35", status: "upcoming" },
-    ];
+  // Helper to determine status based on current time and prayer time
+  const getPrayerStatus = (
+    prayerTimeStr: string,
+    nextPrayerTimeStr: string | null
+  ): "completed" | "current" | "upcoming" => {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    if (!prayerTimeStr) return "upcoming";
+
+    // API returns "04:45" or "04:45 (WIB)". We need to clean it just in case.
+    const cleanTime = prayerTimeStr.split(" ")[0];
+    const [pHeader, pMinute] = cleanTime.split(":").map(Number);
+    const prayerTimeMinutes = pHeader * 60 + pMinute;
+
+    if (currentTime < prayerTimeMinutes) {
+      return "upcoming";
+    }
+
+    if (nextPrayerTimeStr) {
+      const cleanNextTime = nextPrayerTimeStr.split(" ")[0];
+      const [nHeader, nMinute] = cleanNextTime.split(":").map(Number);
+      const nextPrayerTimeMinutes = nHeader * 60 + nMinute;
+      if (
+        currentTime >= prayerTimeMinutes &&
+        currentTime < nextPrayerTimeMinutes
+      ) {
+        return "current";
+      }
+    } else {
+      // Logic for Isha (last prayer of day)
+      if (currentTime >= prayerTimeMinutes) {
+        return "current";
+      }
+    }
+
+    return "completed";
+  };
+
+  const fetchPrayerTimes = async (lat: number, lng: number) => {
+    try {
+      const date = new Date();
+      // Ensure DD-MM-YYYY format with leading zeros
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      const dateString = `${day}-${month}-${year}`;
+
+      // Using Aladhan API with https protocol
+      const apiUrl = `https://api.aladhan.com/v1/timings/${dateString}?latitude=${lat}&longitude=${lng}&method=20`;
+
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: AladhanResponse = await response.json();
+
+      if (!data || !data.data || !data.data.timings) {
+        throw new Error("Invalid API response structure");
+      }
+
+      const timings = data.data.timings;
+
+      // Map API response to our interface
+      const rawPrayers = [
+        { name: "Subuh", arabic: "الفجر", time: timings.Fajr },
+        { name: "Dzuhur", arabic: "الظهر", time: timings.Dhuhr },
+        { name: "Ashar", arabic: "العصر", time: timings.Asr },
+        { name: "Maghrib", arabic: "المغرب", time: timings.Maghrib },
+        { name: "Isya", arabic: "العشاء", time: timings.Isha },
+      ];
+
+      const processedPrayers: PrayerTime[] = rawPrayers.map((p, index) => {
+        const nextPrayer = rawPrayers[index + 1];
+        const status = getPrayerStatus(
+          p.time,
+          nextPrayer ? nextPrayer.time : null
+        );
+        return {
+          ...p,
+          status,
+        };
+      });
+
+      setPrayerTimes(processedPrayers);
+    } catch (err) {
+      console.error("Failed to fetch prayer times:", err);
+      setError("Gagal memuat jadwal sholat. Periksa koneksi internet Anda.");
+    }
   };
 
   const getCurrentLocation = () => {
@@ -64,25 +156,40 @@ export default function SholatPage() {
         const { latitude, longitude } = position.coords;
 
         try {
-          // Reverse geocoding to get city name (in real app, use a proper geocoding service)
+          // Reverse geocoding to get city name
           const response = await fetch(
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=id`
           );
-          const data = await response.json();
+
+          // Only process if response is OK
+          let locationData = {
+            city: "Lokasi tidak diketahui",
+            country: "Indonesia",
+          };
+          if (response.ok) {
+            const data = await response.json();
+            locationData = {
+              city: data.city || data.locality || "Lokasi tidak diketahui",
+              country: data.countryName || "Indonesia",
+            };
+          }
 
           const newLocation: Location = {
             latitude,
             longitude,
-            city: data.city || data.locality || "Lokasi tidak diketahui",
-            country: data.countryName || "Indonesia",
+            city: locationData.city,
+            country: locationData.country,
           };
 
           setLocation(newLocation);
-          setPrayerTimes(getPrayerTimes(latitude, longitude));
+          // Fetch prayer times using real coordinates
+          await fetchPrayerTimes(latitude, longitude);
           setPermissionStatus("granted");
-        } catch {
-          setError("Gagal mendapatkan nama lokasi");
-          // Still set location with coordinates even if geocoding fails
+        } catch (err) {
+          console.error("Location or API Error:", err);
+          setError("Gagal mendapatkan data lokasi atau jadwal.");
+
+          // Still try to set location if we have coordinates but geocoding failed
           const newLocation: Location = {
             latitude,
             longitude,
@@ -90,7 +197,8 @@ export default function SholatPage() {
             country: "Indonesia",
           };
           setLocation(newLocation);
-          setPrayerTimes(getPrayerTimes(latitude, longitude));
+          // Still try to fetch prayer times even if city name failed
+          await fetchPrayerTimes(latitude, longitude);
         }
 
         setIsLoading(false);
@@ -195,10 +303,13 @@ export default function SholatPage() {
                   )}
                 </Button>
 
+                {/* Error message displayed below the button */}
                 {error && (
-                  <div className="flex items-center gap-2 p-3 bg-error/10 border border-error/20 rounded-lg">
-                    <AlertCircle className="w-4 h-4 text-error flex-shrink-0" />
-                    <p className="text-sm text-error font-comfortaa">{error}</p>
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <p className="text-sm text-red-600 font-comfortaa">
+                      {error}
+                    </p>
                   </div>
                 )}
               </div>
@@ -295,8 +406,8 @@ export default function SholatPage() {
           </Card>
         )}
 
-        {/* No Location Message */}
-        {!location && !isLoading && (
+        {/* No Location Message or Error Persistence (if location null but tried) */}
+        {!location && !isLoading && !error && (
           <Card className="border-awqaf-border-light">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -318,6 +429,14 @@ export default function SholatPage() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Additional error display if location failed but UI is in "No Location" state */}
+        {!location && error && (
+          <div className="flex items-center justify-center p-4 bg-red-50 border border-red-200 rounded-lg mx-4">
+            <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+            <p className="text-sm text-red-600 font-comfortaa">{error}</p>
+          </div>
         )}
       </main>
     </div>

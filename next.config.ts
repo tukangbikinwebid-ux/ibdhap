@@ -73,6 +73,11 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "cms.ibadahapp.com",
+        pathname: "/storage/**",
+      },
     ],
   },
 };

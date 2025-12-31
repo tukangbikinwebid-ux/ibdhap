@@ -26,10 +26,30 @@ interface Location {
 interface QiblaData {
   direction: number;
   distance: number;
-  bearing: number;
+  bearing?: number; // Optional, API might give precise direction
 }
 
-// Kaaba coordinates (Mecca)
+// Helper to calculate distance manually if needed (Haversine)
+const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+) => {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+// Kaaba coordinates (Mecca) for distance calc fallback
 const KAABA_LAT = 21.4225;
 const KAABA_LNG = 39.8262;
 
@@ -53,8 +73,35 @@ export default function QiblaPage() {
     }
   }, []);
 
-  // Calculate Qibla direction
-  const calculateQibla = (lat: number, lng: number): QiblaData => {
+  // Fetch Qibla Direction from API
+  const fetchQiblaDirection = async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://api.aladhan.com/v1/qibla/${lat}/${lng}`
+      );
+      if (!response.ok) throw new Error("Gagal mengambil data arah kiblat");
+
+      const data = await response.json();
+      const direction = data.data.direction; // Direction relative to North
+
+      // Calculate distance manually since this specific endpoint might not return it directly
+      const distance = calculateDistance(lat, lng, KAABA_LAT, KAABA_LNG);
+
+      return {
+        direction: direction,
+        distance: distance,
+        bearing: direction,
+      };
+    } catch (err) {
+      console.error(err);
+      // Fallback to manual calculation if API fails
+      // (This ensures the app still works offline or on API failure)
+      return calculateQiblaManual(lat, lng);
+    }
+  };
+
+  // Manual Calculation (Fallback)
+  const calculateQiblaManual = (lat: number, lng: number): QiblaData => {
     const toRadians = (degrees: number) => degrees * (Math.PI / 180);
     const toDegrees = (radians: number) => radians * (180 / Math.PI);
 
@@ -73,14 +120,7 @@ export default function QiblaPage() {
     let bearing = toDegrees(Math.atan2(y, x));
     bearing = (bearing + 360) % 360;
 
-    // Calculate distance using Haversine formula
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = lat2 - lat1;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
+    const distance = calculateDistance(lat, lng, KAABA_LAT, KAABA_LNG);
 
     return {
       direction: bearing,
@@ -133,8 +173,8 @@ export default function QiblaPage() {
         });
       }
 
-      // Calculate Qibla direction
-      const qibla = calculateQibla(latitude, longitude);
+      // Get Qibla Data (Async API Call)
+      const qibla = await fetchQiblaDirection(latitude, longitude);
       setQiblaData(qibla);
 
       setPermissionStatus("granted");

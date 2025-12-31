@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,154 +10,94 @@ import {
   ShoppingCart,
   ExternalLink,
   Store,
-  Tag,
-  Filter,
   ShoppingBag,
   Heart,
   History,
-  CheckCircle2,
-  Clock,
   X,
   ChevronRight,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  useGetPublicStoresQuery,
+  useGetPublicProductsQuery,
+} from "@/services/public/store.service";
+import { Product } from "@/types/public/store/product";
 
-// --- 1. TIPE DATA ---
-interface Product {
-  product_id: string;
-  name: string;
-  price: number;
-  stock: number;
-  vendor_id: string;
-  external_link_url: string;
-  category: string;
-  image_url: string;
-  description?: string;
-}
+// Helper Format Rupiah
+const formatRupiah = (num: number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(num);
+};
 
-interface PurchaseHistory {
+// Interface Local History
+interface LocalHistoryItem {
   id: string;
   date: string;
   productName: string;
   price: number;
+  quantity: number;
+  totalPrice: number;
   status: "pending" | "completed" | "cancelled";
   vendor: string;
+  vendorLink: string;
+  image: string;
 }
-
-// --- 2. DATA DUMMY ---
-const PRODUCTS: Product[] = [
-  {
-    product_id: "P-001",
-    name: "Parfum Kasturi Kijang Asli (Non-Alkohol)",
-    price: 85000,
-    stock: 50,
-    vendor_id: "shopee",
-    external_link_url: "https://shopee.co.id",
-    category: "wewangian",
-    image_url: "bg-amber-100",
-  },
-  {
-    product_id: "P-002",
-    name: "Baju Koko Modern Premium - Cream",
-    price: 175000,
-    stock: 12,
-    vendor_id: "tokopedia",
-    external_link_url: "https://tokopedia.com",
-    category: "fashion",
-    image_url: "bg-stone-200",
-  },
-  {
-    product_id: "P-003",
-    name: "Kurma Ajwa Al-Madinah (500gr)",
-    price: 120000,
-    stock: 5,
-    vendor_id: "whatsapp",
-    external_link_url: "https://wa.me/",
-    category: "makanan",
-    image_url: "bg-orange-100",
-  },
-  {
-    product_id: "P-004",
-    name: "Buku Panduan Fiqih Muamalah",
-    price: 95000,
-    stock: 0,
-    vendor_id: "official",
-    external_link_url: "#",
-    category: "buku",
-    image_url: "bg-blue-100",
-  },
-  {
-    product_id: "P-005",
-    name: "Sajadah Travel Waterproof - Pocket Size",
-    price: 45000,
-    stock: 100,
-    vendor_id: "shopee",
-    external_link_url: "https://shopee.co.id",
-    category: "perlengkapan",
-    image_url: "bg-teal-100",
-  },
-  {
-    product_id: "P-006",
-    name: "Madu Yaman Mara'i (1kg)",
-    price: 350000,
-    stock: 8,
-    vendor_id: "whatsapp",
-    external_link_url: "https://wa.me/",
-    category: "makanan",
-    image_url: "bg-yellow-100",
-  },
-];
-
-const HISTORY_DATA: PurchaseHistory[] = [
-  {
-    id: "TRX-001",
-    date: "2024-02-20",
-    productName: "Parfum Kasturi Kijang",
-    price: 85000,
-    status: "completed",
-    vendor: "Shopee",
-  },
-  {
-    id: "TRX-002",
-    date: "2024-02-18",
-    productName: "Buku Panduan Shalat",
-    price: 45000,
-    status: "completed",
-    vendor: "Tokopedia",
-  },
-  {
-    id: "TRX-003",
-    date: "2024-02-15",
-    productName: "Madu Yaman (250gr)",
-    price: 125000,
-    status: "pending",
-    vendor: "WhatsApp",
-  },
-];
-
-const CATEGORIES = [
-  { id: "all", label: "Semua" },
-  { id: "fashion", label: "Fashion" },
-  { id: "makanan", label: "Makanan/Herbal" },
-  { id: "wewangian", label: "Wewangian" },
-  { id: "perlengkapan", label: "Ibadah" },
-  { id: "buku", label: "Buku" },
-];
 
 export default function StorePage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedStoreId, setSelectedStoreId] = useState<number | undefined>(
+    undefined
+  );
   const [showHistory, setShowHistory] = useState(false);
   const historyRef = useRef<HTMLDivElement>(null);
+  const [historyData, setHistoryData] = useState<LocalHistoryItem[]>([]);
 
-  // Format Rupiah
-  const formatRupiah = (num: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(num);
+  // 1. Fetch API
+  const { data: storesData, isLoading: isLoadingStores } =
+    useGetPublicStoresQuery({ page: 1, paginate: 100 });
+
+  const { data: productsData, isLoading: isLoadingProducts } =
+    useGetPublicProductsQuery({
+      page: 1,
+      paginate: 50,
+      store_id: selectedStoreId,
+    });
+
+  // 2. Load History from LocalStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("purchase_history");
+    if (saved) {
+      setHistoryData(JSON.parse(saved));
+    }
+  }, []);
+
+  // 3. Save History Handler
+  const handlePurchaseClick = (product: Product) => {
+    const newHistory: LocalHistoryItem = {
+      id: `TRX-${Date.now()}`,
+      date: new Date().toISOString(),
+      productName: product.name,
+      price: product.price,
+      quantity: 1,
+      totalPrice: product.price,
+      status: "pending",
+      vendor: product.store.name,
+      vendorLink: product.external_link,
+      image: product.image,
+    };
+
+    const updatedHistory = [newHistory, ...historyData];
+    setHistoryData(updatedHistory);
+    localStorage.setItem("purchase_history", JSON.stringify(updatedHistory));
+
+    // Open External Link
+    window.open(product.external_link, "_blank");
   };
 
   // Close history when clicking outside
@@ -176,54 +116,13 @@ export default function StorePage() {
     };
   }, []);
 
-  // Helper Vendor Badge
-  const getVendorBadge = (vendorId: string) => {
-    switch (vendorId) {
-      case "shopee":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-orange-100 text-orange-700 hover:bg-orange-200 text-[10px]"
-          >
-            Shopee
-          </Badge>
-        );
-      case "tokopedia":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-green-100 text-green-700 hover:bg-green-200 text-[10px]"
-          >
-            Tokopedia
-          </Badge>
-        );
-      case "whatsapp":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-[10px]"
-          >
-            WhatsApp
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-[10px] text-gray-500">
-            Official
-          </Badge>
-        );
-    }
-  };
-
-  // Filter Logic
-  const filteredProducts = PRODUCTS.filter((product) => {
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Filter Logic (Client Side Search for better UX on small data)
+  const filteredProducts = useMemo(() => {
+    if (!productsData) return [];
+    return productsData.data.filter((product) =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [productsData, searchQuery]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
@@ -253,8 +152,9 @@ export default function StorePage() {
                 onClick={() => setShowHistory(!showHistory)}
               >
                 <ShoppingBag className="w-5 h-5" />
-                {/* Badge notifikasi (hardcoded length for demo) */}
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                {historyData.length > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                )}
               </Button>
 
               {/* FLOATING HISTORY COMPONENT */}
@@ -275,30 +175,21 @@ export default function StorePage() {
                   </div>
 
                   <div className="max-h-[320px] overflow-y-auto p-2 space-y-2">
-                    {HISTORY_DATA.map((item) => (
+                    {historyData.slice(0, 5).map((item) => (
                       <div
                         key={item.id}
                         className="p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors group relative"
                       >
                         <div className="flex justify-between items-start mb-1">
                           <p className="text-[10px] text-gray-400 font-mono">
-                            {item.date}
+                            {new Date(item.date).toLocaleDateString("id-ID")}
                           </p>
-                          {item.status === "completed" ? (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] h-5 bg-green-50 text-green-700 border-green-200 gap-1 pl-1 pr-2"
-                            >
-                              <CheckCircle2 className="w-3 h-3" /> Selesai
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] h-5 bg-yellow-50 text-yellow-700 border-yellow-200 gap-1 pl-1 pr-2"
-                            >
-                              <Clock className="w-3 h-3" /> Proses
-                            </Badge>
-                          )}
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] h-5 bg-yellow-50 text-yellow-700 border-yellow-200 gap-1 pl-1 pr-2"
+                          >
+                            <Clock className="w-3 h-3" /> Proses
+                          </Badge>
                         </div>
                         <h4 className="text-sm font-bold text-gray-800 font-comfortaa line-clamp-1">
                           {item.productName}
@@ -312,16 +203,14 @@ export default function StorePage() {
                               {formatRupiah(item.price)}
                             </p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 rounded-full bg-white border border-gray-200 text-gray-400 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
                     ))}
+                    {historyData.length === 0 && (
+                      <p className="text-center text-xs text-gray-400 py-4">
+                        Belum ada riwayat pembelian.
+                      </p>
+                    )}
                     <div className="text-center pt-2 pb-1">
                       <Link
                         href="/store/history"
@@ -366,39 +255,75 @@ export default function StorePage() {
           </div>
         </div>
 
-        {/* Categories */}
+        {/* Categories (Stores) */}
         <div>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {CATEGORIES.map((cat) => (
+          {isLoadingStores ? (
+            <div className="flex gap-2 overflow-hidden">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-8 w-20 bg-gray-200 rounded-full animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               <Button
-                key={cat.id}
                 size="sm"
-                variant={selectedCategory === cat.id ? "default" : "outline"}
+                variant={selectedStoreId === undefined ? "default" : "outline"}
                 className={`rounded-full px-4 font-comfortaa text-xs whitespace-nowrap h-8 ${
-                  selectedCategory === cat.id
+                  selectedStoreId === undefined
                     ? "bg-awqaf-primary hover:bg-awqaf-primary/90"
                     : "bg-white border-awqaf-border-light text-gray-600"
                 }`}
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => setSelectedStoreId(undefined)}
               >
-                {cat.label}
+                Semua Toko
               </Button>
-            ))}
-          </div>
+              {storesData?.data.map((store) => (
+                <Button
+                  key={store.id}
+                  size="sm"
+                  variant={selectedStoreId === store.id ? "default" : "outline"}
+                  className={`rounded-full px-4 font-comfortaa text-xs whitespace-nowrap h-8 ${
+                    selectedStoreId === store.id
+                      ? "bg-awqaf-primary hover:bg-awqaf-primary/90"
+                      : "bg-white border-awqaf-border-light text-gray-600"
+                  }`}
+                  onClick={() => setSelectedStoreId(store.id)}
+                >
+                  {store.name}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {filteredProducts.length > 0 ? (
+          {isLoadingProducts ? (
+            // Loading Skeleton
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-64 rounded-xl bg-gray-100 animate-pulse"
+              />
+            ))
+          ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
               <Card
-                key={product.product_id}
+                key={product.id}
                 className="overflow-hidden border-awqaf-border-light hover:shadow-md transition-all duration-200 group bg-white flex flex-col h-full"
               >
-                {/* Image Area (Simulasi) */}
-                <div
-                  className={`relative w-full aspect-square ${product.image_url} flex items-center justify-center`}
-                >
+                {/* Image Area */}
+                <div className="relative w-full aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                  <Image
+                    src={product.image || "/placeholder-image.jpg"}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                  />
                   {product.stock < 1 && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
                       <span className="text-white font-bold text-xs bg-red-600 px-2 py-1 rounded">
@@ -406,18 +331,22 @@ export default function StorePage() {
                       </span>
                     </div>
                   )}
-                  <ShoppingBag className="w-12 h-12 text-white/40" />
 
                   {/* Wishlist Button Overlay */}
-                  <button className="absolute top-2 right-2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors backdrop-blur-sm">
+                  <button className="absolute top-2 right-2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors backdrop-blur-sm z-20">
                     <Heart className="w-4 h-4" />
                   </button>
                 </div>
 
                 <CardContent className="p-3 flex-1 flex flex-col">
-                  {/* Vendor & Category */}
+                  {/* Vendor Badge */}
                   <div className="flex justify-between items-center mb-2">
-                    {getVendorBadge(product.vendor_id)}
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px]"
+                    >
+                      {product.store.name}
+                    </Badge>
                   </div>
 
                   {/* Title */}
@@ -446,10 +375,7 @@ export default function StorePage() {
                         : "bg-accent-50 text-awqaf-primary hover:bg-accent-100 border border-accent-100"
                     }`}
                     disabled={product.stock < 1}
-                    onClick={() => {
-                      if (product.stock > 0)
-                        window.open(product.external_link_url, "_blank");
-                    }}
+                    onClick={() => handlePurchaseClick(product)}
                   >
                     {product.stock < 1 ? (
                       "Stok Habis"
@@ -471,7 +397,7 @@ export default function StorePage() {
                 Produk tidak ditemukan
               </p>
               <p className="text-xs text-gray-500 font-comfortaa">
-                Coba kata kunci lain atau kategori berbeda
+                Coba kata kunci lain atau toko berbeda
               </p>
             </div>
           )}

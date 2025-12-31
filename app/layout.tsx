@@ -3,7 +3,8 @@ import { Comfortaa, Tajawal } from "next/font/google";
 import "./globals.css";
 import PWAInstaller from "./components/PWAInstaller";
 import AppWrapper from "./components/AppWrapper";
-import BottomNavigation from "./components/BottomNavigation";
+import NavigationWrapper from "./navigation-wrapper";
+import ReduxProvider from "@/providers/redux";
 
 const comfortaa = Comfortaa({
   variable: "--font-comfortaa",
@@ -138,12 +139,13 @@ export default function RootLayout({
         />
       </head>
       <body className={`${comfortaa.variable} ${tajawal.variable} antialiased`}>
-        <AppWrapper>{children}</AppWrapper>
-        <BottomNavigation />
-        <PWAInstaller />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+        <ReduxProvider>
+          <AppWrapper>{children}</AppWrapper>
+          <NavigationWrapper />
+          <PWAInstaller />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js')
@@ -156,10 +158,10 @@ export default function RootLayout({
                 });
               }
             `,
-          }}
-        />
+            }}
+          />
+        </ReduxProvider>
       </body>
     </html>
   );
 }
-

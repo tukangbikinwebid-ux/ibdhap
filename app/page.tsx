@@ -1,12 +1,11 @@
 "use client";
 
-import { Search, Clock, BookOpen, ShoppingBag } from "lucide-react";
+import { Search, Clock, BookOpen, ShoppingBag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { artikelData } from "./artikel/data-artikel";
+import { useState, useMemo } from "react";
 import HijriDate from "./components/HijriDate";
 import WidgetCard from "./components/WidgetCard";
 import ProgressWidget from "./components/ProgressWidget";
@@ -14,12 +13,20 @@ import FeatureNavigation from "./components/FeatureNavigation";
 import ArticleCard from "./components/ArticleCard";
 import SearchModal from "./components/SearchModal";
 import NotificationButton from "./components/NotificationButton";
+// Import service API
+import { useGetArticlesQuery } from "@/services/public/article.service";
 
 export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const currentHour = new Date().getHours();
   const greeting =
     currentHour < 12 ? "Pagi" : currentHour < 18 ? "Siang" : "Malam";
+
+  const { data: articlesData, isLoading: isLoadingArticles } =
+    useGetArticlesQuery({
+      page: 1,
+      paginate: 10, // Ambil cukup banyak untuk memastikan kita dapat yang terbaru
+    });
 
   // Format tanggal ke lokal Indonesia
   const formatDate = (dateString: string) => {
@@ -31,25 +38,30 @@ export default function Home() {
     });
   };
 
-  // Ambil artikel terbaru dari sumber data yang sama dengan halaman /artikel
-  const latestArticles = artikelData
-    .slice()
-    .sort(
+  // Transform data API ke format yang dibutuhkan ArticleCard
+  const latestArticles = useMemo(() => {
+    if (!articlesData?.data) return [];
+
+    // Sorting manual by published_at desc (jika API belum sorting)
+    const sorted = [...articlesData.data].sort(
       (a, b) =>
-        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-    )
-    .slice(0, 3)
-    .map((artikel) => ({
-      id: artikel.id,
-      slug: artikel.slug,
+        new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+    );
+
+    return sorted.slice(0, 3).map((artikel) => ({
+      id: artikel.id.toString(), // Konversi ke string jika ArticleCard butuh string
+      slug: artikel.id.toString(), // Atau artikel.slug jika ada
       title: artikel.title,
-      excerpt: artikel.excerpt,
-      category: artikel.category,
-      readTime: artikel.readTime,
-      views: artikel.views.toLocaleString(),
-      publishedAt: formatDate(artikel.publishedAt),
+      // Strip HTML tags untuk excerpt
+      excerpt:
+        artikel.content.replace(/<[^>]*>?/gm, "").substring(0, 100) + "...",
+      category: artikel.category.name,
+      readTime: "5 min", // Simulasi read time
+      views: "1.2K", // Simulasi views atau ambil dari API jika ada
+      publishedAt: formatDate(artikel.published_at),
       image: artikel.image,
     }));
+  }, [articlesData]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
@@ -174,9 +186,20 @@ export default function Home() {
           </div>
 
           <div className="space-y-3">
-            {latestArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
+            {isLoadingArticles ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary" />
+              </div>
+            ) : latestArticles.length > 0 ? (
+              latestArticles.map((article) => (
+                // Pastikan ArticleCard menerima prop sesuai struktur yang dimapping
+                <ArticleCard key={article.id} article={article} />
+              ))
+            ) : (
+              <p className="text-center text-sm text-gray-500 py-4 font-comfortaa">
+                Belum ada artikel terbaru.
+              </p>
+            )}
           </div>
         </div>
       </main>
