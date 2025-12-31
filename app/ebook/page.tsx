@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   BookMarked,
   Download,
@@ -7,11 +8,77 @@ import {
   Clock,
   BookA,
   ArrowRight,
-  Languages, // Import icon baru
+  Languages,
+  Loader2,
+  Library,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import {
+  useGetEbookCategoriesQuery,
+  useGetEbookByCategoryQuery,
+} from "@/services/public/e-book.service";
 
 export default function EBookPage() {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
+
+  // 1. Fetch Categories
+  const { data: categoriesData, isLoading: isLoadingCategories } =
+    useGetEbookCategoriesQuery({
+      page: 1,
+      paginate: 10,
+    });
+
+  // Set default category
+  useEffect(() => {
+    if (
+      categoriesData?.data &&
+      categoriesData.data.length > 0 &&
+      selectedCategoryId === null
+    ) {
+      setSelectedCategoryId(categoriesData.data[0].id);
+    }
+  }, [categoriesData, selectedCategoryId]);
+
+  // 2. Fetch Books by Category
+  const {
+    data: booksData,
+    isLoading: isLoadingBooks,
+    isFetching: isFetchingBooks,
+  } = useGetEbookByCategoryQuery(
+    {
+      category: selectedCategoryId || 0,
+      page: 1,
+      paginate: 10,
+    },
+    {
+      skip: selectedCategoryId === null,
+    }
+  );
+
+  // Helper untuk mendapatkan nama kategori
+  const getCategoryName = (id: number | null) => {
+    return (
+      categoriesData?.data.find((cat) => cat.id === id)?.name ||
+      "Kategori Pilihan"
+    );
+  };
+
+  const handleOpenPdf = (url: string) => {
+    window.open(url, "_blank");
+  };
+
+  // Helper untuk simulasi rating & downloads (karena API belum menyediakan)
+  const getBookMeta = (id: number) => {
+    // Generate random but deterministic values based on ID
+    const rating = (4 + (id % 10) / 10).toFixed(1);
+    const downloads = `${(10 + (id % 50)).toFixed(1)}K`;
+    const pages = 100 + ((id * 10) % 500);
+    return { rating, downloads, pages };
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
       {/* Header */}
@@ -27,28 +94,46 @@ export default function EBookPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6">
-        {/* Categories */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-card rounded-2xl shadow-sm p-4 text-center hover:shadow-md transition-all duration-200 border border-awqaf-border-light active:scale-95">
-            <BookMarked className="w-8 h-8 text-awqaf-primary mx-auto mb-2" />
-            <h3 className="font-semibold text-card-foreground text-sm font-comfortaa">
-              Buku Fiqih
-            </h3>
-            <p className="text-xs text-awqaf-foreground-secondary mt-1 font-comfortaa">
-              Hukum-hukum Islam
-            </p>
+        {/* Categories Grid (Loading State) */}
+        {isLoadingCategories ? (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                className="bg-card rounded-2xl p-4 h-24 animate-pulse bg-gray-200"
+              />
+            ))}
           </div>
-
-          <div className="bg-card rounded-2xl shadow-sm p-4 text-center hover:shadow-md transition-all duration-200 border border-awqaf-border-light active:scale-95">
-            <Star className="w-8 h-8 text-warning mx-auto mb-2" />
-            <h3 className="font-semibold text-card-foreground text-sm font-comfortaa">
-              Buku Akidah
-            </h3>
-            <p className="text-xs text-awqaf-foreground-secondary mt-1 font-comfortaa">
-              Keimanan dan tauhid
-            </p>
+        ) : (
+          /* Categories Grid (Data) */
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {categoriesData?.data.map((category) => (
+              <div
+                key={category.id}
+                onClick={() => setSelectedCategoryId(category.id)}
+                className={`bg-card rounded-2xl shadow-sm p-4 text-center hover:shadow-md transition-all duration-200 border cursor-pointer active:scale-95 ${
+                  selectedCategoryId === category.id
+                    ? "border-awqaf-primary ring-1 ring-awqaf-primary bg-accent-50"
+                    : "border-awqaf-border-light"
+                }`}
+              >
+                {/* Ikon dinamis sederhana berdasarkan ID ganjil/genap untuk variasi */}
+                {category.id % 2 !== 0 ? (
+                  <BookMarked className="w-8 h-8 text-awqaf-primary mx-auto mb-2" />
+                ) : (
+                  <Star className="w-8 h-8 text-warning mx-auto mb-2" />
+                )}
+                <h3 className="font-semibold text-card-foreground text-sm font-comfortaa line-clamp-1">
+                  {category.name}
+                </h3>
+                <div
+                  className="text-xs text-awqaf-foreground-secondary mt-1 font-comfortaa line-clamp-1"
+                  dangerouslySetInnerHTML={{ __html: category.description }}
+                />
+              </div>
+            ))}
           </div>
-        </div>
+        )}
 
         {/* --- BANNER KAMUS ISTILAH --- */}
         <Link href="/kamus-istilah" className="block mb-4">
@@ -77,7 +162,7 @@ export default function EBookPage() {
           </div>
         </Link>
 
-        {/* --- BANNER BAHASA ARAB (NEW) --- */}
+        {/* --- BANNER BAHASA ARAB --- */}
         <Link href="/bahasa-arab" className="block mb-6">
           <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-4 text-white shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
             {/* Decorative BG */}
@@ -103,76 +188,101 @@ export default function EBookPage() {
             </div>
           </div>
         </Link>
-        {/* ---------------------------------- */}
 
-        {/* Featured Books */}
-        <div className="bg-card rounded-2xl shadow-sm p-6 border border-awqaf-border-light mb-6">
-          <h3 className="font-semibold text-card-foreground mb-4 font-comfortaa">
-            Buku Terpopuler
-          </h3>
+        {/* Books List Section */}
+        <div className="bg-card rounded-2xl shadow-sm p-6 border border-awqaf-border-light mb-6 min-h-[300px]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-card-foreground font-comfortaa">
+              {getCategoryName(selectedCategoryId)}
+            </h3>
+            {isLoadingBooks || isFetchingBooks ? (
+              <Loader2 className="w-4 h-4 animate-spin text-awqaf-primary" />
+            ) : null}
+          </div>
 
-          <div className="space-y-4">
-            {[
-              {
-                title: "Riyadhus Shalihin",
-                author: "Imam Nawawi",
-                pages: 1200,
-                rating: 4.9,
-                downloads: "25.3K",
-              },
-              {
-                title: "Bulughul Maram",
-                author: "Ibnu Hajar Al-Asqalani",
-                pages: 800,
-                rating: 4.8,
-                downloads: "18.7K",
-              },
-              {
-                title: "Al-Adab Al-Mufrad",
-                author: "Imam Bukhari",
-                pages: 600,
-                rating: 4.7,
-                downloads: "15.2K",
-              },
-            ].map((book, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-4 p-4 rounded-xl hover:bg-accent-50 transition-all duration-200 cursor-pointer"
-              >
-                <div className="w-12 h-12 bg-accent-100 rounded-lg flex items-center justify-center">
-                  <BookMarked className="w-6 h-6 text-awqaf-primary" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-card-foreground font-comfortaa text-sm">
-                    {book.title}
-                  </h4>
-                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    {book.author}
-                  </p>
-                  <div className="flex items-center gap-4 mt-1">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 text-warning fill-current" />
-                      <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                        {book.rating}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Download className="w-3 h-3 text-awqaf-foreground-secondary" />
-                      <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                        {book.downloads}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-awqaf-foreground-secondary" />
-                      <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                        {book.pages} hlm
-                      </span>
-                    </div>
+          {isLoadingBooks ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="flex gap-4 p-4 rounded-xl border border-gray-100"
+                >
+                  <div className="w-12 h-16 bg-gray-200 rounded animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse" />
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : booksData?.data.length === 0 ? (
+            <div className="text-center py-10">
+              <Library className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 font-comfortaa">
+                Belum ada buku di kategori ini.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {booksData?.data.map((book) => {
+                const meta = getBookMeta(book.id);
+                return (
+                  <div
+                    key={book.id}
+                    onClick={() => handleOpenPdf(book.pdf)}
+                    className="flex items-start gap-4 p-4 rounded-xl hover:bg-accent-50 transition-all duration-200 cursor-pointer border border-transparent hover:border-accent-100"
+                  >
+                    {/* Cover Image */}
+                    <div className="w-16 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative">
+                      {book.cover ? (
+                        <Image
+                          src={book.cover}
+                          alt={book.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-accent-100">
+                          <BookMarked className="w-6 h-6 text-awqaf-primary" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-card-foreground font-comfortaa text-sm line-clamp-2">
+                        {book.title}
+                      </h4>
+                      <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mt-1">
+                        {book.author}
+                      </p>
+
+                      {/* Meta Info */}
+                      <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 text-warning fill-current" />
+                          <span className="text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                            {meta.rating}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Download className="w-3 h-3 text-awqaf-foreground-secondary" />
+                          <span className="text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                            {meta.downloads}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-awqaf-foreground-secondary" />
+                          <span className="text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                            {meta.pages} hlm
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Download Status */}

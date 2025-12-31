@@ -28,6 +28,8 @@ export const apiSlice = createApi({
     "HadithBookDetail",
     "DoaCategories",
     "DoaList",
+    "EbookCategories",
+    "EbookList",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,
