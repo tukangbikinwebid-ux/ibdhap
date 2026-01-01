@@ -1,67 +1,116 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Users, BookOpen, TrendingUp } from "lucide-react";
+import {
+  MessageCircle,
+  Users,
+  BookOpen,
+  TrendingUp,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 import QuestionFilter, { SortOption } from "./components/QuestionFilter";
 import QuestionList from "./components/QuestionList";
 import PopularQuestions from "./components/PopularQuestions";
+// Import Services & Types
 import {
-  mockQuestions,
-  getPopularQuestions,
-  searchQuestions,
-  sortQuestions,
-  questionCategories,
-  Question,
-} from "./data/questions";
+  useGetUstadzQnAQuery,
+  useGetUstadzListQuery,
+} from "@/services/public/kajian.service";
+import { QnAUstadz } from "@/types/public/kajian";
 
 export default function TanyaUstadzPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedUstadzId, setSelectedUstadzId] = useState<string>(""); // Filter by Ustadz
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
-  // Get popular questions
-  const popularQuestions = getPopularQuestions(5);
+  // 1. Fetch Ustadz List (untuk filter dan stats)
+  const { data: ustadzData } = useGetUstadzListQuery({
+    page: 1,
+    paginate: 100,
+  });
 
-  // Filter and sort questions
+  // 2. Fetch QnA List
+  const { data: qnaData, isLoading: isLoadingQnA } = useGetUstadzQnAQuery({
+    page: 1,
+    paginate: 50, // Ambil cukup banyak untuk client-side filtering/sorting
+    is_public: 1,
+    ustadz_id: selectedUstadzId ? parseInt(selectedUstadzId) : undefined,
+  });
+
+  // Derived Stats
+  const totalQuestions = qnaData?.total || 0;
+  const answeredCount =
+    qnaData?.data.filter((q) => q.status === 1 || q.answer).length || 0;
+  // Kategori di sini diasumsikan sebagai Ustadz karena API belum punya endpoint kategori khusus QnA
+  const totalCategories = ustadzData?.data.length || 0;
+
+  // Popular Questions Logic (Simulasi: Ambil 5 teratas berdasarkan kriteria tertentu, misal yang sudah dijawab)
+  // Karena API belum ada field 'views' atau 'likes', kita anggap yang sudah dijawab adalah yang populer/bermanfaat.
+  const popularQuestions = useMemo(() => {
+    if (!qnaData?.data) return [];
+    return qnaData.data.filter((q) => q.answer !== null).slice(0, 5);
+  }, [qnaData]);
+
+  // Filter and Sort Logic
   const filteredQuestions = useMemo(() => {
-    let questions = mockQuestions;
+    if (!qnaData?.data) return [];
 
-    // Apply search filter
+    let questions = [...qnaData.data];
+
+    // Filter Search
     if (searchQuery) {
-      questions = searchQuestions(searchQuery);
+      const q = searchQuery.toLowerCase();
+      questions = questions.filter(
+        (item) =>
+          item.question.toLowerCase().includes(q) ||
+          item.name.toLowerCase().includes(q) ||
+          item.ustadz.name.toLowerCase().includes(q)
+      );
     }
 
-    // Apply category filter
-    if (selectedCategory) {
-      questions = questions.filter((q) => q.category === selectedCategory);
+    // Filter Ustadz (Category replacement)
+    if (selectedUstadzId) {
+      questions = questions.filter(
+        (q) => q.ustadz_id === parseInt(selectedUstadzId)
+      );
     }
 
-    // Apply sorting
-    questions = sortQuestions(questions, sortBy);
+    // Sorting
+    questions.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+
+      switch (sortBy) {
+        case "newest":
+          return dateB - dateA;
+        case "oldest":
+          return dateA - dateB;
+        // Popular & Most Liked sementara fallback ke newest karena data views/likes belum ada di API
+        default:
+          return dateB - dateA;
+      }
+    });
 
     return questions;
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [qnaData, searchQuery, selectedUstadzId, sortBy]);
 
-  const handleQuestionClick = (question: Question) => {
+  const handleQuestionClick = (question: QnAUstadz) => {
     console.log("Question clicked:", question);
-    // TODO: Navigate to question detail page
+    // TODO: Navigate to detail
   };
 
   const handleClearFilters = () => {
     setSearchQuery("");
-    setSelectedCategory("");
+    setSelectedUstadzId("");
     setSortBy("newest");
   };
 
   const handleViewAllQuestions = () => {
-    setSearchQuery("");
-    setSelectedCategory("");
-    setSortBy("newest");
-    // Scroll to questions list
+    handleClearFilters();
     document
       .getElementById("questions-list")
       ?.scrollIntoView({ behavior: "smooth" });
@@ -100,7 +149,7 @@ export default function TanyaUstadzPage() {
                 <CardContent className="p-4 text-center">
                   <MessageCircle className="w-8 h-8 text-awqaf-primary mx-auto mb-2" />
                   <p className="text-2xl font-bold text-card-foreground font-comfortaa">
-                    {mockQuestions.length}
+                    {totalQuestions}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
                     Total Pertanyaan
@@ -112,7 +161,7 @@ export default function TanyaUstadzPage() {
                 <CardContent className="p-4 text-center">
                   <Users className="w-8 h-8 text-green-600 mx-auto mb-2" />
                   <p className="text-2xl font-bold text-card-foreground font-comfortaa">
-                    {mockQuestions.filter((q) => q.isAnswered).length}
+                    {answeredCount}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
                     Terjawab
@@ -124,10 +173,10 @@ export default function TanyaUstadzPage() {
                 <CardContent className="p-4 text-center">
                   <BookOpen className="w-8 h-8 text-blue-600 mx-auto mb-2" />
                   <p className="text-2xl font-bold text-card-foreground font-comfortaa">
-                    {questionCategories.length}
+                    {totalCategories}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Kategori
+                    Ustadz Aktif
                   </p>
                 </CardContent>
               </Card>
@@ -148,12 +197,14 @@ export default function TanyaUstadzPage() {
             {/* Filter */}
             <QuestionFilter
               searchQuery={searchQuery}
-              selectedCategory={selectedCategory}
+              selectedCategory={selectedUstadzId}
               sortBy={sortBy}
               onSearchChange={setSearchQuery}
-              onCategoryChange={setSelectedCategory}
+              onCategoryChange={setSelectedUstadzId}
               onSortChange={setSortBy}
               onClearFilters={handleClearFilters}
+              // Pass list ustadz untuk dropdown filter kategori
+              ustadzList={ustadzData?.data || []}
             />
 
             {/* Questions List */}
@@ -163,13 +214,20 @@ export default function TanyaUstadzPage() {
                   Daftar Pertanyaan
                 </h2>
                 <Badge className="bg-awqaf-primary/10 text-awqaf-primary border-awqaf-primary/20 font-comfortaa">
-                  {filteredQuestions.length} pertanyaan
+                  {isLoadingQnA ? "..." : filteredQuestions.length} pertanyaan
                 </Badge>
               </div>
-              <QuestionList
-                questions={filteredQuestions}
-                onQuestionClick={handleQuestionClick}
-              />
+
+              {isLoadingQnA ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary" />
+                </div>
+              ) : (
+                <QuestionList
+                  questions={filteredQuestions}
+                  onQuestionClick={handleQuestionClick}
+                />
+              )}
             </div>
           </div>
 
@@ -181,42 +239,6 @@ export default function TanyaUstadzPage() {
               onQuestionClick={handleQuestionClick}
               onViewAllClick={handleViewAllQuestions}
             />
-
-            {/* Categories */}
-            <Card className="border-awqaf-border-light">
-              <CardHeader>
-                <CardTitle className="text-awqaf-primary font-comfortaa">
-                  Kategori Pertanyaan
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {questionCategories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 text-left font-comfortaa ${
-                        selectedCategory === category.id
-                          ? "border-awqaf-primary bg-awqaf-primary/10"
-                          : "border-awqaf-border-light hover:border-awqaf-primary/50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{category.icon}</span>
-                          <span className="text-sm font-medium">
-                            {category.name}
-                          </span>
-                        </div>
-                        <Badge className="bg-awqaf-primary/10 text-awqaf-primary text-xs">
-                          {category.questionCount}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Motivational Quote */}
             <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">

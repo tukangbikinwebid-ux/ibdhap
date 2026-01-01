@@ -4,33 +4,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Eye,
-  Heart,
   MessageCircle,
   User,
   Calendar,
   CheckCircle,
-  Clock,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { Question, questionCategories } from "../data/questions";
 import { useState } from "react";
+import { QnAUstadz } from "@/types/public/kajian";
 
 interface QuestionListProps {
-  questions: Question[];
-  onQuestionClick?: (question: Question) => void;
+  questions: QnAUstadz[];
+  onQuestionClick?: (question: QnAUstadz) => void;
 }
 
 export default function QuestionList({
   questions,
   onQuestionClick,
 }: QuestionListProps) {
-  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(
     new Set()
   );
 
-  const toggleExpanded = (questionId: string) => {
+  const toggleExpanded = (questionId: number) => {
     setExpandedQuestions((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(questionId)) {
@@ -42,16 +39,12 @@ export default function QuestionList({
     });
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("id-ID", {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "long",
       year: "numeric",
-    }).format(date);
-  };
-
-  const getCategoryInfo = (categoryId: string) => {
-    return questionCategories.find((cat) => cat.id === categoryId);
+    });
   };
 
   if (questions.length === 0) {
@@ -73,9 +66,9 @@ export default function QuestionList({
   return (
     <div className="space-y-4">
       {questions.map((question) => {
-        const categoryInfo = getCategoryInfo(question.category);
         const isExpanded = expandedQuestions.has(question.id);
         const isLongQuestion = question.question.length > 200;
+        const isAnswered = question.answer !== null && question.answer !== "";
 
         return (
           <Card
@@ -89,20 +82,19 @@ export default function QuestionList({
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      {categoryInfo && (
-                        <Badge className="bg-awqaf-primary/10 text-awqaf-primary border-awqaf-primary/20 font-comfortaa">
-                          {categoryInfo.icon} {categoryInfo.name}
-                        </Badge>
-                      )}
-                      {question.isAnswered && (
+                      <Badge className="bg-awqaf-primary/10 text-awqaf-primary border-awqaf-primary/20 font-comfortaa">
+                        <User className="w-3 h-3 mr-1" /> {question.ustadz.name}
+                      </Badge>
+                      {isAnswered && (
                         <Badge className="bg-green-100 text-green-700 border-green-200 font-comfortaa">
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Terjawab
                         </Badge>
                       )}
                     </div>
-                    <h3 className="text-lg font-semibold text-card-foreground font-comfortaa mb-2">
-                      {question.subject}
+                    {/* Menggunakan penanya sebagai subjek karena API tidak ada field subject */}
+                    <h3 className="text-lg font-semibold text-card-foreground font-comfortaa mb-2 capitalize">
+                      {question.name} Bertanya:
                     </h3>
                   </div>
                 </div>
@@ -141,19 +133,21 @@ export default function QuestionList({
                 </div>
 
                 {/* Answer Preview */}
-                {question.isAnswered && question.answer && (
+                {isAnswered && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle className="w-4 h-4 text-green-600" />
                       <span className="text-sm font-medium text-green-800 font-comfortaa">
-                        Jawaban dari {question.answer.answeredBy}
+                        Jawaban Ustadz
                       </span>
                     </div>
-                    <p className="text-sm text-green-700 font-comfortaa leading-relaxed">
-                      {question.answer.content.length > 150
-                        ? `${question.answer.content.substring(0, 150)}...`
-                        : question.answer.content}
-                    </p>
+                    {/* Render HTML Answer */}
+                    <div
+                      className="text-sm text-green-700 font-comfortaa leading-relaxed line-clamp-3"
+                      dangerouslySetInnerHTML={{
+                        __html: question.answer || "",
+                      }}
+                    />
                   </div>
                 )}
 
@@ -162,31 +156,16 @@ export default function QuestionList({
                   <div className="flex items-center gap-4 text-sm text-awqaf-foreground-secondary">
                     <div className="flex items-center gap-1">
                       <User className="w-4 h-4" />
-                      <span className="font-comfortaa">{question.author}</span>
+                      <span className="font-comfortaa capitalize">
+                        {question.name}
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
                       <span className="font-comfortaa">
-                        {formatDate(question.createdAt)}
+                        {formatDate(question.created_at)}
                       </span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-awqaf-foreground-secondary">
-                    <div className="flex items-center gap-1">
-                      <Eye className="w-4 h-4" />
-                      <span className="font-comfortaa">{question.views}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4" />
-                      <span className="font-comfortaa">{question.likes}</span>
-                    </div>
-                    {!question.isAnswered && (
-                      <div className="flex items-center gap-1 text-orange-600">
-                        <Clock className="w-4 h-4" />
-                        <span className="font-comfortaa">Menunggu Jawaban</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

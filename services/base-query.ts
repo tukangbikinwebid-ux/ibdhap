@@ -33,6 +33,7 @@ export const apiSlice = createApi({
     "DictionaryEntries",
     "UstadzList",
     "KajianList",
+    "UstadzQnA",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,

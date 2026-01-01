@@ -13,19 +13,21 @@ import {
   TrendingUp,
   Heart,
   Calendar,
+  User,
 } from "lucide-react";
-import { questionCategories } from "../data/questions";
+import { Ustadz } from "@/types/public/kajian";
 
 export type SortOption = "newest" | "oldest" | "popular" | "most-liked";
 
 interface QuestionFilterProps {
   searchQuery: string;
-  selectedCategory: string;
+  selectedCategory: string; // This now represents selected Ustadz ID
   sortBy: SortOption;
   onSearchChange: (query: string) => void;
-  onCategoryChange: (category: string) => void;
+  onCategoryChange: (ustadzId: string) => void;
   onSortChange: (sort: SortOption) => void;
   onClearFilters: () => void;
+  ustadzList: Ustadz[]; // Added prop
 }
 
 export default function QuestionFilter({
@@ -36,18 +38,25 @@ export default function QuestionFilter({
   onCategoryChange,
   onSortChange,
   onClearFilters,
+  ustadzList,
 }: QuestionFilterProps) {
   const [showFilters, setShowFilters] = useState(false);
 
   const sortOptions = [
     { value: "newest", label: "Terbaru", icon: Clock },
     { value: "oldest", label: "Terlama", icon: Calendar },
-    { value: "popular", label: "Populer", icon: TrendingUp },
-    { value: "most-liked", label: "Paling Disukai", icon: Heart },
+    // Popular & Most Liked sementara disabled atau mapping ke logic lain karena API limitasi
+    // { value: "popular", label: "Populer", icon: TrendingUp },
+    // { value: "most-liked", label: "Paling Disukai", icon: Heart },
   ] as const;
 
   const hasActiveFilters =
     searchQuery || selectedCategory || sortBy !== "newest";
+
+  // Helper untuk mendapatkan nama ustadz dari ID
+  const selectedUstadzName = ustadzList.find(
+    (u) => u.id.toString() === selectedCategory
+  )?.name;
 
   return (
     <Card className="border-awqaf-border-light">
@@ -59,7 +68,7 @@ export default function QuestionFilter({
             <Input
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Cari pertanyaan, subjek, atau penulis..."
+              placeholder="Cari pertanyaan, penanya, atau ustadz..."
               className="pl-10 font-comfortaa"
             />
           </div>
@@ -103,12 +112,12 @@ export default function QuestionFilter({
           {/* Filters Panel */}
           {showFilters && (
             <div className="space-y-4 pt-4 border-t border-awqaf-border-light">
-              {/* Category Filter */}
+              {/* Ustadz Filter (Replacing Category) */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-card-foreground font-comfortaa">
-                  Kategori
+                  Pilih Ustadz
                 </h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto mobile-scroll pb-2">
                   <button
                     onClick={() => onCategoryChange("")}
                     className={`px-3 py-1 rounded-full text-xs font-comfortaa transition-colors ${
@@ -117,19 +126,19 @@ export default function QuestionFilter({
                         : "bg-awqaf-border-light text-awqaf-foreground-secondary hover:bg-awqaf-primary/10"
                     }`}
                   >
-                    Semua Kategori
+                    Semua Ustadz
                   </button>
-                  {questionCategories.map((category) => (
+                  {ustadzList.map((ustadz) => (
                     <button
-                      key={category.id}
-                      onClick={() => onCategoryChange(category.id)}
+                      key={ustadz.id}
+                      onClick={() => onCategoryChange(ustadz.id.toString())}
                       className={`px-3 py-1 rounded-full text-xs font-comfortaa transition-colors ${
-                        selectedCategory === category.id
+                        selectedCategory === ustadz.id.toString()
                           ? "bg-awqaf-primary text-white"
                           : "bg-awqaf-border-light text-awqaf-foreground-secondary hover:bg-awqaf-primary/10"
                       }`}
                     >
-                      {category.icon} {category.name}
+                      {ustadz.name}
                     </button>
                   ))}
                 </div>
@@ -175,16 +184,8 @@ export default function QuestionFilter({
               )}
               {selectedCategory && (
                 <Badge className="bg-awqaf-primary/10 text-awqaf-primary border-awqaf-primary/20">
-                  {
-                    questionCategories.find(
-                      (cat) => cat.id === selectedCategory
-                    )?.icon
-                  }{" "}
-                  {
-                    questionCategories.find(
-                      (cat) => cat.id === selectedCategory
-                    )?.name
-                  }
+                  <User className="w-3 h-3 mr-1" />
+                  {selectedUstadzName}
                 </Badge>
               )}
               {sortBy !== "newest" && (

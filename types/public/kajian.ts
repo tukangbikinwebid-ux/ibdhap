@@ -1,3 +1,5 @@
+import { User } from "../user";
+
 // Tipe Data untuk Ustadz
 export interface Ustadz {
   id: number;
@@ -34,4 +36,27 @@ export interface GetKajianParams {
   ustadz_id?: number;
   page?: number;
   paginate?: number;
+}
+
+export interface QnAUstadz {
+  id: number;
+  user_id: number | null;
+  ustadz_id: number;
+  name: string;
+  question: string;
+  answer: string | null;
+  status: number; // 0 = pending, 1 = answered maybe
+  is_public: number; // 1 = public
+  created_at: string;
+  updated_at: string;
+  ustadz: Ustadz;
+  user: User | null; // Adjust based on your user type definition
+}
+
+// Params untuk Get QnA List
+export interface GetQnAParams {
+  page?: number;
+  paginate?: number;
+  ustadz_id?: number;
+  is_public?: number;
 }
