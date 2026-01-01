@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-// Sesuaikan path import
+// Sesuaikan path import service
 import { useGetPublicPlacesQuery } from "@/services/public/masjid-halal.service";
 import { Place } from "@/types/public/place";
 
@@ -64,14 +64,14 @@ export default function MasjidPage() {
     "distance"
   );
 
-  // Radius state (default 5km misalnya)
+  // Radius state (default 5km)
   const [radius, setRadius] = useState([5]);
 
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Hook API Service: Params dinamis mengikuti user location dan radius
+  // Hook API Service
   const {
     data: places,
     isLoading: isLoadingPlaces,
@@ -81,10 +81,10 @@ export default function MasjidPage() {
     {
       latitude: userLocation?.latitude || -6.2,
       longitude: userLocation?.longitude || 106.816666,
-      radius: radius[0], // Ambil nilai radius dari state
+      radius: radius[0],
     },
     {
-      skip: !userLocation, // Tunggu sampai lokasi didapat
+      skip: !userLocation,
     }
   );
 
@@ -174,6 +174,14 @@ export default function MasjidPage() {
   const filteredMasjidData = useMemo(() => {
     let filtered = masjidData;
 
+    // 1. FILTER TIPE: Hanya ambil yang type-nya mengandung "masjid" atau "mushola"
+    // Ini akan membuang tipe "restaurant" atau lainnya
+    filtered = filtered.filter((masjid) => {
+      const type = masjid.type?.toLowerCase() || "";
+      return type.includes("masjid") || type.includes("mushola");
+    });
+
+    // 2. Filter Search Query
     if (searchQuery) {
       filtered = filtered.filter(
         (masjid) =>
@@ -182,6 +190,14 @@ export default function MasjidPage() {
       );
     }
 
+    // 3. Filter berdasarkan Selected Type (Tab All/Masjid/Mushola)
+    if (selectedType !== "all") {
+      filtered = filtered.filter((masjid) =>
+        masjid.type?.toLowerCase().includes(selectedType)
+      );
+    }
+
+    // 4. Sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "distance":
@@ -196,7 +212,7 @@ export default function MasjidPage() {
     });
 
     return filtered;
-  }, [masjidData, searchQuery, sortBy]); // selectedType removed temporarily as per logic
+  }, [masjidData, searchQuery, sortBy, selectedType]);
 
   // Helpers
   const formatDistance = (distance?: number): string => {
@@ -334,7 +350,6 @@ export default function MasjidPage() {
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-medium text-gray-700 font-comfortaa flex items-center gap-1">
-                    {/* Icon Radius (opsional, bisa pakai MapPin/Circle) */}
                     <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
                       <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                     </div>

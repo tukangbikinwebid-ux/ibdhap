@@ -1,76 +1,72 @@
 "use client";
 
-import { Play, Clock, Users, RefreshCw, GraduationCap } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
-
-interface KajianItem {
-  id: string;
-  title: string;
-  ustadz: string;
-  duration: string; // mm:ss
-  views: string;
-  date: string; // ISO
-}
-
-const allUstadz = [
-  "Ust. Syafiq Riza Basalamah",
-  "Ust. Abdul Hakim bin Amir Abdat",
-  "Ust. Yazid bin Abdul Qadir Jawas",
-  "Ust. Anas Burhanuddin",
-] as const;
-
-const kajianData: KajianItem[] = [
-  {
-    id: "k1",
-    title: "Keutamaan Sholat Berjamaah",
-    ustadz: "Ust. Syafiq Riza Basalamah",
-    duration: "45:30",
-    views: "12.5K",
-    date: "2024-05-01",
-  },
-  {
-    id: "k2",
-    title: "Hikmah Puasa Sunnah",
-    ustadz: "Ust. Abdul Hakim bin Amir Abdat",
-    duration: "38:15",
-    views: "8.2K",
-    date: "2024-04-15",
-  },
-  {
-    id: "k3",
-    title: "Menjaga Lisan dalam Islam",
-    ustadz: "Ust. Yazid bin Abdul Qadir Jawas",
-    duration: "52:10",
-    views: "15.7K",
-    date: "2024-06-10",
-  },
-  {
-    id: "k4",
-    title: "Adab Penuntut Ilmu",
-    ustadz: "Ust. Anas Burhanuddin",
-    duration: "40:05",
-    views: "6.9K",
-    date: "2024-03-20",
-  },
-];
+import {
+  Play,
+  Clock,
+  Users,
+  RefreshCw,
+  GraduationCap,
+  Loader2,
+} from "lucide-react";
+import Link from "next/link";
+// Import Services & Types
+import {
+  useGetUstadzListQuery,
+  useGetKajianListQuery,
+} from "@/services/public/kajian.service";
 
 export default function KajianPage() {
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
-  const [selectedUstadz, setSelectedUstadz] = useState<string | null>(null);
+  const [selectedUstadzId, setSelectedUstadzId] = useState<number | undefined>(
+    undefined
+  );
 
+  // 1. Fetch Ustadz List (untuk filter dropdown)
+  const { data: ustadzData, isLoading: isLoadingUstadz } =
+    useGetUstadzListQuery({
+      page: 1,
+      paginate: 100, // Ambil semua ustadz
+    });
+
+  // 2. Fetch Kajian List
+  const {
+    data: kajianData,
+    isLoading: isLoadingKajian,
+    refetch,
+  } = useGetKajianListQuery({
+    page: 1,
+    paginate: 20,
+    ustadz_id: selectedUstadzId,
+  });
+
+  // Filter & Sort Logic (Client-side sorting pada batch yang di-load)
   const filteredKajian = useMemo(() => {
-    let list = [...kajianData];
-    if (selectedUstadz) {
-      list = list.filter((k) => k.ustadz === selectedUstadz);
-    }
-    list.sort((a, b) =>
-      sortBy === "newest"
-        ? new Date(b.date).getTime() - new Date(a.date).getTime()
-        : new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    if (!kajianData?.data) return [];
+
+    const list = [...kajianData.data];
+
+    list.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortBy === "newest" ? dateB - dateA : dateA - dateB;
+    });
+
     return list;
-  }, [sortBy, selectedUstadz]);
+  }, [kajianData, sortBy]);
+
+  // Helper formatting
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const resetFilters = () => {
+    setSortBy("newest");
+    setSelectedUstadzId(undefined);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
       {/* Header */}
@@ -102,6 +98,7 @@ export default function KajianPage() {
             </div>
           </div>
         </div>
+
         {/* Filters */}
         <div className="mb-6">
           <div className="grid grid-cols-2 gap-3">
@@ -128,28 +125,30 @@ export default function KajianPage() {
                 Ustadz
               </label>
               <select
-                value={selectedUstadz || ""}
-                onChange={(e) => setSelectedUstadz(e.target.value || null)}
+                value={selectedUstadzId || ""}
+                onChange={(e) =>
+                  setSelectedUstadzId(
+                    e.target.value ? Number(e.target.value) : undefined
+                  )
+                }
                 className="w-full h-10 px-3 rounded-md border border-awqaf-border-light bg-background text-sm font-comfortaa"
+                disabled={isLoadingUstadz}
               >
                 <option value="">Semua Ustadz</option>
-                {allUstadz.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
+                {ustadzData?.data.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {(selectedUstadz || sortBy !== "newest") && (
+          {(selectedUstadzId || sortBy !== "newest") && (
             <div className="mt-3">
               <button
                 className="px-3 py-2 rounded-md text-sm border bg-background border-awqaf-border-light flex items-center gap-1"
-                onClick={() => {
-                  setSelectedUstadz(null);
-                  setSortBy("newest");
-                }}
+                onClick={resetFilters}
               >
                 <RefreshCw className="w-4 h-4" /> Reset
               </button>
@@ -158,44 +157,57 @@ export default function KajianPage() {
         </div>
 
         {/* Kajian List */}
-        <div className="bg-card rounded-2xl shadow-sm p-6 border border-awqaf-border-light mb-6">
+        <div className="bg-card rounded-2xl shadow-sm p-6 border border-awqaf-border-light mb-6 min-h-[300px]">
           <h3 className="font-semibold text-card-foreground mb-4 font-comfortaa">
             Daftar Kajian
           </h3>
-          <div className="space-y-3">
-            {filteredKajian.map((k) => (
-              <Link key={k.id} href={`/kajian/${k.id}`}>
-                <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-accent-50 transition-all duration-200">
-                  <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center">
-                    <Play className="w-6 h-6 text-awqaf-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-card-foreground font-comfortaa text-sm line-clamp-2">
-                      {k.title}
-                    </h4>
-                    <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      {k.ustadz}
-                    </p>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {k.duration}
-                      </div>
-                      <div>
-                        {new Date(k.date).toLocaleDateString("id-ID", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-3 h-3" /> {k.views}
+
+          {isLoadingKajian ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary" />
+            </div>
+          ) : filteredKajian.length > 0 ? (
+            <div className="space-y-3">
+              {filteredKajian.map((k) => (
+                <Link key={k.id} href={`/kajian/${k.id}`}>
+                  <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-accent-50 transition-all duration-200 cursor-pointer">
+                    <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Play className="w-5 h-5 text-awqaf-primary ml-1" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-card-foreground font-comfortaa text-sm line-clamp-2">
+                        {k.title}
+                      </h4>
+                      <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mt-1">
+                        {k.ustadz?.name || "Ustadz"}
+                      </p>
+                      <div className="flex items-center gap-4 mt-2 text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />{" "}
+                          {formatDuration(k.duration)}
+                        </div>
+                        <div>
+                          {new Date(k.created_at).toLocaleDateString("id-ID", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </div>
+                        {/* Views simulation since API doesn't provide it yet */}
+                        <div className="flex items-center gap-1">
+                          <Users className="w-3 h-3" /> {(k.id * 123) % 1000}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 text-gray-500 font-comfortaa text-sm">
+              Belum ada kajian ditemukan.
+            </div>
+          )}
         </div>
 
         {/* Quick Access */}

@@ -31,6 +31,8 @@ export const apiSlice = createApi({
     "EbookCategories",
     "EbookList",
     "DictionaryEntries",
+    "UstadzList",
+    "KajianList",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,

@@ -11,47 +11,28 @@ import {
   RotateCcw,
   RotateCw,
   Heart,
+  Loader2,
+  Volume2,
 } from "lucide-react";
 import Image from "next/image";
-
-interface KajianItem {
-  id: string;
-  title: string;
-  ustadz: string;
-  date: string; // ISO
-  audioUrl: string;
-  preview: string;
-}
-
-const sampleKajian: KajianItem[] = [
-  {
-    id: "k1",
-    title: "Keutamaan Sholat Berjamaah",
-    ustadz: "Ust. Syafiq Riza Basalamah",
-    date: "2024-05-01",
-    audioUrl: "/audio/k1.mp3",
-    preview:
-      "Pembahasan tentang keutamaan sholat berjamaah, dalil-dalil, dan faedah praktisnya dalam kehidupan sehari-hari.",
-  },
-  {
-    id: "k2",
-    title: "Hikmah Puasa Sunnah",
-    ustadz: "Ust. Abdul Hakim bin Amir Abdat",
-    date: "2024-04-15",
-    audioUrl: "/audio/k2.mp3",
-    preview:
-      "Ringkasan faedah puasa sunnah Senin-Kamis dan amalan-amalan terkait yang dianjurkan.",
-  },
-];
+// Import Service
+import { useGetKajianListQuery } from "@/services/public/kajian.service";
 
 export default function KajianDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const kajianId = params.id as string;
+  const kajianId = Number(params.id);
+
+  // Fetch Kajian List untuk mencari detail (Workaround jika belum ada endpoint detail spesifik)
+  // Idealnya ada endpoint: /public/ustadz/kajian/:id
+  const { data: kajianData, isLoading } = useGetKajianListQuery({
+    page: 1,
+    paginate: 100, // Ambil cukup banyak untuk probability ketemu
+  });
 
   const kajian = useMemo(
-    () => sampleKajian.find((k) => k.id === kajianId) || sampleKajian[0],
-    [kajianId]
+    () => kajianData?.data.find((k) => k.id === kajianId),
+    [kajianData, kajianId]
   );
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -61,21 +42,26 @@ export default function KajianDetailPage() {
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
-    const el = new Audio(kajian.audioUrl);
+    if (!kajian?.audio) return;
+
+    const el = new Audio(kajian.audio);
     audioRef.current = el;
+
     const onTime = () => setCurrentTime(el.currentTime);
-    const onLoaded = () => setDuration(el.duration || 0);
+    const onLoaded = () => setDuration(el.duration || kajian.duration || 0);
     const onEnded = () => setIsPlaying(false);
+
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onLoaded);
     el.addEventListener("ended", onEnded);
+
     return () => {
       el.pause();
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onLoaded);
       el.removeEventListener("ended", onEnded);
     };
-  }, [kajian.audioUrl]);
+  }, [kajian]);
 
   const togglePlay = () => {
     const el = audioRef.current;
@@ -112,6 +98,22 @@ export default function KajianDetailPage() {
     setCurrentTime(newTime);
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-accent-50 to-accent-100">
+        <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary" />
+      </div>
+    );
+  }
+
+  if (!kajian) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Kajian tidak ditemukan.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
       {/* Header */}
@@ -140,41 +142,43 @@ export default function KajianDetailPage() {
         {/* Info */}
         <Card className="border-awqaf-border-light">
           <CardContent className="p-4 space-y-2">
-            <h2 className="font-semibold text-card-foreground font-comfortaa">
+            <h2 className="font-semibold text-card-foreground font-comfortaa text-lg leading-tight">
               {kajian.title}
             </h2>
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-              {kajian.ustadz} •{" "}
-              {new Date(kajian.date).toLocaleDateString("id-ID", {
+              {kajian.ustadz?.name} •{" "}
+              {new Date(kajian.created_at).toLocaleDateString("id-ID", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
               })}
             </p>
-            <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-              {kajian.preview}
-            </p>
+            <div
+              className="text-sm text-awqaf-foreground-secondary font-comfortaa mt-2"
+              dangerouslySetInnerHTML={{ __html: kajian.description }}
+            />
           </CardContent>
         </Card>
 
         {/* Audio Player */}
-        {/* Preview image banner */}
-
         <Card className="border-awqaf-border-light">
-          <CardContent>
-            <div className="rounded-xl overflow-hidden border border-awqaf-border-light mb-4">
+          <CardContent className="pt-6">
+            <div className="rounded-xl overflow-hidden border border-awqaf-border-light mb-4 relative bg-gray-100">
               <Image
                 unoptimized
-                width={100}
-                height={100}
-                src="https://images.unsplash.com/photo-1700716137543-ef7d4d78c5f3?q=80&w=1334&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                width={400}
+                height={200}
+                src="https://images.unsplash.com/photo-1700716137543-ef7d4d78c5f3?q=80&w=1334&auto=format&fit=crop"
                 alt="Preview Kajian"
-                className="w-full h-40 object-cover"
+                className="w-full h-48 object-cover opacity-90"
               />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                <Volume2 className="w-12 h-12 text-white opacity-80" />
+              </div>
             </div>
 
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+              <span className="text-xs text-awqaf-foreground-secondary font-comfortaa font-mono">
                 {fmt(currentTime)} / {fmt(duration || 0)}
               </span>
               <Button
@@ -194,34 +198,47 @@ export default function KajianDetailPage() {
             </div>
 
             {/* Progress bar */}
-            <div className="mb-4">
+            <div className="mb-6 px-1">
               <input
                 type="range"
                 min={0}
                 max={Math.max(0, Math.floor(duration || 0))}
                 value={Math.floor(currentTime)}
                 onChange={(e) => handleSeek(Number(e.target.value))}
-                className="w-full accent-awqaf-primary"
+                className="w-full accent-awqaf-primary h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
             </div>
 
-            <div className="flex items-center justify-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => seekBy(-60)}>
-                <RotateCcw className="w-4 h-4 mr-2" /> -1:00
+            <div className="flex items-center justify-center gap-6 pb-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full w-10 h-10 border-2"
+                onClick={() => seekBy(-15)}
+              >
+                <RotateCcw className="w-5 h-5 text-gray-600" />
               </Button>
-              <Button variant="default" size="sm" onClick={togglePlay}>
+
+              <Button
+                variant="default"
+                size="icon"
+                className="w-14 h-14 rounded-full shadow-lg bg-awqaf-primary hover:bg-awqaf-primary/90"
+                onClick={togglePlay}
+              >
                 {isPlaying ? (
-                  <>
-                    <Pause className="w-4 h-4 mr-2" /> Pause
-                  </>
+                  <Pause className="w-6 h-6 text-white fill-current" />
                 ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2" /> Play
-                  </>
+                  <Play className="w-6 h-6 text-white fill-current ml-1" />
                 )}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => seekBy(60)}>
-                <RotateCw className="w-4 h-4 mr-2" /> +1:00
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full w-10 h-10 border-2"
+                onClick={() => seekBy(15)}
+              >
+                <RotateCw className="w-5 h-5 text-gray-600" />
               </Button>
             </div>
           </CardContent>
