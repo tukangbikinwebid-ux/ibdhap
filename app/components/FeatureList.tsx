@@ -189,9 +189,9 @@ const features: Feature[] = [
     category: "Amal",
   },
   {
-    id: "surah",
-    name: "Surah",
-    description: "Template surah untuk membaca Al-Qur'an",
+    id: "surat",
+    name: "Surat",
+    description: "Template Surat untuk keperluan keagamaan",
     icon: UserCheck,
     href: "/template-surat",
     category: "Template",

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,71 +11,28 @@ import {
   User,
   ExternalLink,
   ArrowLeft,
-  Filter,
   Ticket,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
-
-// --- 1. TIPE DATA ---
-interface EventItem {
-  id: string;
-  event_name: string;
-  organizer: string;
-  date_start: string; // ISO String
-  location_name: string;
-  is_online: boolean;
-  link_registration: string;
-  category?: "Kajian" | "Webinar" | "Workshop"; // Opsional untuk UI
-}
-
-// --- 2. DATA DUMMY ---
-const EVENTS: EventItem[] = [
-  {
-    id: "EVT-001",
-    event_name: "Kajian Akbar: Menjemput Rezeki Berkah",
-    organizer: "Masjid Raya Al-Falah",
-    date_start: "2025-02-10T09:00:00",
-    location_name: "Aula Utama Masjid Raya Al-Falah, Jakarta",
-    is_online: false,
-    link_registration: "https://bit.ly/kajian-alfalah",
-    category: "Kajian",
-  },
-  {
-    id: "EVT-002",
-    event_name: "Webinar Fiqih Muamalah Kontemporer",
-    organizer: "Awqaf Academy",
-    date_start: "2025-02-15T19:30:00",
-    location_name: "Zoom Meeting",
-    is_online: true,
-    link_registration: "https://zoom.us/meeting/register",
-    category: "Webinar",
-  },
-  {
-    id: "EVT-003",
-    event_name: "Workshop Desain Dakwah Visual",
-    organizer: "Komunitas Pemuda Hijrah",
-    date_start: "2025-02-20T13:00:00",
-    location_name: "Co-working Space Tebet",
-    is_online: false,
-    link_registration: "https://ticket.com/workshop-dakwah",
-    category: "Workshop",
-  },
-  {
-    id: "EVT-004",
-    event_name: "Bedah Buku: Sirah Nabawiyah",
-    organizer: "Pustaka Ilmu",
-    date_start: "2025-02-25T15:30:00",
-    location_name: "Google Meet",
-    is_online: true,
-    link_registration: "https://meet.google.com/",
-    category: "Webinar",
-  },
-];
+import Image from "next/image";
+// Import Service & Type
+import { useGetEventsQuery } from "@/services/public/event.service";
 
 type FilterType = "all" | "online" | "offline";
 
 export default function EventPage() {
   const [filter, setFilter] = useState<FilterType>("all");
+
+  // Fetch Events from API
+  const {
+    data: eventsData,
+    isLoading,
+    isError,
+  } = useGetEventsQuery({
+    page: 1,
+    paginate: 20, // Fetch more items for client-side filtering if needed
+  });
 
   // Helper Format Tanggal & Jam
   const formatEventDate = (dateString: string) => {
@@ -97,12 +54,16 @@ export default function EventPage() {
   };
 
   // Filter Logic
-  const filteredEvents = EVENTS.filter((evt) => {
-    if (filter === "all") return true;
-    if (filter === "online") return evt.is_online;
-    if (filter === "offline") return !evt.is_online;
-    return true;
-  });
+  const filteredEvents = useMemo(() => {
+    if (!eventsData?.data) return [];
+
+    return eventsData.data.filter((evt) => {
+      if (filter === "all") return true;
+      if (filter === "online") return evt.is_online === 1; // API returns 1 for true
+      if (filter === "offline") return evt.is_online === 0; // API returns 0 for false
+      return true;
+    });
+  }, [eventsData, filter]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
@@ -158,15 +119,38 @@ export default function EventPage() {
 
         {/* Event List */}
         <div className="space-y-4">
-          {filteredEvents.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary mb-2" />
+              <p className="text-sm text-gray-500 font-comfortaa">
+                Memuat agenda...
+              </p>
+            </div>
+          ) : isError ? (
+            <div className="text-center py-12 text-red-500 font-comfortaa text-sm">
+              Gagal memuat data event.
+            </div>
+          ) : filteredEvents.length > 0 ? (
             filteredEvents.map((evt) => {
-              const dateInfo = formatEventDate(evt.date_start);
+              const dateInfo = formatEventDate(evt.start_date);
 
               return (
                 <Card
                   key={evt.id}
-                  className="overflow-hidden border-awqaf-border-light hover:shadow-md transition-shadow duration-200 group"
+                  className="overflow-hidden border-awqaf-border-light hover:shadow-md transition-shadow duration-200 group flex flex-col"
                 >
+                  {/* Optional Image Banner if available from API */}
+                  {evt.image && (
+                    <div className="relative h-32 w-full bg-gray-100">
+                      <Image
+                        src={evt.image}
+                        alt={evt.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+
                   <div className="flex">
                     {/* Left Column: Date Badge */}
                     <div className="w-20 bg-accent-50 border-r border-gray-100 flex flex-col items-center justify-center p-2 text-center shrink-0">
@@ -190,9 +174,9 @@ export default function EventPage() {
                             variant="outline"
                             className="text-[10px] border-accent-200 text-awqaf-primary bg-accent-50/50"
                           >
-                            {evt.category || "Event"}
+                            Event {/* API doesn't provide category name yet */}
                           </Badge>
-                          {evt.is_online ? (
+                          {evt.is_online === 1 ? (
                             <Badge className="text-[10px] bg-sky-100 text-sky-700 hover:bg-sky-200 border-0 px-1.5 h-5 gap-1">
                               <Video className="w-3 h-3" /> Online
                             </Badge>
@@ -204,8 +188,8 @@ export default function EventPage() {
                         </div>
 
                         {/* Title */}
-                        <h3 className="font-bold text-gray-800 text-base font-comfortaa leading-snug mb-2 group-hover:text-awqaf-primary transition-colors">
-                          {evt.event_name}
+                        <h3 className="font-bold text-gray-800 text-base font-comfortaa leading-snug mb-2 group-hover:text-awqaf-primary transition-colors line-clamp-2">
+                          {evt.title}
                         </h3>
 
                         {/* Organizer */}
@@ -218,29 +202,31 @@ export default function EventPage() {
 
                         {/* Location Text */}
                         <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                          {evt.is_online ? (
+                          {evt.is_online === 1 ? (
                             <Video className="w-3.5 h-3.5 text-sky-500" />
                           ) : (
                             <MapPin className="w-3.5 h-3.5 text-orange-500" />
                           )}
                           <span className="font-comfortaa line-clamp-1">
-                            {evt.location_name}
+                            {evt.location}
                           </span>
                         </div>
                       </div>
 
                       {/* Action Button */}
-                      <div className="mt-4 pt-3 border-t border-gray-100">
-                        <Button
-                          className="w-full h-8 text-xs font-comfortaa bg-white border border-awqaf-primary text-awqaf-primary hover:bg-awqaf-primary hover:text-white transition-all shadow-sm"
-                          onClick={() =>
-                            window.open(evt.link_registration, "_blank")
-                          }
-                        >
-                          Daftar Sekarang{" "}
-                          <ExternalLink className="w-3 h-3 ml-2" />
-                        </Button>
-                      </div>
+                      {evt.registration_link && (
+                        <div className="mt-4 pt-3 border-t border-gray-100">
+                          <Button
+                            className="w-full h-8 text-xs font-comfortaa bg-white border border-awqaf-primary text-awqaf-primary hover:bg-awqaf-primary hover:text-white transition-all shadow-sm"
+                            onClick={() =>
+                              window.open(evt.registration_link, "_blank")
+                            }
+                          >
+                            Daftar Sekarang{" "}
+                            <ExternalLink className="w-3 h-3 ml-2" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>

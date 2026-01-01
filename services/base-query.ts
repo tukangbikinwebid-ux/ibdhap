@@ -34,6 +34,8 @@ export const apiSlice = createApi({
     "UstadzList",
     "KajianList",
     "UstadzQnA",
+    "Events",
+    "TemplateLetters",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,108 +12,60 @@ import {
   Navigation,
   FileJson,
   FileType,
-  Filter,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
+// Import Services & Types
+import { useGetTemplateLettersQuery } from "@/services/public/template-surat.service";
+import Swal from "sweetalert2"; // Import SweetAlert2
 
-// 1. Definisi Tipe Data
-interface LetterTemplate {
-  id: string;
-  title: string;
-  description: string;
-  file_url: string;
-  file_type: "docx" | "pdf";
-  category: "nikah" | "wakaf" | "masjid" | "umum";
-  date_added: string;
-}
-
-// 2. Data Dummy (Bisa diganti fetch API nantinya)
-const TEMPLATES: LetterTemplate[] = [
-  {
-    id: "1",
-    title: "Surat Ikrar Wakaf",
-    description:
-      "Format standar surat pernyataan ikrar wakaf tanah untuk keperluan KUA.",
-    file_url: "/files/ikrar-wakaf.docx",
-    file_type: "docx",
-    category: "wakaf",
-    date_added: "2024-01-10",
-  },
-  {
-    id: "2",
-    title: "Formulir N1 - Pengantar Nikah",
-    description: "Formulir surat pengantar nikah dari Kelurahan/Desa.",
-    file_url: "/files/form-n1.pdf",
-    file_type: "pdf",
-    category: "nikah",
-    date_added: "2024-01-12",
-  },
-  {
-    id: "3",
-    title: "Surat Rekomendasi Nikah",
-    description:
-      "Surat rekomendasi nikah untuk calon pengantin yang menikah di luar kecamatan.",
-    file_url: "/files/rekomendasi-nikah.docx",
-    file_type: "docx",
-    category: "nikah",
-    date_added: "2024-01-15",
-  },
-  {
-    id: "4",
-    title: "Proposal Pembangunan Masjid",
-    description: "Template proposal pengajuan dana bantuan pembangunan masjid.",
-    file_url: "/files/proposal-masjid.docx",
-    file_type: "docx",
-    category: "masjid",
-    date_added: "2024-02-01",
-  },
-  {
-    id: "5",
-    title: "Surat Keterangan Tidak Mampu (SKTM)",
-    description:
-      "Format surat keterangan tidak mampu untuk keperluan administrasi umum.",
-    file_url: "/files/sktm.pdf",
-    file_type: "pdf",
-    category: "umum",
-    date_added: "2024-02-05",
-  },
-  {
-    id: "6",
-    title: "Sertifikat Wakaf Uang",
-    description: "Contoh desain dan format sertifikat wakaf uang tunai.",
-    file_url: "/files/sertifikat-wakaf.pdf",
-    file_type: "pdf",
-    category: "wakaf",
-    date_added: "2024-02-10",
-  },
-];
-
+// Categories untuk filter UI (Client side filtering)
+// Note: Idealnya kategori ini juga didapat dari API atau unique values dari data API
 const CATEGORIES = [
   { id: "all", label: "Semua" },
-  { id: "nikah", label: "Pernikahan" },
-  { id: "wakaf", label: "Wakaf" },
-  { id: "masjid", label: "Masjid" },
-  { id: "umum", label: "Umum" },
+  { id: "Nikah", label: "Pernikahan" },
+  { id: "Wakaf", label: "Wakaf" },
+  { id: "Masjid", label: "Masjid" },
+  { id: "Umum", label: "Umum" },
 ];
 
 export default function TemplateSuratPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Logic Filtering
-  const filteredTemplates = TEMPLATES.filter((item) => {
-    const matchCategory =
-      selectedCategory === "all" || item.category === selectedCategory;
-    const matchSearch =
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCategory && matchSearch;
+  // Fetch Data from API
+  const {
+    data: templateData,
+    isLoading,
+    isError,
+  } = useGetTemplateLettersQuery({
+    page: 1,
+    paginate: 100, // Fetch banyak untuk client-side filtering
   });
+
+  // Logic Filtering
+  const filteredTemplates = useMemo(() => {
+    if (!templateData?.data) return [];
+
+    return templateData.data.filter((item) => {
+      const matchCategory =
+        selectedCategory === "all" ||
+        item.category.toLowerCase() === selectedCategory.toLowerCase();
+
+      const q = searchQuery.toLowerCase();
+      const matchSearch =
+        item.title.toLowerCase().includes(q) ||
+        (item.description && item.description.toLowerCase().includes(q));
+
+      return matchCategory && matchSearch;
+    });
+  }, [templateData, selectedCategory, searchQuery]);
 
   // Helper untuk warna badge kategori
   const getCategoryColor = (cat: string) => {
-    switch (cat) {
+    const categoryLower = cat.toLowerCase();
+    switch (categoryLower) {
       case "nikah":
         return "bg-pink-100 text-pink-700 hover:bg-pink-200 border-pink-200";
       case "wakaf":
@@ -125,12 +77,26 @@ export default function TemplateSuratPage() {
     }
   };
 
-  // Helper untuk icon file
-  const getFileIcon = (type: "docx" | "pdf") => {
-    if (type === "pdf") {
+  // Helper untuk icon file berdasarkan ekstensi file attachment
+  const getFileIcon = (fileUrl: string) => {
+    if (fileUrl.endsWith(".pdf")) {
       return <FileType className="w-8 h-8 text-red-500" />;
     }
+    // Default docx/doc icon style
     return <FileText className="w-8 h-8 text-blue-600" />;
+  };
+
+  const handleDownload = (url: string) => {
+    if (!url) {
+      Swal.fire({
+        icon: "error",
+        title: "Gagal",
+        text: "Link download tidak tersedia",
+        confirmButtonColor: "#d33", // Optional: customize button color
+      });
+      return;
+    }
+    window.open(url, "_blank");
   };
 
   return (
@@ -194,7 +160,27 @@ export default function TemplateSuratPage() {
 
         {/* Results List */}
         <div className="space-y-4">
-          {filteredTemplates.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-10">
+              <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary mb-2" />
+              <p className="text-sm text-gray-500 font-comfortaa">
+                Memuat template...
+              </p>
+            </div>
+          ) : isError ? (
+            <div className="text-center py-10">
+              <p className="text-red-500 font-comfortaa mb-2">
+                Gagal memuat data.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.reload()}
+              >
+                Coba Lagi
+              </Button>
+            </div>
+          ) : filteredTemplates.length > 0 ? (
             filteredTemplates.map((template) => (
               <Card
                 key={template.id}
@@ -204,7 +190,7 @@ export default function TemplateSuratPage() {
                   <div className="flex items-start gap-4">
                     {/* Icon Container */}
                     <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 flex items-center justify-center shadow-sm shrink-0">
-                      {getFileIcon(template.file_type)}
+                      {getFileIcon(template.attachment)}
                     </div>
 
                     {/* Content */}
@@ -215,7 +201,7 @@ export default function TemplateSuratPage() {
                         </h3>
                       </div>
                       <p className="text-xs text-gray-500 font-comfortaa mt-1 line-clamp-2">
-                        {template.description}
+                        {template.description || "Tidak ada deskripsi"}
                       </p>
 
                       {/* Footer: Category & Action */}
@@ -226,16 +212,13 @@ export default function TemplateSuratPage() {
                             template.category
                           )}`}
                         >
-                          {template.category.charAt(0).toUpperCase() +
-                            template.category.slice(1)}
+                          {template.category}
                         </Badge>
 
                         <Button
                           size="sm"
                           className="h-7 px-3 text-xs bg-accent-50 text-awqaf-primary hover:bg-accent-100 hover:text-awqaf-primary border border-accent-100 font-comfortaa"
-                          onClick={() =>
-                            window.open(template.file_url, "_blank")
-                          }
+                          onClick={() => handleDownload(template.attachment)}
                         >
                           <Download className="w-3 h-3 mr-1.5" />
                           Unduh
@@ -262,7 +245,7 @@ export default function TemplateSuratPage() {
           )}
         </div>
 
-        {/* Promo / Info Banner (Optional aesthetic addition) */}
+        {/* Promo / Info Banner */}
         <Card className="bg-gradient-to-r from-awqaf-primary to-teal-600 border-none text-white overflow-hidden relative">
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-10 -mt-10" />
           <CardContent className="p-4 relative z-10">
