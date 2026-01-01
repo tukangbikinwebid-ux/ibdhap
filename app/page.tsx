@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import HijriDate from "./components/HijriDate";
 import WidgetCard from "./components/WidgetCard";
 import ProgressWidget from "./components/ProgressWidget";
@@ -13,8 +13,10 @@ import FeatureNavigation from "./components/FeatureNavigation";
 import ArticleCard from "./components/ArticleCard";
 import SearchModal from "./components/SearchModal";
 import NotificationButton from "./components/NotificationButton";
-// Import service API
+// Import Services
 import { useGetArticlesQuery } from "@/services/public/article.service";
+import { usePrayerTracker } from "@/app/prayer-tracker/hooks/usePrayerTracker";
+import { useGetSurahsQuery } from "@/services/public/quran.service"; // Tambahkan import ini
 
 export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -22,13 +24,51 @@ export default function Home() {
   const greeting =
     currentHour < 12 ? "Pagi" : currentHour < 18 ? "Siang" : "Malam";
 
+  // 1. Fetch Data
   const { data: articlesData, isLoading: isLoadingArticles } =
-    useGetArticlesQuery({
-      page: 1,
-      paginate: 10, // Ambil cukup banyak untuk memastikan kita dapat yang terbaru
-    });
+    useGetArticlesQuery({ page: 1, paginate: 10 });
 
-  // Format tanggal ke lokal Indonesia
+  // Fetch Surah List untuk mapping nama (biasanya cached)
+  const { data: surahList } = useGetSurahsQuery({ lang: "id" });
+
+  const { currentPrayerKey, prayerTimes } = usePrayerTracker();
+
+  // 2. Local State for Last Quran Activity
+  const [lastQuranActivity, setLastQuranActivity] = useState(
+    "Belum ada aktivitas"
+  );
+
+  useEffect(() => {
+    const lastRead = localStorage.getItem("quran-last-read");
+
+    if (lastRead) {
+      const parsed = JSON.parse(lastRead);
+      setLastQuranActivity(`${parsed.surahName} : Ayat ${parsed.verse}`);
+    } else {
+      // Fallback ke recent ID
+      const recent = localStorage.getItem("quran-recent");
+      if (recent) {
+        const arr = JSON.parse(recent);
+        if (arr.length > 0) {
+          const surahId = arr[0];
+          // Cari nama surat
+          const surahName = surahList?.find(
+            (s) => s.id === surahId
+          )?.transliteration;
+
+          // Gunakan nama jika ada, jika tidak fallback sementara ke ID
+          setLastQuranActivity(
+            surahName ? `Surah ${surahName}` : `Surah ke-${surahId}`
+          );
+        }
+      }
+    }
+  }, [surahList]); // Re-run ketika surahList tersedia
+
+  // ... (Sisa kode helpers formatDate, latestArticles, prayerWidgetData sama seperti sebelumnya)
+  // ... (Tidak ada perubahan pada helpers)
+
+  // Helpers (disertakan kembali agar lengkap)
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("id-ID", {
@@ -38,37 +78,56 @@ export default function Home() {
     });
   };
 
-  // Transform data API ke format yang dibutuhkan ArticleCard
   const latestArticles = useMemo(() => {
     if (!articlesData?.data) return [];
-
-    // Sorting manual by published_at desc (jika API belum sorting)
     const sorted = [...articlesData.data].sort(
       (a, b) =>
         new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
     );
 
     return sorted.slice(0, 3).map((artikel) => ({
-      id: artikel.id.toString(), // Konversi ke string jika ArticleCard butuh string
-      slug: artikel.id.toString(), // Atau artikel.slug jika ada
+      id: artikel.id.toString(),
+      slug: artikel.id.toString(),
       title: artikel.title,
-      // Strip HTML tags untuk excerpt
       excerpt:
         artikel.content.replace(/<[^>]*>?/gm, "").substring(0, 100) + "...",
       category: artikel.category.name,
-      readTime: "5 min", // Simulasi read time
-      views: "1.2K", // Simulasi views atau ambil dari API jika ada
+      readTime: "5 min",
+      views: "1.2K",
       publishedAt: formatDate(artikel.published_at),
       image: artikel.image,
     }));
   }, [articlesData]);
+
+  const prayerWidgetData = useMemo(() => {
+    if (!prayerTimes) return { title: "Memuat...", time: "--:--" };
+
+    const prayerNames: Record<string, string> = {
+      fajr: "Subuh",
+      dhuhr: "Dzuhur",
+      asr: "Ashar",
+      maghrib: "Maghrib",
+      isha: "Isya",
+    };
+
+    if (currentPrayerKey) {
+      return {
+        title: prayerNames[currentPrayerKey],
+        time: prayerTimes[currentPrayerKey],
+      };
+    }
+
+    return {
+      title: "Subuh",
+      time: prayerTimes.fajr,
+    };
+  }, [prayerTimes, currentPrayerKey]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
       {/* Header */}
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
-          {/* Background only for header content */}
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -89,9 +148,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right Side Actions */}
               <div className="flex items-center gap-2">
-                {/* DIRECT LINK TO STORE */}
                 <Link href="/store">
                   <Button
                     variant="ghost"
@@ -143,13 +200,13 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Widget Cards */}
+        {/* Widget Cards - REALTIME DATA */}
         <div className="grid grid-cols-2 gap-4">
           <WidgetCard
             type="prayer"
             title="Waktu Sholat"
-            subtitle="Dzuhur"
-            time="12:15"
+            subtitle={prayerWidgetData.title}
+            time={prayerWidgetData.time}
             status="current"
             icon={<Clock className="w-4 h-4 text-awqaf-primary" />}
           />
@@ -157,12 +214,12 @@ export default function Home() {
             type="activity"
             title="Aktivitas Terakhir"
             subtitle="Baca Al-Qur'an"
-            activity="Surah Al-Fatihah"
+            activity={lastQuranActivity}
             icon={<BookOpen className="w-4 h-4 text-info" />}
           />
         </div>
 
-        {/* Progress Widget */}
+        {/* Progress Widget - REALTIME DATA */}
         <ProgressWidget />
 
         {/* Feature Navigation */}
@@ -192,7 +249,6 @@ export default function Home() {
               </div>
             ) : latestArticles.length > 0 ? (
               latestArticles.map((article) => (
-                // Pastikan ArticleCard menerima prop sesuai struktur yang dimapping
                 <ArticleCard key={article.id} article={article} />
               ))
             ) : (

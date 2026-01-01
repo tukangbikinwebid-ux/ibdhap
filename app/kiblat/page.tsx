@@ -29,6 +29,11 @@ interface QiblaData {
   bearing?: number; // Optional, API might give precise direction
 }
 
+// Extend the standard DeviceOrientationEvent interface to include iOS properties
+interface DeviceOrientationEventiOS extends DeviceOrientationEvent {
+  webkitCompassHeading?: number;
+}
+
 // Helper to calculate distance manually if needed (Haversine)
 const calculateDistance = (
   lat1: number,
@@ -217,62 +222,51 @@ export default function QiblaPage() {
   useEffect(() => {
     if (!isCompassSupported || !isCompassEnabled) return;
 
-    const getScreenOrientation = (): number => {
-      const orientation: ScreenOrientation | number | undefined =
-        (window.screen as unknown as { orientation?: ScreenOrientation })
-          .orientation ||
-        (window as unknown as { orientation?: number }).orientation;
-      const angle =
-        typeof orientation === "object" && orientation
-          ? orientation.angle
-          : typeof orientation === "number"
-          ? orientation
-          : 0;
-      return typeof angle === "number" ? angle : 0;
-    };
+    let lastHeading: number | null = null;
 
-    const toCompassHeading = (alpha: number): number => {
-      // Convert device yaw (alpha, 0-360, clockwise from device top) to compass heading from North
-      // Many devices report alpha as 0 when facing North; adjust for screen rotation
-      const screenAngle = getScreenOrientation();
-      const heading = (alpha + screenAngle) % 360;
-      return heading < 0 ? heading + 360 : heading;
-    };
-
-    const handleOrientation = (
-      event: DeviceOrientationEvent & { webkitCompassHeading?: number }
-    ) => {
-      // Prefer iOS webkitCompassHeading if available
-      const webkitHeading = (
-        event as unknown as { webkitCompassHeading?: number }
-      ).webkitCompassHeading;
-      if (typeof webkitHeading === "number") {
-        setCompassHeading(webkitHeading);
-        return;
+    const smoothHeading = (value: number) => {
+      if (lastHeading === null) {
+        lastHeading = value;
+        return value;
       }
-      if (event.alpha != null) {
-        setCompassHeading(toCompassHeading(event.alpha));
+
+      const diff = ((value - lastHeading + 540) % 360) - 180;
+      lastHeading = (lastHeading + diff * 0.2 + 360) % 360;
+      return lastHeading;
+    };
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      let heading: number | null = null;
+
+      // ✅ iOS (Safari)
+      if (typeof event.webkitCompassHeading === "number") {
+        heading = event.webkitCompassHeading;
+      }
+      // ✅ Android / Chrome
+      else if (event.absolute && typeof event.alpha === "number") {
+        heading = (360 - event.alpha) % 360;
+      }
+
+      if (heading !== null) {
+        setCompassHeading(smoothHeading(heading));
       }
     };
 
-    // Some browsers emit 'deviceorientationabsolute'
     window.addEventListener(
       "deviceorientationabsolute",
-      handleOrientation as EventListener
+      handleOrientation,
+      true
     );
-    window.addEventListener(
-      "deviceorientation",
-      handleOrientation as EventListener
-    );
+
+    window.addEventListener("deviceorientation", handleOrientation, true);
+
     return () => {
       window.removeEventListener(
         "deviceorientationabsolute",
-        handleOrientation as EventListener
+        handleOrientation,
+        true
       );
-      window.removeEventListener(
-        "deviceorientation",
-        handleOrientation as EventListener
-      );
+      window.removeEventListener("deviceorientation", handleOrientation, true);
     };
   }, [isCompassSupported, isCompassEnabled]);
 
@@ -281,11 +275,23 @@ export default function QiblaPage() {
     if (!compassRef.current || !qiblaData) return;
 
     const hasLiveHeading = isCompassEnabled && compassHeading !== null;
+
+    // If live compass: needle rotates relative to device heading
+    // If no live compass: needle points to fixed Qibla direction (static north-up map style)
     const rotation = hasLiveHeading
-      ? (qiblaData.direction - (compassHeading as number) + 360) % 360
+      ? qiblaData.direction - (compassHeading as number)
       : qiblaData.direction;
 
-    compassRef.current.style.transform = `rotate(${rotation}deg)`;
+    // Use CSS transition for smooth movement
+    compassRef.current.style.transform = `translate(-50%, -100%) rotate(${rotation}deg)`;
+
+    // Also rotate the compass background to show North relative to device if live
+    const compassDial = document.getElementById("compass-dial");
+    if (compassDial && hasLiveHeading) {
+      compassDial.style.transform = `rotate(${-compassHeading}deg)`;
+    } else if (compassDial) {
+      compassDial.style.transform = `rotate(0deg)`;
+    }
   }, [isCompassEnabled, compassHeading, qiblaData]);
 
   const formatDistance = (distance: number): string => {
@@ -417,8 +423,11 @@ export default function QiblaPage() {
               {/* Compass */}
               <div className="relative w-48 h-48 mx-auto">
                 <div className="absolute inset-0 rounded-full border-4 border-awqaf-border-light bg-white shadow-lg">
-                  {/* Compass background */}
-                  <div className="absolute inset-2 rounded-full bg-gradient-to-br from-accent-50 to-accent-100">
+                  {/* Compass background (Rotates with phone heading) */}
+                  <div
+                    id="compass-dial"
+                    className="absolute inset-2 rounded-full bg-gradient-to-br from-accent-50 to-accent-100 transition-transform duration-300 ease-out"
+                  >
                     {/* Direction markers */}
                     {[0, 45, 90, 135, 180, 225, 270, 315].map(
                       (angle, index) => {
@@ -432,6 +441,7 @@ export default function QiblaPage() {
                           "B", // Barat
                           "BL", // Barat Laut
                         ];
+                        // Adjust angle so 0 (North) is at top (-90 degrees in CSS math)
                         const x =
                           50 + 40 * Math.cos(((angle - 90) * Math.PI) / 180);
                         const y =
@@ -439,7 +449,11 @@ export default function QiblaPage() {
                         return (
                           <div
                             key={angle}
-                            className="absolute text-xs font-bold text-awqaf-foreground-secondary"
+                            className={`absolute text-xs font-bold ${
+                              index === 0
+                                ? "text-red-500"
+                                : "text-awqaf-foreground-secondary"
+                            }`}
                             style={{
                               left: `${x}%`,
                               top: `${y}%`,
@@ -451,20 +465,26 @@ export default function QiblaPage() {
                         );
                       }
                     )}
-
-                    {/* Qibla direction indicator (needle) */}
-                    <div
-                      ref={compassRef}
-                      className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-1 h-20 bg-awqaf-primary rounded-full origin-bottom transition-transform duration-150"
-                    >
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-b-4 border-l-transparent border-r-transparent border-b-awqaf-primary"></div>
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-base leading-none select-none">
-                        🕋
-                      </div>
-                    </div>
-
                     {/* Center dot */}
-                    <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-awqaf-primary rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+                    <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-gray-300 rounded-full transform -translate-x-1/2 -translate-y-1/2 z-10"></div>
+                  </div>
+
+                  {/* Qibla Needle (Rotates to point to Kaaba) */}
+                  {/* We use a fixed overlay for the needle container, but rotate it via JS */}
+                  <div
+                    ref={compassRef}
+                    className="absolute top-1/2 left-1/2 w-1 h-20 bg-awqaf-primary rounded-full origin-bottom transition-transform duration-300 ease-out z-20"
+                    style={{
+                      transformOrigin: "bottom center",
+                      transform: "translate(-50%, -100%) rotate(0deg)",
+                    }}
+                  >
+                    {/* Arrow Head */}
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-awqaf-primary"></div>
+                    {/* Icon */}
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl leading-none select-none">
+                      🕋
+                    </div>
                   </div>
                 </div>
               </div>

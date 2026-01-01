@@ -59,6 +59,17 @@ export default function SurahDetailPage() {
     }
   }, [surahId]);
 
+  useEffect(() => {
+    if (surah) {
+      const data = {
+        surahName: surah.transliteration,
+        verse: 1, 
+        page: 1,
+      };
+      localStorage.setItem("quran-last-read", JSON.stringify(data));
+    }
+  }, [surah]);
+
   // Handle audio playback (Simple implementation using HTMLAudioElement)
   useEffect(() => {
     return () => {

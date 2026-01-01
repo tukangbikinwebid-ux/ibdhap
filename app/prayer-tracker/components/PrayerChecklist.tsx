@@ -1,10 +1,12 @@
 "use client";
 
-// no local state needed
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
+
+// 1. Definisikan tipe PrayerKey agar sesuai dengan keyof PrayerStatus
+export type PrayerKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
 
 interface PrayerTimes {
   fajr: string;
@@ -16,6 +18,7 @@ interface PrayerTimes {
 
 interface PrayerChecklistProps {
   prayerTimes: PrayerTimes;
+  // Gunakan Record<PrayerKey, boolean> atau definisikan manual, asalkan key-nya sesuai
   prayerStatus: {
     fajr: boolean;
     dhuhr: boolean;
@@ -23,7 +26,8 @@ interface PrayerChecklistProps {
     maghrib: boolean;
     isha: boolean;
   };
-  onPrayerToggle: (prayer: string) => void;
+  // 2. PERBAIKAN DI SINI: Ubah 'string' menjadi 'PrayerKey'
+  onPrayerToggle: (prayer: PrayerKey) => void;
   currentPrayer: string | null;
 }
 
@@ -33,7 +37,13 @@ export default function PrayerChecklist({
   onPrayerToggle,
   currentPrayer,
 }: PrayerChecklistProps) {
-  const prayers = [
+  // 3. Pastikan array prayers diketik dengan benar agar 'key' dianggap PrayerKey, bukan string biasa
+  const prayers: {
+    key: PrayerKey;
+    name: string;
+    arabic: string;
+    time: string;
+  }[] = [
     { key: "fajr", name: "Subuh", arabic: "الفجر", time: prayerTimes.fajr },
     { key: "dhuhr", name: "Dzuhur", arabic: "الظهر", time: prayerTimes.dhuhr },
     { key: "asr", name: "Ashar", arabic: "العصر", time: prayerTimes.asr },
@@ -47,7 +57,8 @@ export default function PrayerChecklist({
   ];
 
   const getPrayerStatus = (prayerKey: string) => {
-    const isCompleted = prayerStatus[prayerKey as keyof typeof prayerStatus];
+    // Casting keyof untuk akses object aman
+    const isCompleted = prayerStatus[prayerKey as PrayerKey];
     const isCurrent = currentPrayer === prayerKey;
 
     if (isCompleted) return "completed";
@@ -56,10 +67,9 @@ export default function PrayerChecklist({
   };
 
   const canCheckPrayer = (prayerKey: string) => {
-    const isCompleted = prayerStatus[prayerKey as keyof typeof prayerStatus];
+    const isCompleted = prayerStatus[prayerKey as PrayerKey];
     const isCurrent = currentPrayer === prayerKey;
 
-    // Can check if it's the current prayer time or if it's already completed (to uncheck)
     return isCurrent || isCompleted;
   };
 
@@ -121,8 +131,7 @@ export default function PrayerChecklist({
           {prayers.map((prayer) => {
             const status = getPrayerStatus(prayer.key);
             const canCheck = canCheckPrayer(prayer.key);
-            const isCompleted =
-              prayerStatus[prayer.key as keyof typeof prayerStatus];
+            const isCompleted = prayerStatus[prayer.key];
 
             return (
               <div
@@ -136,6 +145,7 @@ export default function PrayerChecklist({
                     ? "ring-2 ring-warning/20 bg-warning/5"
                     : ""
                 }`}
+                // Tidak perlu arrow function anonim jika parameternya sama, tapi agar aman:
                 onClick={() => canCheck && onPrayerToggle(prayer.key)}
               >
                 <div className="flex items-center gap-3">

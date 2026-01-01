@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -10,115 +9,21 @@ import PrayerProgress from "./components/PrayerProgress";
 import PrayerChecklist from "./components/PrayerChecklist";
 import MonthlyProgress from "./components/MonthlyProgress";
 import { usePrayerTracker } from "./hooks/usePrayerTracker";
-
-interface Location {
-  id: string;
-  name: string;
-  city: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-  timezone: string;
-}
-
-interface PrayerTimes {
-  fajr: string;
-  dhuhr: string;
-  asr: string;
-  maghrib: string;
-  isha: string;
-}
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function PrayerTrackerPage() {
   const {
+    todayData,
     dailyData,
+    prayerTimes,
+    currentPrayerKey,
+    selectedLocation,
     isLoading,
     setSelectedLocation,
     togglePrayer,
-    todayData,
-    canCheckPrayer,
   } = usePrayerTracker();
 
-  const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null);
-  const [currentPrayer, setCurrentPrayer] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"today" | "monthly">("today");
-
-  // Update current prayer when prayer times change
-  useEffect(() => {
-    if (prayerTimes) {
-      const now = new Date();
-      const currentTime = now.getHours() * 60 + now.getMinutes();
-
-      const prayerTimesInMinutes = {
-        fajr: parseTimeToMinutes(prayerTimes.fajr),
-        dhuhr: parseTimeToMinutes(prayerTimes.dhuhr),
-        asr: parseTimeToMinutes(prayerTimes.asr),
-        maghrib: parseTimeToMinutes(prayerTimes.maghrib),
-        isha: parseTimeToMinutes(prayerTimes.isha),
-      };
-
-      // Handle after Isya until before Fajr as "isha"
-      if (
-        currentTime >= prayerTimesInMinutes.isha ||
-        currentTime < prayerTimesInMinutes.fajr
-      ) {
-        setCurrentPrayer("isha");
-        return;
-      }
-
-      if (
-        currentTime >= prayerTimesInMinutes.fajr &&
-        currentTime < prayerTimesInMinutes.dhuhr
-      ) {
-        setCurrentPrayer("fajr");
-        return;
-      }
-      if (
-        currentTime >= prayerTimesInMinutes.dhuhr &&
-        currentTime < prayerTimesInMinutes.asr
-      ) {
-        setCurrentPrayer("dhuhr");
-        return;
-      }
-      if (
-        currentTime >= prayerTimesInMinutes.asr &&
-        currentTime < prayerTimesInMinutes.maghrib
-      ) {
-        setCurrentPrayer("asr");
-        return;
-      }
-      if (
-        currentTime >= prayerTimesInMinutes.maghrib &&
-        currentTime < prayerTimesInMinutes.isha
-      ) {
-        setCurrentPrayer("maghrib");
-        return;
-      }
-    }
-  }, [prayerTimes]);
-
-  const handleLocationChange = (location: Location) => {
-    setSelectedLocation(location);
-  };
-
-  const handlePrayerTimesChange = (times: PrayerTimes) => {
-    setPrayerTimes(times);
-  };
-
-  const handlePrayerToggle = (prayer: string) => {
-    if (
-      canCheckPrayer(prayer as keyof typeof todayData.prayers, currentPrayer)
-    ) {
-      togglePrayer(prayer as keyof typeof todayData.prayers);
-    }
-  };
-
-  // removed clear/export handlers per requirements
-
-  const parseTimeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + minutes;
-  };
 
   if (isLoading) {
     return (
@@ -126,7 +31,7 @@ export default function PrayerTrackerPage() {
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-awqaf-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-awqaf-foreground-secondary font-comfortaa">
-            Memuat data...
+            Memuat jadwal sholat...
           </p>
         </div>
       </div>
@@ -159,17 +64,16 @@ export default function PrayerTrackerPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2"></div>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        {/* Location Selector */}
+        {/* Location Selector (Auto API) */}
         <LocationSelector
-          onLocationChange={handleLocationChange}
-          onPrayerTimesChange={handlePrayerTimesChange}
+          currentLocation={selectedLocation}
+          onLocationChange={setSelectedLocation}
         />
 
         {/* Tab Navigation */}
@@ -208,17 +112,21 @@ export default function PrayerTrackerPage() {
               completedPrayers={todayData.completedPrayers}
               totalPrayers={todayData.totalPrayers}
               prayerStatus={todayData.prayers}
-              currentPrayer={currentPrayer}
+              currentPrayer={currentPrayerKey}
             />
 
             {/* Prayer Checklist */}
-            {prayerTimes && (
+            {prayerTimes ? (
               <PrayerChecklist
                 prayerTimes={prayerTimes}
                 prayerStatus={todayData.prayers}
-                onPrayerToggle={handlePrayerToggle}
-                currentPrayer={currentPrayer}
+                onPrayerToggle={togglePrayer}
+                currentPrayer={currentPrayerKey}
               />
+            ) : (
+              <div className="text-center py-4 text-sm text-gray-500">
+                Gagal memuat jadwal sholat. Periksa koneksi internet.
+              </div>
             )}
           </div>
         )}
@@ -228,10 +136,7 @@ export default function PrayerTrackerPage() {
           <div className="space-y-6">
             <MonthlyProgress
               monthlyData={dailyData}
-              onDateSelect={(date) => {
-                // Handle date selection if needed
-                console.log("Selected date:", date);
-              }}
+              onDateSelect={(date) => console.log("Selected date:", date)}
             />
           </div>
         )}
