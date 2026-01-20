@@ -11,6 +11,7 @@ import {
   BookmarkCheck,
   Share2,
   Settings,
+  RotateCcw,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,9 +42,7 @@ export default function SurahDetailPage() {
   });
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [bookmarkedVerses, setBookmarkedVerses] = useState<number[]>([]);
   const [fontSize, setFontSize] = useState<"sm" | "md" | "lg">("md");
@@ -70,37 +69,84 @@ export default function SurahDetailPage() {
     }
   }, [surah]);
 
-  // Handle audio playback (Simple implementation using HTMLAudioElement)
+  // Initialize audio when surah data is loaded or changed
   useEffect(() => {
-    return () => {
-      // Cleanup audio saat unmount
-      if (currentAudio) {
-        currentAudio.pause();
-      }
-    };
-  }, [currentAudio]);
-
-  const handlePlayPause = () => {
     if (!surah) return;
 
-    if (isPlaying && currentAudio) {
-      currentAudio.pause();
+    const audioUrl = surah.audio["1"]?.url;
+    if (!audioUrl) return;
+
+    // Cleanup previous audio if exists
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setIsPlaying(false);
+    }
+
+    // Create new audio instance
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+
+    // Handle audio events
+    audio.onended = () => {
+      setIsPlaying(false);
+    };
+
+    audio.onerror = () => {
+      setIsPlaying(false);
+      alert("Error memutar audio. Silakan coba lagi.");
+    };
+
+    // Cleanup audio saat unmount atau surah berubah
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+        setIsPlaying(false);
+      }
+    };
+  }, [surah]);
+
+  // Cleanup audio saat unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const handlePlayPause = () => {
+    if (!audioRef.current) {
+      alert("Audio tidak tersedia untuk surah ini.");
+      return;
+    }
+
+    if (isPlaying) {
+      // Pause audio - akan melanjutkan dari posisi ini saat play lagi
+      audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      // Menggunakan audio reciter pertama (misal Mishary Rashid - key "1")
-      // Sesuaikan key jika API mengembalikan key lain
-      const audioUrl = surah.audio["1"]?.url;
+      // Resume audio from current position (atau mulai dari awal jika belum pernah diputar)
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch((error) => {
+          console.error("Error playing audio:", error);
+          alert("Gagal memutar audio. Silakan coba lagi.");
+          setIsPlaying(false);
+        });
+    }
+  };
 
-      if (audioUrl) {
-        const audio = new Audio(audioUrl);
-        setCurrentAudio(audio);
-        audio.play();
-        setIsPlaying(true);
-
-        audio.onended = () => setIsPlaying(false);
-      } else {
-        alert("Audio tidak tersedia untuk surah ini.");
-      }
+  const handleReset = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0; // Reset to beginning
+      setIsPlaying(false);
     }
   };
 
@@ -290,19 +336,30 @@ export default function SurahDetailPage() {
                 </div>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePlayPause}
-                className="border-awqaf-border-light hover:bg-accent-100 font-comfortaa"
-              >
-                {isPlaying ? (
-                  <Pause className="w-4 h-4 mr-2" />
-                ) : (
-                  <Play className="w-4 h-4 mr-2" />
-                )}
-                {isPlaying ? "Pause" : "Play Audio"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePlayPause}
+                  className="border-awqaf-border-light hover:bg-accent-100 font-comfortaa"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Play className="w-4 h-4 mr-2" />
+                  )}
+                  {isPlaying ? "Pause" : "Play Audio"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="border-awqaf-border-light hover:bg-accent-100 font-comfortaa"
+                  title="Reset Audio"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center gap-4 text-sm text-awqaf-foreground-secondary font-comfortaa">

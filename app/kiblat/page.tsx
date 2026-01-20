@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,7 +12,10 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
-  Globe,
+  Info,
+  ArrowLeft,
+  Target,
+  Smartphone,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -69,13 +72,19 @@ export default function QiblaPage() {
   >("unknown");
   const [isCompassSupported, setIsCompassSupported] = useState(false);
   const [isCompassEnabled, setIsCompassEnabled] = useState(false);
+  const [accuracy, setAccuracy] = useState<"high" | "medium" | "low" | null>(null);
+  const [isAligned, setIsAligned] = useState(false);
   const compassRef = useRef<HTMLDivElement>(null);
 
-  // Check if device supports device orientation
+  // Check if device supports device orientation and auto-get location
   useEffect(() => {
     if (typeof window !== "undefined" && "DeviceOrientationEvent" in window) {
       setIsCompassSupported(true);
     }
+
+    // Auto-detect location on page load
+    getCurrentLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch Qibla Direction from API
@@ -135,7 +144,7 @@ export default function QiblaPage() {
   };
 
   // Get user location
-  const getCurrentLocation = async () => {
+  const getCurrentLocation = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -148,13 +157,22 @@ export default function QiblaPage() {
         (resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000, // 5 minutes
+            timeout: 15000,
+            maximumAge: 60000, // 1 minute for fresher data
           });
         }
       );
 
-      const { latitude, longitude } = position.coords;
+      const { latitude, longitude, accuracy: posAccuracy } = position.coords;
+
+      // Set accuracy level based on GPS accuracy
+      if (posAccuracy && posAccuracy < 50) {
+        setAccuracy("high");
+      } else if (posAccuracy && posAccuracy < 100) {
+        setAccuracy("medium");
+      } else {
+        setAccuracy("low");
+      }
 
       // Reverse geocoding to get city name
       try {
@@ -184,16 +202,26 @@ export default function QiblaPage() {
 
       setPermissionStatus("granted");
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Terjadi kesalahan saat mendapatkan lokasi";
+      const geoError = err as GeolocationPositionError;
+      let errorMessage = "Terjadi kesalahan saat mendapatkan lokasi";
+
+      if (geoError.code === 1) {
+        errorMessage =
+          "Akses lokasi ditolak. Silakan izinkan akses lokasi di pengaturan browser.";
+      } else if (geoError.code === 2) {
+        errorMessage = "Lokasi tidak tersedia. Pastikan GPS aktif.";
+      } else if (geoError.code === 3) {
+        errorMessage = "Timeout mendapatkan lokasi. Silakan coba lagi.";
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
       setError(errorMessage);
       setPermissionStatus("denied");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Request permission (iOS) and enable compass
   const enableCompass = async () => {
@@ -270,7 +298,7 @@ export default function QiblaPage() {
     };
   }, [isCompassSupported, isCompassEnabled]);
 
-  // Update needle rotation towards Qibla
+  // Update needle rotation towards Qibla and check alignment
   useEffect(() => {
     if (!compassRef.current || !qiblaData) return;
 
@@ -281,6 +309,20 @@ export default function QiblaPage() {
     const rotation = hasLiveHeading
       ? qiblaData.direction - (compassHeading as number)
       : qiblaData.direction;
+
+    // Normalize rotation to 0-360
+    const normalizedRotation = ((rotation % 360) + 360) % 360;
+
+    // Check if device is aligned with Qibla (within 5 degrees)
+    if (hasLiveHeading) {
+      const alignmentThreshold = 10;
+      const isNowAligned =
+        normalizedRotation < alignmentThreshold ||
+        normalizedRotation > 360 - alignmentThreshold;
+      setIsAligned(isNowAligned);
+    } else {
+      setIsAligned(false);
+    }
 
     // Use CSS transition for smooth movement
     compassRef.current.style.transform = `translate(-50%, -100%) rotate(${rotation}deg)`;
@@ -316,6 +358,33 @@ export default function QiblaPage() {
     return directions[index];
   };
 
+  // Get accuracy badge color
+  const getAccuracyColor = () => {
+    switch (accuracy) {
+      case "high":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "medium":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "low":
+        return "bg-red-100 text-red-700 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  };
+
+  const getAccuracyText = () => {
+    switch (accuracy) {
+      case "high":
+        return "Akurasi Tinggi";
+      case "medium":
+        return "Akurasi Sedang";
+      case "low":
+        return "Akurasi Rendah";
+      default:
+        return "Mendeteksi...";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
       {/* Header */}
@@ -329,12 +398,19 @@ export default function QiblaPage() {
                   size="sm"
                   className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200"
                 >
-                  <Navigation className="w-5 h-5" />
+                  <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
-              <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Arah Kiblat
-              </h1>
+              <div className="text-center">
+                <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
+                  Arah Kiblat
+                </h1>
+                {location && (
+                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                    {location.city}
+                  </p>
+                )}
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -354,242 +430,322 @@ export default function QiblaPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        {/* Location Status */}
-        <Card className="border-awqaf-border-light">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-awqaf-primary" />
+        {/* Loading State */}
+        {isLoading && !qiblaData && (
+          <Card className="border-awqaf-border-light">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <Navigation className="w-8 h-8 text-awqaf-primary" />
               </div>
-              <div className="flex-1">
-                {location ? (
-                  <div>
-                    <p className="font-medium text-card-foreground font-comfortaa">
-                      {location.city}, {location.country}
-                    </p>
-                    <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      {location.latitude.toFixed(4)},{" "}
-                      {location.longitude.toFixed(4)}
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="font-medium text-card-foreground font-comfortaa">
-                      Lokasi belum terdeteksi
-                    </p>
-                    <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      Tekan tombol refresh untuk mendapatkan lokasi
-                    </p>
-                  </div>
-                )}
-              </div>
-              {permissionStatus === "granted" && (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              )}
-              {permissionStatus === "denied" && (
-                <AlertCircle className="w-5 h-5 text-red-600" />
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
+                Mendeteksi Lokasi...
+              </h3>
+              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
+                Pastikan GPS aktif dan izinkan akses lokasi
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Error Message */}
         {error && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <div>
-                  <p className="font-medium text-red-800 font-comfortaa">
-                    Error
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-red-800 font-comfortaa mb-1">
+                    Gagal Mendapatkan Lokasi
                   </p>
-                  <p className="text-sm text-red-700 font-comfortaa">{error}</p>
+                  <p className="text-sm text-red-700 font-comfortaa mb-3">
+                    {error}
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={getCurrentLocation}
+                    className="bg-red-600 hover:bg-red-700 text-white font-comfortaa"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Coba Lagi
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Qibla Direction */}
+        {/* Main Compass Card */}
         {qiblaData && (
-          <Card className="border-awqaf-border-light">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-comfortaa flex items-center gap-2">
-                <Compass className="w-5 h-5 text-awqaf-primary" />
-                Arah Kiblat
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <Card
+            className={`border-2 transition-all duration-300 ${
+              isAligned
+                ? "border-green-400 bg-green-50/50 shadow-lg shadow-green-100"
+                : "border-awqaf-border-light"
+            }`}
+          >
+            <CardContent className="p-6">
+              {/* Alignment Status */}
+              {isCompassEnabled && (
+                <div
+                  className={`text-center mb-4 py-2 px-4 rounded-full transition-all duration-300 ${
+                    isAligned
+                      ? "bg-green-100 text-green-700"
+                      : "bg-accent-100 text-awqaf-foreground-secondary"
+                  }`}
+                >
+                  <p className="text-sm font-semibold font-comfortaa flex items-center justify-center gap-2">
+                    {isAligned ? (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        Anda Menghadap Kiblat!
+                      </>
+                    ) : (
+                      <>
+                        <Target className="w-4 h-4" />
+                        Putar perangkat ke arah jarum
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
+
               {/* Compass */}
-              <div className="relative w-48 h-48 mx-auto">
-                <div className="absolute inset-0 rounded-full border-4 border-awqaf-border-light bg-white shadow-lg">
+              <div className="relative w-64 h-64 mx-auto mb-6">
+                {/* Outer ring with degree markers */}
+                <div
+                  className={`absolute inset-0 rounded-full border-4 transition-colors duration-300 ${
+                    isAligned ? "border-green-400" : "border-awqaf-border-light"
+                  } bg-white shadow-xl`}
+                >
                   {/* Compass background (Rotates with phone heading) */}
                   <div
                     id="compass-dial"
-                    className="absolute inset-2 rounded-full bg-gradient-to-br from-accent-50 to-accent-100 transition-transform duration-300 ease-out"
+                    className="absolute inset-2 rounded-full bg-gradient-to-br from-white to-accent-50 transition-transform duration-200 ease-out"
                   >
-                    {/* Direction markers */}
-                    {[0, 45, 90, 135, 180, 225, 270, 315].map(
-                      (angle, index) => {
-                        const directions = [
-                          "U", // Utara
-                          "TL", // Timur Laut
-                          "T", // Timur
-                          "TG", // Tenggara
-                          "S", // Selatan
-                          "BD", // Barat Daya
-                          "B", // Barat
-                          "BL", // Barat Laut
-                        ];
-                        // Adjust angle so 0 (North) is at top (-90 degrees in CSS math)
-                        const x =
-                          50 + 40 * Math.cos(((angle - 90) * Math.PI) / 180);
-                        const y =
-                          50 + 40 * Math.sin(((angle - 90) * Math.PI) / 180);
-                        return (
-                          <div
-                            key={angle}
-                            className={`absolute text-xs font-bold ${
-                              index === 0
-                                ? "text-red-500"
-                                : "text-awqaf-foreground-secondary"
-                            }`}
-                            style={{
-                              left: `${x}%`,
-                              top: `${y}%`,
-                              transform: "translate(-50%, -50%)",
-                            }}
-                          >
-                            {directions[index]}
-                          </div>
-                        );
-                      }
-                    )}
-                    {/* Center dot */}
-                    <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-gray-300 rounded-full transform -translate-x-1/2 -translate-y-1/2 z-10"></div>
+                    {/* Degree tick marks */}
+                    {Array.from({ length: 72 }).map((_, i) => {
+                      const angle = i * 5;
+                      const isMajor = angle % 45 === 0;
+                      const isCardinal = angle % 90 === 0;
+                      return (
+                        <div
+                          key={angle}
+                          className={`absolute left-1/2 ${
+                            isCardinal
+                              ? "h-3 w-0.5 bg-awqaf-primary"
+                              : isMajor
+                              ? "h-2 w-0.5 bg-awqaf-foreground-secondary"
+                              : "h-1 w-px bg-gray-300"
+                          }`}
+                          style={{
+                            top: "4px",
+                            transformOrigin: "center 122px",
+                            transform: `translateX(-50%) rotate(${angle}deg)`,
+                          }}
+                        />
+                      );
+                    })}
+
+                    {/* Direction labels */}
+                    {[
+                      { angle: 0, label: "U", color: "text-red-500" },
+                      { angle: 90, label: "T", color: "text-awqaf-primary" },
+                      { angle: 180, label: "S", color: "text-awqaf-primary" },
+                      { angle: 270, label: "B", color: "text-awqaf-primary" },
+                    ].map(({ angle, label, color }) => {
+                      const x = 50 + 35 * Math.cos(((angle - 90) * Math.PI) / 180);
+                      const y = 50 + 35 * Math.sin(((angle - 90) * Math.PI) / 180);
+                      return (
+                        <div
+                          key={angle}
+                          className={`absolute text-sm font-bold ${color}`}
+                          style={{
+                            left: `${x}%`,
+                            top: `${y}%`,
+                            transform: "translate(-50%, -50%)",
+                          }}
+                        >
+                          {label}
+                        </div>
+                      );
+                    })}
+
+                    {/* Center circle */}
+                    <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-gradient-to-br from-gray-200 to-gray-400 rounded-full transform -translate-x-1/2 -translate-y-1/2 z-10 shadow-inner" />
                   </div>
 
-                  {/* Qibla Needle (Rotates to point to Kaaba) */}
-                  {/* We use a fixed overlay for the needle container, but rotate it via JS */}
+                  {/* Qibla Needle */}
                   <div
                     ref={compassRef}
-                    className="absolute top-1/2 left-1/2 w-1 h-20 bg-awqaf-primary rounded-full origin-bottom transition-transform duration-300 ease-out z-20"
+                    className={`absolute top-1/2 left-1/2 w-1.5 h-24 rounded-full origin-bottom transition-transform duration-200 ease-out z-20 ${
+                      isAligned
+                        ? "bg-gradient-to-t from-green-500 to-green-400"
+                        : "bg-gradient-to-t from-awqaf-primary to-awqaf-primary/80"
+                    }`}
                     style={{
                       transformOrigin: "bottom center",
                       transform: "translate(-50%, -100%) rotate(0deg)",
                     }}
                   >
                     {/* Arrow Head */}
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-awqaf-primary"></div>
-                    {/* Icon */}
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl leading-none select-none">
+                    <div
+                      className={`absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-l-transparent border-r-transparent ${
+                        isAligned ? "border-b-green-500" : "border-b-awqaf-primary"
+                      }`}
+                    />
+                    {/* Kaaba Icon */}
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-2xl leading-none select-none drop-shadow-md">
                       🕋
                     </div>
                   </div>
+
+                  {/* Device Direction Indicator (shows where device is pointing) */}
+                  {isCompassEnabled && (
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full z-30 shadow-md">
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-r-[4px] border-b-[6px] border-l-transparent border-r-transparent border-b-blue-500" />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Enable compass button for iOS permission or when disabled */}
-              {isCompassSupported && !isCompassEnabled && (
-                <div className="text-center">
-                  <Button size="sm" variant="outline" onClick={enableCompass}>
-                    Aktifkan Kompas Real-time
-                  </Button>
-                  <p className="mt-2 text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Pada beberapa perangkat (iOS), Anda perlu memberi izin
-                    sensor.
-                  </p>
-                </div>
-              )}
-
               {/* Qibla Information */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                    Arah
-                  </p>
-                  <p className="text-lg font-bold text-awqaf-primary font-comfortaa">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-3 bg-accent-50 rounded-xl">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Compass className="w-4 h-4 text-awqaf-primary" />
+                    <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                      Arah Kiblat
+                    </p>
+                  </div>
+                  <p className="text-xl font-bold text-awqaf-primary font-comfortaa">
                     {qiblaData.direction.toFixed(1)}°
                   </p>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs mt-1">
                     {getDirectionText(qiblaData.direction)}
                   </Badge>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                    Jarak ke Kaaba
-                  </p>
-                  <p className="text-lg font-bold text-awqaf-primary font-comfortaa">
+                <div className="text-center p-3 bg-accent-50 rounded-xl">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <MapPin className="w-4 h-4 text-awqaf-primary" />
+                    <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                      Jarak ke Ka&apos;bah
+                    </p>
+                  </div>
+                  <p className="text-xl font-bold text-awqaf-primary font-comfortaa">
                     {formatDistance(qiblaData.distance)}
                   </p>
                 </div>
+              </div>
+
+              {/* Enable Compass Button */}
+              {isCompassSupported && !isCompassEnabled && (
+                <Button
+                  onClick={enableCompass}
+                  className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white font-comfortaa"
+                >
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Aktifkan Kompas Real-time
+                </Button>
+              )}
+
+              {/* Compass Status */}
+              {isCompassEnabled && (
+                <div className="flex items-center justify-center gap-2 text-sm text-awqaf-foreground-secondary font-comfortaa">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span>Kompas aktif - Gerakkan perangkat Anda</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Location & Accuracy Info */}
+        {location && (
+          <Card className="border-awqaf-border-light">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-awqaf-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-card-foreground font-comfortaa">
+                      {location.city}, {location.country}
+                    </p>
+                    <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                      {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                    </p>
+                  </div>
+                </div>
+                <Badge className={`${getAccuracyColor()} border`}>
+                  {getAccuracyText()}
+                </Badge>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Compass Support Info */}
-        <Card className="border-awqaf-border-light">
+        {/* Quick Tips */}
+        <Card className="border-awqaf-border-light bg-gradient-to-br from-accent-50 to-white">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center">
-                <Globe className="w-5 h-5 text-awqaf-primary" />
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-awqaf-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <Info className="w-4 h-4 text-awqaf-primary" />
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-card-foreground font-comfortaa">
-                  Kompas Digital
+              <div>
+                <p className="font-semibold text-card-foreground font-comfortaa text-sm mb-2">
+                  Tips Akurasi Maksimal
                 </p>
-                <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                  {isCompassSupported
-                    ? isCompassEnabled
-                      ? "Kompas digital aktif. Jarum bergerak real-time."
-                      : "Kompas digital tersedia. Aktifkan untuk arah real-time."
-                    : "Kompas digital tidak tersedia di perangkat ini"}
-                </p>
+                <ul className="text-xs text-awqaf-foreground-secondary font-comfortaa space-y-1">
+                  <li className="flex items-start gap-2">
+                    <span className="text-awqaf-primary">•</span>
+                    Aktifkan GPS/Lokasi di pengaturan perangkat
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-awqaf-primary">•</span>
+                    Jauhkan dari benda logam atau magnet
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-awqaf-primary">•</span>
+                    Kalibrasi kompas dengan gerakan angka 8
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-awqaf-primary">•</span>
+                    Pegang perangkat secara horizontal
+                  </li>
+                </ul>
               </div>
-              {isCompassSupported ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-yellow-600" />
-              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Instructions */}
-        <Card className="border-awqaf-border-light">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-comfortaa">
-              Cara Menggunakan
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-awqaf-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
-                1
+        {/* Calibration Guide */}
+        {isCompassSupported && isCompassEnabled && (
+          <Card className="border-awqaf-border-light">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-card-foreground font-comfortaa text-sm mb-1">
+                    Kalibrasi Kompas
+                  </p>
+                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-2">
+                    Jika jarum tidak akurat, gerakkan perangkat membentuk angka 8
+                    di udara beberapa kali untuk mengkalibrasi sensor kompas.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="text-2xl">∞</div>
+                    <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                      Gerakan kalibrasi
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                Tekan tombol refresh untuk mendapatkan lokasi Anda
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-awqaf-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
-                2
-              </div>
-              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                Arahkan perangkat ke arah yang ditunjukkan oleh panah merah
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-awqaf-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
-                3
-              </div>
-              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                Untuk akurasi maksimal, gunakan kompas digital jika tersedia
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );

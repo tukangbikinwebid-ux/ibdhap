@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Clock,
   MapPin,
@@ -9,6 +9,12 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  Bell,
+  BellOff,
+  Volume2,
+  VolumeX,
+  Play,
+  Square,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +46,14 @@ interface AladhanResponse {
   };
 }
 
+// Popular Adhan Audio URL - Mishary Rashid Alafasy (most popular reciter worldwide)
+// Using multiple fallback URLs for reliability
+const ADHAN_URLS = [
+  "https://www.islamcan.com/audio/adhan/azan1.mp3", // Full Adhan - Makkah style
+  "https://media.sd.ma/assabile/adhan_3435/8bdb88c0b65f.mp3", // Mishary Rashid Alafasy
+  "https://cdn.aladhan.com/audio/mishary/adhan.mp3", // Aladhan CDN fallback
+];
+
 export default function SholatPage() {
   const [location, setLocation] = useState<Location | null>(null);
   const [prayerTimes, setPrayerTimes] = useState<PrayerTime[]>([]);
@@ -48,6 +62,20 @@ export default function SholatPage() {
   const [permissionStatus, setPermissionStatus] = useState<
     "granted" | "denied" | "prompt" | "unknown"
   >("unknown");
+
+  // Adhan Reminder States
+  const [isAdhanEnabled, setIsAdhanEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<
+    "granted" | "denied" | "default"
+  >("default");
+  const [isAdhanPlaying, setIsAdhanPlaying] = useState(false);
+  const [currentAdhanPrayer, setCurrentAdhanPrayer] = useState<string | null>(
+    null
+  );
+
+  // Refs
+  const adhanAudioRef = useRef<HTMLAudioElement | null>(null);
+  const adhanTimersRef = useRef<NodeJS.Timeout[]>([]);
 
   // Helper to determine status based on current time and prayer time
   const getPrayerStatus = (
@@ -238,7 +266,219 @@ export default function SholatPage() {
     } else {
       setError("Geolocation tidak didukung oleh browser ini");
     }
+
+    // Load adhan preference from localStorage
+    const savedAdhanPref = localStorage.getItem("adhan-reminder-enabled");
+    if (savedAdhanPref === "true") {
+      setIsAdhanEnabled(true);
+    }
+
+    // Check notification permission
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    // Initialize audio element with fallback
+    const initAudio = () => {
+      const audio = new Audio(ADHAN_URLS[0]);
+      audio.preload = "auto";
+
+      // Add error handler to try fallback URLs
+      let currentUrlIndex = 0;
+      audio.onerror = () => {
+        currentUrlIndex++;
+        if (currentUrlIndex < ADHAN_URLS.length) {
+          audio.src = ADHAN_URLS[currentUrlIndex];
+          audio.load();
+        }
+      };
+
+      return audio;
+    };
+
+    adhanAudioRef.current = initAudio();
+
+    // Cleanup on unmount
+    return () => {
+      // Clear all timers
+      adhanTimersRef.current.forEach((timer) => clearTimeout(timer));
+      adhanTimersRef.current = [];
+
+      // Stop and cleanup audio
+      if (adhanAudioRef.current) {
+        adhanAudioRef.current.pause();
+        adhanAudioRef.current = null;
+      }
+    };
   }, []);
+
+  // Play Adhan function
+  const playAdhan = useCallback((prayerName: string) => {
+    if (!adhanAudioRef.current) {
+      adhanAudioRef.current = new Audio(ADHAN_URLS[0]);
+    }
+
+    setCurrentAdhanPrayer(prayerName);
+    setIsAdhanPlaying(true);
+
+    // Show notification
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(`Waktu ${prayerName}`, {
+        body: `Saatnya menunaikan sholat ${prayerName}`,
+        icon: "/icons/icon-192x192.png",
+        tag: `adhan-${prayerName}`,
+        requireInteraction: true,
+      });
+    }
+
+    // Play adhan audio
+    adhanAudioRef.current.currentTime = 0;
+    adhanAudioRef.current
+      .play()
+      .then(() => {
+        console.log(`Playing adhan for ${prayerName}`);
+      })
+      .catch((err) => {
+        console.error("Error playing adhan:", err);
+        setIsAdhanPlaying(false);
+        setCurrentAdhanPrayer(null);
+      });
+
+    // Handle audio end
+    adhanAudioRef.current.onended = () => {
+      setIsAdhanPlaying(false);
+      setCurrentAdhanPrayer(null);
+    };
+  }, []);
+
+  // Stop Adhan function
+  const stopAdhan = useCallback(() => {
+    if (adhanAudioRef.current) {
+      adhanAudioRef.current.pause();
+      adhanAudioRef.current.currentTime = 0;
+    }
+    setIsAdhanPlaying(false);
+    setCurrentAdhanPrayer(null);
+  }, []);
+
+  // Schedule Adhan reminders
+  const scheduleAdhanReminders = useCallback(() => {
+    // Clear existing timers
+    adhanTimersRef.current.forEach((timer) => clearTimeout(timer));
+    adhanTimersRef.current = [];
+
+    if (!isAdhanEnabled || prayerTimes.length === 0) return;
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    prayerTimes.forEach((prayer) => {
+      // Parse prayer time
+      const cleanTime = prayer.time.split(" ")[0];
+      const [hours, minutes] = cleanTime.split(":").map(Number);
+      const prayerMinutes = hours * 60 + minutes;
+
+      // Only schedule if prayer time is in the future
+      if (prayerMinutes > currentMinutes) {
+        const delayMs = (prayerMinutes - currentMinutes) * 60 * 1000;
+
+        const timer = setTimeout(() => {
+          playAdhan(prayer.name);
+        }, delayMs);
+
+        adhanTimersRef.current.push(timer);
+        console.log(
+          `Scheduled adhan for ${prayer.name} in ${Math.round(delayMs / 60000)} minutes`
+        );
+      }
+    });
+  }, [isAdhanEnabled, prayerTimes, playAdhan]);
+
+  // Effect to schedule adhan when enabled or prayer times change
+  useEffect(() => {
+    scheduleAdhanReminders();
+
+    // Reschedule every minute to handle edge cases
+    const intervalId = setInterval(() => {
+      scheduleAdhanReminders();
+    }, 60000);
+
+    return () => {
+      clearInterval(intervalId);
+      adhanTimersRef.current.forEach((timer) => clearTimeout(timer));
+    };
+  }, [scheduleAdhanReminders]);
+
+  // Request notification permission
+  const requestNotificationPermission = async () => {
+    if (!("Notification" in window)) {
+      alert("Browser tidak mendukung notifikasi");
+      return false;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      return permission === "granted";
+    } catch (err) {
+      console.error("Error requesting notification permission:", err);
+      return false;
+    }
+  };
+
+  // Toggle Adhan Reminder
+  const toggleAdhanReminder = async () => {
+    if (!isAdhanEnabled) {
+      // Enabling - request notification permission first
+      const hasPermission = await requestNotificationPermission();
+
+      if (hasPermission || notificationPermission === "granted") {
+        setIsAdhanEnabled(true);
+        localStorage.setItem("adhan-reminder-enabled", "true");
+
+        // Test audio can play (browsers require user interaction)
+        if (adhanAudioRef.current) {
+          adhanAudioRef.current.volume = 0.1;
+          adhanAudioRef.current
+            .play()
+            .then(() => {
+              setTimeout(() => {
+                if (adhanAudioRef.current) {
+                  adhanAudioRef.current.pause();
+                  adhanAudioRef.current.currentTime = 0;
+                  adhanAudioRef.current.volume = 1;
+                }
+              }, 500);
+            })
+            .catch((err) => {
+              console.log("Audio autoplay blocked:", err);
+            });
+        }
+      } else {
+        alert(
+          "Izinkan notifikasi untuk mengaktifkan pengingat adzan. Silakan cek pengaturan browser Anda."
+        );
+      }
+    } else {
+      // Disabling
+      setIsAdhanEnabled(false);
+      localStorage.setItem("adhan-reminder-enabled", "false");
+      stopAdhan();
+
+      // Clear all scheduled timers
+      adhanTimersRef.current.forEach((timer) => clearTimeout(timer));
+      adhanTimersRef.current = [];
+    }
+  };
+
+  // Test play adhan
+  const testPlayAdhan = () => {
+    if (isAdhanPlaying) {
+      stopAdhan();
+    } else {
+      playAdhan("Test");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
@@ -316,6 +556,132 @@ export default function SholatPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Adhan Reminder Card */}
+        {location && prayerTimes.length > 0 && (
+          <Card className="border-awqaf-border-light">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                      isAdhanEnabled
+                        ? "bg-awqaf-primary text-white"
+                        : "bg-accent-100 text-awqaf-primary"
+                    }`}
+                  >
+                    {isAdhanEnabled ? (
+                      <Bell className="w-5 h-5" />
+                    ) : (
+                      <BellOff className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-card-foreground font-comfortaa">
+                      Pengingat Adzan
+                    </h3>
+                    <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                      {isAdhanEnabled
+                        ? "Adzan otomatis aktif"
+                        : "Aktifkan untuk pengingat otomatis"}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={toggleAdhanReminder}
+                  variant={isAdhanEnabled ? "default" : "outline"}
+                  size="sm"
+                  className={`font-comfortaa ${
+                    isAdhanEnabled
+                      ? "bg-awqaf-primary hover:bg-awqaf-primary/90"
+                      : "border-awqaf-border-light"
+                  }`}
+                >
+                  {isAdhanEnabled ? (
+                    <>
+                      <Volume2 className="w-4 h-4 mr-2" />
+                      Aktif
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-4 h-4 mr-2" />
+                      Nonaktif
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Test Play Button & Status */}
+              {isAdhanEnabled && (
+                <div className="mt-4 pt-4 border-t border-awqaf-border-light">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
+                        {isAdhanPlaying
+                          ? `Memutar adzan ${currentAdhanPrayer}...`
+                          : "Test suara adzan"}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={testPlayAdhan}
+                      variant="outline"
+                      size="sm"
+                      className="border-awqaf-border-light font-comfortaa"
+                    >
+                      {isAdhanPlaying ? (
+                        <>
+                          <Square className="w-4 h-4 mr-2" />
+                          Stop
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Test
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Scheduled Prayers Info */}
+                  <div className="mt-3 text-xs text-awqaf-foreground-secondary font-comfortaa">
+                    <p>
+                      Jadwal adzan yang akan diputar hari ini:
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {prayerTimes
+                        .filter((p) => p.status === "upcoming" || p.status === "current")
+                        .map((prayer) => (
+                          <span
+                            key={prayer.name}
+                            className="px-2 py-1 bg-accent-100 rounded-full text-awqaf-primary"
+                          >
+                            {prayer.name} ({prayer.time})
+                          </span>
+                        ))}
+                      {prayerTimes.filter(
+                        (p) => p.status === "upcoming" || p.status === "current"
+                      ).length === 0 && (
+                        <span className="text-awqaf-foreground-secondary">
+                          Semua waktu sholat hari ini sudah lewat
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notification Permission Warning */}
+              {isAdhanEnabled && notificationPermission !== "granted" && (
+                <div className="mt-3 flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                  <p className="text-xs text-yellow-700 font-comfortaa">
+                    Izinkan notifikasi browser untuk pengalaman terbaik
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Prayer Times */}
         {location && prayerTimes.length > 0 && (

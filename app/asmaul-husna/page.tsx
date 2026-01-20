@@ -6,627 +6,46 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Search,
   Heart,
   Share2,
   Copy,
   CheckCircle,
-  Navigation,
+  ArrowLeft,
   Crown,
   Sparkles,
+  BookOpen,
+  Star,
+  X,
+  ChevronRight,
+  Filter,
+  Gift,
+  Quote,
 } from "lucide-react";
 import Link from "next/link";
-
-interface AsmaulHusna {
-  id: number;
-  arabic: string;
-  latin: string;
-  meaning: string;
-  isFavorite?: boolean;
-}
-
-const asmaulHusnaData: AsmaulHusna[] = [
-  {
-    id: 1,
-    arabic: "الرَّحْمَنُ",
-    latin: "Ar-Rahman",
-    meaning: "Yang Maha Pengasih",
-  },
-  {
-    id: 2,
-    arabic: "الرَّحِيمُ",
-    latin: "Ar-Rahim",
-    meaning: "Yang Maha Penyayang",
-  },
-  {
-    id: 3,
-    arabic: "الْمَلِكُ",
-    latin: "Al-Malik",
-    meaning: "Yang Maha Merajai",
-  },
-  {
-    id: 4,
-    arabic: "الْقُدُّوسُ",
-    latin: "Al-Quddus",
-    meaning: "Yang Maha Suci",
-  },
-  {
-    id: 5,
-    arabic: "السَّلَامُ",
-    latin: "As-Salam",
-    meaning: "Yang Maha Memberi Kesejahteraan",
-  },
-  {
-    id: 6,
-    arabic: "الْمُؤْمِنُ",
-    latin: "Al-Mu'min",
-    meaning: "Yang Maha Memberi Keamanan",
-  },
-  {
-    id: 7,
-    arabic: "الْمُهَيْمِنُ",
-    latin: "Al-Muhaymin",
-    meaning: "Yang Maha Memelihara",
-  },
-  {
-    id: 8,
-    arabic: "الْعَزِيزُ",
-    latin: "Al-Aziz",
-    meaning: "Yang Maha Perkasa",
-  },
-  {
-    id: 9,
-    arabic: "الْجَبَّارُ",
-    latin: "Al-Jabbar",
-    meaning: "Yang Maha Memaksa",
-  },
-  {
-    id: 10,
-    arabic: "الْمُتَكَبِّرُ",
-    latin: "Al-Mutakabbir",
-    meaning: "Yang Maha Megah",
-  },
-  {
-    id: 11,
-    arabic: "الْخَالِقُ",
-    latin: "Al-Khaliq",
-    meaning: "Yang Maha Pencipta",
-  },
-  {
-    id: 12,
-    arabic: "الْبَارِئُ",
-    latin: "Al-Bari'",
-    meaning: "Yang Maha Mengadakan",
-  },
-  {
-    id: 13,
-    arabic: "الْمُصَوِّرُ",
-    latin: "Al-Musawwir",
-    meaning: "Yang Maha Membentuk",
-  },
-  {
-    id: 14,
-    arabic: "الْغَفَّارُ",
-    latin: "Al-Ghaffar",
-    meaning: "Yang Maha Pengampun",
-  },
-  {
-    id: 15,
-    arabic: "الْقَهَّارُ",
-    latin: "Al-Qahhar",
-    meaning: "Yang Maha Memaksa",
-  },
-  {
-    id: 16,
-    arabic: "الْوَهَّابُ",
-    latin: "Al-Wahhab",
-    meaning: "Yang Maha Pemberi",
-  },
-  {
-    id: 17,
-    arabic: "الرَّزَّاقُ",
-    latin: "Ar-Razzaq",
-    meaning: "Yang Maha Pemberi Rezeki",
-  },
-  {
-    id: 18,
-    arabic: "الْفَتَّاحُ",
-    latin: "Al-Fattah",
-    meaning: "Yang Maha Pembuka",
-  },
-  {
-    id: 19,
-    arabic: "الْعَلِيمُ",
-    latin: "Al-Alim",
-    meaning: "Yang Maha Mengetahui",
-  },
-  {
-    id: 20,
-    arabic: "الْقَابِضُ",
-    latin: "Al-Qabid",
-    meaning: "Yang Maha Menyempitkan",
-  },
-  {
-    id: 21,
-    arabic: "الْبَاسِطُ",
-    latin: "Al-Basit",
-    meaning: "Yang Maha Melapangkan",
-  },
-  {
-    id: 22,
-    arabic: "الْخَافِضُ",
-    latin: "Al-Khafid",
-    meaning: "Yang Maha Merendahkan",
-  },
-  {
-    id: 23,
-    arabic: "الرَّافِعُ",
-    latin: "Ar-Rafi'",
-    meaning: "Yang Maha Meninggikan",
-  },
-  {
-    id: 24,
-    arabic: "الْمُعِزُّ",
-    latin: "Al-Mu'izz",
-    meaning: "Yang Maha Memuliakan",
-  },
-  {
-    id: 25,
-    arabic: "الْمُذِلُّ",
-    latin: "Al-Mudhill",
-    meaning: "Yang Maha Menghinakan",
-  },
-  {
-    id: 26,
-    arabic: "السَّمِيعُ",
-    latin: "As-Sami'",
-    meaning: "Yang Maha Mendengar",
-  },
-  {
-    id: 27,
-    arabic: "الْبَصِيرُ",
-    latin: "Al-Basir",
-    meaning: "Yang Maha Melihat",
-  },
-  {
-    id: 28,
-    arabic: "الْحَكَمُ",
-    latin: "Al-Hakam",
-    meaning: "Yang Maha Menetapkan",
-  },
-  {
-    id: 29,
-    arabic: "الْعَدْلُ",
-    latin: "Al-Adl",
-    meaning: "Yang Maha Adil",
-  },
-  {
-    id: 30,
-    arabic: "اللَّطِيفُ",
-    latin: "Al-Latif",
-    meaning: "Yang Maha Lembut",
-  },
-  {
-    id: 31,
-    arabic: "الْخَبِيرُ",
-    latin: "Al-Khabir",
-    meaning: "Yang Maha Mengetahui",
-  },
-  {
-    id: 32,
-    arabic: "الْحَلِيمُ",
-    latin: "Al-Halim",
-    meaning: "Yang Maha Penyantun",
-  },
-  {
-    id: 33,
-    arabic: "الْعَظِيمُ",
-    latin: "Al-Azim",
-    meaning: "Yang Maha Agung",
-  },
-  {
-    id: 34,
-    arabic: "الْغَفُورُ",
-    latin: "Al-Ghafur",
-    meaning: "Yang Maha Pengampun",
-  },
-  {
-    id: 35,
-    arabic: "الشَّكُورُ",
-    latin: "Asy-Syakur",
-    meaning: "Yang Maha Mensyukuri",
-  },
-  {
-    id: 36,
-    arabic: "الْعَلِيُّ",
-    latin: "Al-Aliyy",
-    meaning: "Yang Maha Tinggi",
-  },
-  {
-    id: 37,
-    arabic: "الْكَبِيرُ",
-    latin: "Al-Kabir",
-    meaning: "Yang Maha Besar",
-  },
-  {
-    id: 38,
-    arabic: "الْحَفِيظُ",
-    latin: "Al-Hafiz",
-    meaning: "Yang Maha Memelihara",
-  },
-  {
-    id: 39,
-    arabic: "الْمُقِيتُ",
-    latin: "Al-Muqit",
-    meaning: "Yang Maha Memberi Kecukupan",
-  },
-  {
-    id: 40,
-    arabic: "الْحَسِيبُ",
-    latin: "Al-Hasib",
-    meaning: "Yang Maha Membuat Perhitungan",
-  },
-  {
-    id: 41,
-    arabic: "الْجَلِيلُ",
-    latin: "Al-Jalil",
-    meaning: "Yang Maha Mulia",
-  },
-  {
-    id: 42,
-    arabic: "الْكَرِيمُ",
-    latin: "Al-Karim",
-    meaning: "Yang Maha Pemurah",
-  },
-  {
-    id: 43,
-    arabic: "الرَّقِيبُ",
-    latin: "Ar-Raqib",
-    meaning: "Yang Maha Mengawasi",
-  },
-  {
-    id: 44,
-    arabic: "الْمُجِيبُ",
-    latin: "Al-Mujib",
-    meaning: "Yang Maha Mengabulkan",
-  },
-  {
-    id: 45,
-    arabic: "الْوَاسِعُ",
-    latin: "Al-Wasi'",
-    meaning: "Yang Maha Luas",
-  },
-  {
-    id: 46,
-    arabic: "الْحَكِيمُ",
-    latin: "Al-Hakim",
-    meaning: "Yang Maha Bijaksana",
-  },
-  {
-    id: 47,
-    arabic: "الْوَدُودُ",
-    latin: "Al-Wadud",
-    meaning: "Yang Maha Mencintai",
-  },
-  {
-    id: 48,
-    arabic: "الْمَجِيدُ",
-    latin: "Al-Majid",
-    meaning: "Yang Maha Mulia",
-  },
-  {
-    id: 49,
-    arabic: "الْبَاعِثُ",
-    latin: "Al-Ba'ith",
-    meaning: "Yang Maha Membangkitkan",
-  },
-  {
-    id: 50,
-    arabic: "الشَّهِيدُ",
-    latin: "Asy-Syahid",
-    meaning: "Yang Maha Menyaksikan",
-  },
-  {
-    id: 51,
-    arabic: "الْحَقُّ",
-    latin: "Al-Haqq",
-    meaning: "Yang Maha Benar",
-  },
-  {
-    id: 52,
-    arabic: "الْوَكِيلُ",
-    latin: "Al-Wakil",
-    meaning: "Yang Maha Memelihara",
-  },
-  {
-    id: 53,
-    arabic: "الْقَوِيُّ",
-    latin: "Al-Qawiyy",
-    meaning: "Yang Maha Kuat",
-  },
-  {
-    id: 54,
-    arabic: "الْمَتِينُ",
-    latin: "Al-Matin",
-    meaning: "Yang Maha Kokoh",
-  },
-  {
-    id: 55,
-    arabic: "الْوَلِيُّ",
-    latin: "Al-Waliyy",
-    meaning: "Yang Maha Melindungi",
-  },
-  {
-    id: 56,
-    arabic: "الْحَمِيدُ",
-    latin: "Al-Hamid",
-    meaning: "Yang Maha Terpuji",
-  },
-  {
-    id: 57,
-    arabic: "الْمُحْصِي",
-    latin: "Al-Muhsi",
-    meaning: "Yang Maha Menghitung",
-  },
-  {
-    id: 58,
-    arabic: "الْمُبْدِئُ",
-    latin: "Al-Mubdi'",
-    meaning: "Yang Maha Memulai",
-  },
-  {
-    id: 59,
-    arabic: "الْمُعِيدُ",
-    latin: "Al-Mu'id",
-    meaning: "Yang Maha Mengembalikan",
-  },
-  {
-    id: 60,
-    arabic: "الْمُحْيِي",
-    latin: "Al-Muhyi",
-    meaning: "Yang Maha Menghidupkan",
-  },
-  {
-    id: 61,
-    arabic: "الْمُمِيتُ",
-    latin: "Al-Mumit",
-    meaning: "Yang Maha Mematikan",
-  },
-  {
-    id: 62,
-    arabic: "الْحَيُّ",
-    latin: "Al-Hayy",
-    meaning: "Yang Maha Hidup",
-  },
-  {
-    id: 63,
-    arabic: "الْقَيُّومُ",
-    latin: "Al-Qayyum",
-    meaning: "Yang Maha Berdiri Sendiri",
-  },
-  {
-    id: 64,
-    arabic: "الْوَاجِدُ",
-    latin: "Al-Wajid",
-    meaning: "Yang Maha Menemukan",
-  },
-  {
-    id: 65,
-    arabic: "الْمَاجِدُ",
-    latin: "Al-Majid",
-    meaning: "Yang Maha Mulia",
-  },
-  {
-    id: 66,
-    arabic: "الْوَاحِدُ",
-    latin: "Al-Wahid",
-    meaning: "Yang Maha Esa",
-  },
-  {
-    id: 67,
-    arabic: "الْأَحَدُ",
-    latin: "Al-Ahad",
-    meaning: "Yang Maha Tunggal",
-  },
-  {
-    id: 68,
-    arabic: "الصَّمَدُ",
-    latin: "As-Samad",
-    meaning: "Yang Maha Dibutuhkan",
-  },
-  {
-    id: 69,
-    arabic: "الْقَادِرُ",
-    latin: "Al-Qadir",
-    meaning: "Yang Maha Kuasa",
-  },
-  {
-    id: 70,
-    arabic: "الْمُقْتَدِرُ",
-    latin: "Al-Muqtadir",
-    meaning: "Yang Maha Berkuasa",
-  },
-  {
-    id: 71,
-    arabic: "الْمُقَدِّمُ",
-    latin: "Al-Muqaddim",
-    meaning: "Yang Maha Mendahulukan",
-  },
-  {
-    id: 72,
-    arabic: "الْمُؤَخِّرُ",
-    latin: "Al-Mu'akhkhir",
-    meaning: "Yang Maha Mengakhirkan",
-  },
-  {
-    id: 73,
-    arabic: "الْأَوَّلُ",
-    latin: "Al-Awwal",
-    meaning: "Yang Maha Awal",
-  },
-  {
-    id: 74,
-    arabic: "الْآخِرُ",
-    latin: "Al-Akhir",
-    meaning: "Yang Maha Akhir",
-  },
-  {
-    id: 75,
-    arabic: "الظَّاهِرُ",
-    latin: "Az-Zahir",
-    meaning: "Yang Maha Nyata",
-  },
-  {
-    id: 76,
-    arabic: "الْبَاطِنُ",
-    latin: "Al-Batin",
-    meaning: "Yang Maha Tersembunyi",
-  },
-  {
-    id: 77,
-    arabic: "الْوَالِي",
-    latin: "Al-Wali",
-    meaning: "Yang Maha Memerintah",
-  },
-  {
-    id: 78,
-    arabic: "الْمُتَعَالِي",
-    latin: "Al-Muta'ali",
-    meaning: "Yang Maha Tinggi",
-  },
-  {
-    id: 79,
-    arabic: "الْبَرُّ",
-    latin: "Al-Barr",
-    meaning: "Yang Maha Baik",
-  },
-  {
-    id: 80,
-    arabic: "التَّوَّابُ",
-    latin: "At-Tawwab",
-    meaning: "Yang Maha Menerima Taubat",
-  },
-  {
-    id: 81,
-    arabic: "الْمُنْتَقِمُ",
-    latin: "Al-Muntaqim",
-    meaning: "Yang Maha Menuntut Balas",
-  },
-  {
-    id: 82,
-    arabic: "الْعَفُوُّ",
-    latin: "Al-Afuww",
-    meaning: "Yang Maha Pemaaf",
-  },
-  {
-    id: 83,
-    arabic: "الرَّءُوفُ",
-    latin: "Ar-Ra'uf",
-    meaning: "Yang Maha Pengasih",
-  },
-  {
-    id: 84,
-    arabic: "مَالِكُ الْمُلْكِ",
-    latin: "Malikul Mulk",
-    meaning: "Yang Maha Memiliki Kerajaan",
-  },
-  {
-    id: 85,
-    arabic: "ذُو الْجَلَالِ وَالْإِكْرَامِ",
-    latin: "Dzul Jalali wal Ikram",
-    meaning: "Yang Maha Memiliki Kebesaran dan Kemuliaan",
-  },
-  {
-    id: 86,
-    arabic: "الْمُقْسِطُ",
-    latin: "Al-Muqsit",
-    meaning: "Yang Maha Adil",
-  },
-  {
-    id: 87,
-    arabic: "الْجَامِعُ",
-    latin: "Al-Jami'",
-    meaning: "Yang Maha Mengumpulkan",
-  },
-  {
-    id: 88,
-    arabic: "الْغَنِيُّ",
-    latin: "Al-Ghaniyy",
-    meaning: "Yang Maha Kaya",
-  },
-  {
-    id: 89,
-    arabic: "الْمُغْنِي",
-    latin: "Al-Mughni",
-    meaning: "Yang Maha Memberi Kekayaan",
-  },
-  {
-    id: 90,
-    arabic: "الْمَانِعُ",
-    latin: "Al-Mani'",
-    meaning: "Yang Maha Mencegah",
-  },
-  {
-    id: 91,
-    arabic: "الضَّارُّ",
-    latin: "Ad-Darr",
-    meaning: "Yang Maha Memberi Bahaya",
-  },
-  {
-    id: 92,
-    arabic: "النَّافِعُ",
-    latin: "An-Nafi'",
-    meaning: "Yang Maha Memberi Manfaat",
-  },
-  {
-    id: 93,
-    arabic: "النُّورُ",
-    latin: "An-Nur",
-    meaning: "Yang Maha Bercahaya",
-  },
-  {
-    id: 94,
-    arabic: "الْهَادِي",
-    latin: "Al-Hadi",
-    meaning: "Yang Maha Memberi Petunjuk",
-  },
-  {
-    id: 95,
-    arabic: "الْبَدِيعُ",
-    latin: "Al-Badi'",
-    meaning: "Yang Maha Pencipta",
-  },
-  {
-    id: 96,
-    arabic: "الْبَاقِي",
-    latin: "Al-Baqi",
-    meaning: "Yang Maha Kekal",
-  },
-  {
-    id: 97,
-    arabic: "الْوَارِثُ",
-    latin: "Al-Warith",
-    meaning: "Yang Maha Mewarisi",
-  },
-  {
-    id: 98,
-    arabic: "الرَّشِيدُ",
-    latin: "Ar-Rashid",
-    meaning: "Yang Maha Pandai",
-  },
-  {
-    id: 99,
-    arabic: "الصَّبُورُ",
-    latin: "As-Sabur",
-    meaning: "Yang Maha Sabar",
-  },
-];
+import {
+  asmaulHusnaData,
+  categoryLabels,
+  categoryColors,
+  type AsmaulHusna,
+  type AsmaulHusnaCategory,
+} from "./data";
 
 export default function AsmaulHusnaPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedAsma, setSelectedAsma] = useState<AsmaulHusna | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<AsmaulHusnaCategory | "all">("all");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -644,19 +63,35 @@ export default function AsmaulHusnaPage() {
     );
   }, [favorites]);
 
-  // Filter asmaul husna based on search
+  // Filter asmaul husna based on search and category
   const filteredAsmaulHusna = useMemo(() => {
-    if (!searchQuery) return asmaulHusnaData;
+    let result = asmaulHusnaData;
 
-    return asmaulHusnaData.filter(
+    // Filter by search query
+    if (searchQuery) {
+      result = result.filter(
       (item) =>
         item.arabic.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.latin.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.meaning.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+    }
 
-  const handleToggleFavorite = (itemId: number) => {
+    // Filter by category
+    if (selectedCategory !== "all") {
+      result = result.filter((item) => item.category === selectedCategory);
+    }
+
+    // Filter by favorites
+    if (showFavoritesOnly) {
+      result = result.filter((item) => favorites.has(item.id));
+    }
+
+    return result;
+  }, [searchQuery, selectedCategory, showFavoritesOnly, favorites]);
+
+  const handleToggleFavorite = (itemId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setFavorites((prev) => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(itemId)) {
@@ -668,8 +103,9 @@ export default function AsmaulHusnaPage() {
     });
   };
 
-  const handleCopyAsma = async (item: AsmaulHusna) => {
-    const text = `${item.id}. ${item.arabic}\n${item.latin}\n${item.meaning}`;
+  const handleCopyAsma = async (item: AsmaulHusna, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const text = `${item.id}. ${item.arabic}\n${item.latin}\n${item.meaning}\n\n${item.explanation}`;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -680,23 +116,30 @@ export default function AsmaulHusnaPage() {
     }
   };
 
-  const handleShareAsma = async (item: AsmaulHusna) => {
-    const text = `${item.id}. ${item.arabic}\n${item.latin}\n${item.meaning}`;
+  const handleShareAsma = async (item: AsmaulHusna, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const text = `${item.id}. ${item.arabic}\n${item.latin}\n${item.meaning}\n\n${item.explanation}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Asmaul Husna",
+          title: `Asmaul Husna - ${item.latin}`,
           text: text,
         });
       } catch (err) {
         console.error("Failed to share:", err);
       }
     } else {
-      // Fallback to copy
-      handleCopyAsma(item);
+      handleCopyAsma(item, e);
     }
   };
+
+  const handleOpenDetail = (item: AsmaulHusna) => {
+    setSelectedAsma(item);
+    setIsDetailOpen(true);
+  };
+
+  const categories = Object.keys(categoryLabels) as AsmaulHusnaCategory[];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
@@ -711,21 +154,70 @@ export default function AsmaulHusnaPage() {
                   size="sm"
                   className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200"
                 >
-                  <Navigation className="w-5 h-5" />
+                  <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
+              <div className="text-center">
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
                 Asmaul Husna
               </h1>
-              <div className="w-10 h-10"></div>
+                <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                  99 Nama Allah Yang Indah
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={`w-10 h-10 p-0 rounded-full transition-colors duration-200 ${
+                  showFavoritesOnly
+                    ? "bg-red-100 text-red-600"
+                    : "hover:bg-accent-100 hover:text-awqaf-primary"
+                }`}
+              >
+                <Heart
+                  className={`w-5 h-5 ${showFavoritesOnly ? "fill-red-600" : ""}`}
+                />
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        {/* Search and View Mode */}
-        <div className="space-y-4">
+        {/* Hero Card */}
+        <Card className="border-awqaf-border-light bg-gradient-to-br from-awqaf-primary to-awqaf-primary/80 text-white overflow-hidden">
+          <CardContent className="p-6 relative">
+            <div className="absolute top-0 right-0 opacity-10">
+              <Crown className="w-32 h-32 -mt-4 -mr-4" />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="w-5 h-5" />
+                <span className="text-sm font-comfortaa">99 Nama Allah</span>
+              </div>
+              <h2 className="text-2xl font-bold font-arabic mb-2">
+                الأسماء الحسنى
+              </h2>
+              <p className="text-sm opacity-90 font-comfortaa">
+                Pelajari dan amalkan nama-nama Allah yang indah untuk
+                mendekatkan diri kepada-Nya.
+              </p>
+              <div className="flex items-center gap-4 mt-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <Heart className="w-4 h-4" />
+                  <span>{favorites.size} favorit</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <BookOpen className="w-4 h-4" />
+                  <span>Klik untuk detail</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Search */}
           <Card className="border-awqaf-border-light">
             <CardContent className="p-4">
               <div className="relative">
@@ -740,12 +232,48 @@ export default function AsmaulHusnaPage() {
             </CardContent>
           </Card>
 
+        {/* Category Filter */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-awqaf-primary" />
+            <span className="text-sm font-medium text-awqaf-primary font-comfortaa">
+              Kategori
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              className={`cursor-pointer font-comfortaa ${
+                selectedCategory === "all"
+                  ? "bg-awqaf-primary text-white"
+                  : "hover:bg-accent-100"
+              }`}
+              onClick={() => setSelectedCategory("all")}
+            >
+              Semua
+            </Badge>
+            {categories.map((cat) => (
+              <Badge
+                key={cat}
+                variant={selectedCategory === cat ? "default" : "outline"}
+                className={`cursor-pointer font-comfortaa ${
+                  selectedCategory === cat
+                    ? categoryColors[cat]
+                    : "hover:bg-accent-100"
+                }`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {categoryLabels[cat]}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
           {/* View Mode Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-awqaf-primary" />
-              <span className="text-sm font-medium text-awqaf-primary font-comfortaa">
-                99 Nama Allah
+            <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
+              {filteredAsmaulHusna.length} nama ditemukan
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -753,7 +281,7 @@ export default function AsmaulHusnaPage() {
                 variant={viewMode === "grid" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("grid")}
-                className="text-xs"
+              className="text-xs font-comfortaa"
               >
                 Grid
               </Button>
@@ -761,11 +289,10 @@ export default function AsmaulHusnaPage() {
                 variant={viewMode === "list" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setViewMode("list")}
-                className="text-xs"
+              className="text-xs font-comfortaa"
               >
                 List
               </Button>
-            </div>
           </div>
         </div>
 
@@ -776,10 +303,11 @@ export default function AsmaulHusnaPage() {
               {filteredAsmaulHusna.map((item) => (
                 <Card
                   key={item.id}
-                  className="border-awqaf-border-light hover:shadow-md transition-all duration-200"
+                  className="border-awqaf-border-light hover:shadow-lg hover:border-awqaf-primary/30 transition-all duration-200 cursor-pointer group"
+                  onClick={() => handleOpenDetail(item)}
                 >
                   <CardContent className="p-4 space-y-3">
-                    {/* Number and Favorite */}
+                    {/* Number and Actions */}
                     <div className="flex items-center justify-between">
                       <Badge
                         variant="secondary"
@@ -787,25 +315,27 @@ export default function AsmaulHusnaPage() {
                       >
                         {item.id}
                       </Badge>
+                      <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleToggleFavorite(item.id)}
+                          onClick={(e) => handleToggleFavorite(item.id, e)}
                         className="p-1 h-6 w-6"
                       >
                         <Heart
                           className={`w-4 h-4 ${
                             favorites.has(item.id)
                               ? "fill-red-500 text-red-500"
-                              : "text-awqaf-foreground-secondary"
+                                : "text-awqaf-foreground-secondary group-hover:text-awqaf-primary"
                           }`}
                         />
                       </Button>
+                      </div>
                     </div>
 
                     {/* Arabic Text */}
-                    <div className="bg-accent-50 p-3 rounded-lg">
-                      <p className="text-lg font-tajawal text-awqaf-primary text-center leading-relaxed">
+                    <div className="bg-gradient-to-br from-accent-50 to-accent-100 p-3 rounded-xl">
+                      <p className="text-lg font-arabic text-awqaf-primary text-center leading-relaxed">
                         {item.arabic}
                       </p>
                     </div>
@@ -815,33 +345,25 @@ export default function AsmaulHusnaPage() {
                       <p className="text-sm font-semibold text-card-foreground font-comfortaa text-center">
                         {item.latin}
                       </p>
-                      <p className="text-xs text-awqaf-foreground-secondary font-comfortaa text-center leading-relaxed">
+                      <p className="text-xs text-awqaf-foreground-secondary font-comfortaa text-center leading-relaxed line-clamp-2">
                         {item.meaning}
                       </p>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 pt-2 border-t">
-                      <Button
+                    {/* Category Badge */}
+                    <div className="flex justify-center">
+                      <Badge
                         variant="outline"
-                        size="sm"
-                        onClick={() => handleCopyAsma(item)}
-                        className="flex-1 text-xs"
+                        className={`text-[10px] ${categoryColors[item.category]}`}
                       >
-                        {copiedId === item.id ? (
-                          <CheckCircle className="w-3 h-3 text-green-600" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShareAsma(item)}
-                        className="text-xs"
-                      >
-                        <Share2 className="w-3 h-3" />
-                      </Button>
+                        {categoryLabels[item.category]}
+                      </Badge>
+                    </div>
+
+                    {/* View Detail Indicator */}
+                    <div className="flex items-center justify-center gap-1 text-xs text-awqaf-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      <BookOpen className="w-3 h-3" />
+                      <span className="font-comfortaa">Lihat Detail</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -852,75 +374,58 @@ export default function AsmaulHusnaPage() {
               {filteredAsmaulHusna.map((item) => (
                 <Card
                   key={item.id}
-                  className="border-awqaf-border-light hover:shadow-md transition-all duration-200"
+                  className="border-awqaf-border-light hover:shadow-lg hover:border-awqaf-primary/30 transition-all duration-200 cursor-pointer group"
+                  onClick={() => handleOpenDetail(item)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       {/* Number */}
                       <div className="flex-shrink-0">
-                        <Badge
-                          variant="secondary"
-                          className="text-sm font-bold bg-awqaf-primary text-white w-8 h-8 flex items-center justify-center"
-                        >
+                        <div className="w-12 h-12 bg-gradient-to-br from-awqaf-primary to-awqaf-primary/80 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold font-comfortaa">
                           {item.id}
-                        </Badge>
+                          </span>
+                        </div>
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-1">
                           <h3 className="font-semibold text-card-foreground font-comfortaa">
                             {item.latin}
                           </h3>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleFavorite(item.id)}
-                            className="p-1 h-6 w-6"
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${categoryColors[item.category]}`}
                           >
-                            <Heart
-                              className={`w-4 h-4 ${
-                                favorites.has(item.id)
-                                  ? "fill-red-500 text-red-500"
-                                  : "text-awqaf-foreground-secondary"
-                              }`}
-                            />
-                          </Button>
+                            {categoryLabels[item.category]}
+                          </Badge>
                         </div>
-
-                        <div className="bg-accent-50 p-3 rounded-lg mb-2">
-                          <p className="text-lg font-tajawal text-awqaf-primary text-center leading-relaxed">
+                        <p className="text-lg font-arabic text-awqaf-primary mb-1">
                             {item.arabic}
                           </p>
-                        </div>
-
-                        <p className="text-sm text-awqaf-foreground-secondary font-comfortaa leading-relaxed">
+                        <p className="text-sm text-awqaf-foreground-secondary font-comfortaa line-clamp-1">
                           {item.meaning}
                         </p>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex-shrink-0 flex flex-col gap-1">
+                      <div className="flex-shrink-0 flex items-center gap-2">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
-                          onClick={() => handleCopyAsma(item)}
-                          className="text-xs"
+                          onClick={(e) => handleToggleFavorite(item.id, e)}
+                          className="p-2"
                         >
-                          {copiedId === item.id ? (
-                            <CheckCircle className="w-3 h-3 text-green-600" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
+                          <Heart
+                            className={`w-5 h-5 ${
+                              favorites.has(item.id)
+                                ? "fill-red-500 text-red-500"
+                                : "text-awqaf-foreground-secondary"
+                            }`}
+                          />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleShareAsma(item)}
-                          className="text-xs"
-                        >
-                          <Share2 className="w-3 h-3" />
-                        </Button>
+                        <ChevronRight className="w-5 h-5 text-awqaf-foreground-secondary group-hover:text-awqaf-primary transition-colors" />
                       </div>
                     </div>
                   </CardContent>
@@ -936,36 +441,143 @@ export default function AsmaulHusnaPage() {
             <CardContent className="p-8 text-center">
               <Sparkles className="w-12 h-12 text-awqaf-foreground-secondary mx-auto mb-4" />
               <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
-                Tidak ada nama Allah ditemukan
+                {showFavoritesOnly
+                  ? "Belum ada favorit"
+                  : "Tidak ada nama Allah ditemukan"}
               </h3>
               <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                Coba ubah kata kunci pencarian
+                {showFavoritesOnly
+                  ? "Tandai nama yang Anda sukai dengan ikon hati"
+                  : "Coba ubah kata kunci pencarian atau kategori"}
               </p>
             </CardContent>
           </Card>
         )}
-
-        {/* Favorites Summary */}
-        {favorites.size > 0 && (
-          <Card className="border-awqaf-border-light bg-accent-50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <Heart className="w-5 h-5 text-red-600 fill-red-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-card-foreground font-comfortaa">
-                    {favorites.size} Nama Favorit
-                  </p>
-                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Nama-nama Allah yang Anda sukai
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </main>
+
+      {/* Detail Modal */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
+          {selectedAsma && (
+            <>
+              <DialogHeader className="sticky top-0 bg-gradient-to-br from-awqaf-primary to-awqaf-primary/90 text-white p-6 pb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge className="bg-white/20 text-white border-none">
+                    #{selectedAsma.id}
+                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) =>
+                        handleToggleFavorite(selectedAsma.id, e)
+                      }
+                      className="text-white hover:bg-white/20"
+                    >
+                      <Heart
+                        className={`w-5 h-5 ${
+                          favorites.has(selectedAsma.id) ? "fill-white" : ""
+                        }`}
+                      />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleCopyAsma(selectedAsma, e)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      {copiedId === selectedAsma.id ? (
+                        <CheckCircle className="w-5 h-5" />
+                      ) : (
+                        <Copy className="w-5 h-5" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleShareAsma(selectedAsma, e)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-4xl font-arabic mb-3">{selectedAsma.arabic}</p>
+                  <DialogTitle className="text-2xl font-comfortaa mb-1">
+                    {selectedAsma.latin}
+                  </DialogTitle>
+                  <p className="text-white/90 font-comfortaa">
+                    {selectedAsma.meaning}
+                  </p>
+                  <Badge
+                    className={`mt-3 ${categoryColors[selectedAsma.category]}`}
+                  >
+                    {categoryLabels[selectedAsma.category]}
+                  </Badge>
+                </div>
+              </DialogHeader>
+
+              <div className="p-6 space-y-6">
+                {/* Explanation */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-awqaf-primary" />
+                    <h4 className="font-semibold text-card-foreground font-comfortaa">
+                      Penjelasan
+                    </h4>
+                  </div>
+                  <p className="text-sm text-awqaf-foreground-secondary font-comfortaa leading-relaxed">
+                    {selectedAsma.explanation}
+                  </p>
+                </div>
+
+                {/* Benefits */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-awqaf-primary" />
+                    <h4 className="font-semibold text-card-foreground font-comfortaa">
+                      Keutamaan Mengamalkan
+                    </h4>
+                  </div>
+                  <Card className="border-awqaf-border-light bg-accent-50">
+                    <CardContent className="p-4">
+                      <p className="text-sm text-awqaf-foreground-secondary font-comfortaa leading-relaxed">
+                        {selectedAsma.benefits}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Dalil */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Quote className="w-5 h-5 text-awqaf-primary" />
+                    <h4 className="font-semibold text-card-foreground font-comfortaa">
+                      Dalil
+                    </h4>
+                  </div>
+                  <Card className="border-awqaf-primary/30 bg-gradient-to-br from-awqaf-primary/5 to-awqaf-primary/10">
+                    <CardContent className="p-4">
+                      <p className="text-sm text-awqaf-primary font-comfortaa leading-relaxed italic">
+                        {selectedAsma.dalil}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Close Button */}
+                <Button
+                  onClick={() => setIsDetailOpen(false)}
+                  className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white font-comfortaa"
+                >
+                  Tutup
+                </Button>
+              </div>
+            </>
+        )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
