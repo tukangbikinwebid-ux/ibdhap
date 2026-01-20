@@ -159,11 +159,11 @@ export default function MenuCard({
                   Vegetarian
                 </Badge>
               )}
-              {menuItem.isHalal && (
+              {/* {menuItem.isHalal && (
                 <Badge className="bg-info text-white text-xs px-1.5 py-0.5">
                   Halal
                 </Badge>
-              )}
+              )} */}
             </div>
 
             {/* Price and Quantity */}
@@ -180,7 +180,7 @@ export default function MenuCard({
               </div>
 
               {/* Quantity Controls */}
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1 bg-accent-100 rounded-lg">
                   <Button
                     variant="ghost"
@@ -211,7 +211,7 @@ export default function MenuCard({
                 >
                   Tambah
                 </Button>
-              </div>
+              </div> */}
             </div>
           </div>
         </CardContent>

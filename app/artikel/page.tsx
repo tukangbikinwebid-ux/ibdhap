@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Search,
-  Filter,
+  X,
   Calendar,
   Clock,
-  Navigation,
+  ArrowLeft,
   BookOpen,
-  Star,
+  TrendingUp,
+  Sparkles,
+  ChevronRight,
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
@@ -22,6 +24,28 @@ import {
   useGetArticlesQuery,
 } from "@/services/public/article.service";
 
+// Loading Skeleton
+const ArticleSkeleton = () => {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Card key={i} className="border-orange-100">
+          <CardContent className="p-0">
+            <div className="flex gap-4 p-4">
+              <div className="w-24 h-24 bg-gray-200 rounded-xl animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                <div className="h-3 bg-gray-200 rounded animate-pulse w-full" />
+                <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
 export default function ArtikelPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>(
@@ -29,31 +53,35 @@ export default function ArtikelPage() {
   );
 
   // Menggunakan API Categories
-  const { data: categoriesData } = useGetArticleCategoriesQuery({
-    page: 1,
-    paginate: 100, // Ambil banyak kategori sekaligus
-  });
+  const { data: categoriesData, isLoading: isLoadingCategories } =
+    useGetArticleCategoriesQuery({
+      page: 1,
+      paginate: 100,
+    });
 
   // Menggunakan API Articles
-  // Catatan: Sorting biasanya dilakukan di backend via params tambahan.
-  // Di sini kita filter/sort client-side sederhana atau fetch ulang jika backend mendukung sort.
-  // Untuk demo ini, kita fetch basic list.
-  const { data: articlesData, isLoading } = useGetArticlesQuery({
-    page: 1,
-    paginate: 50,
-    category_id: selectedCategory,
-  });
+  const { data: articlesData, isLoading: isLoadingArticles } =
+    useGetArticlesQuery({
+      page: 1,
+      paginate: 50,
+      category_id: selectedCategory,
+    });
 
-  // Filter local untuk search query (karena API contoh belum ada endpoint search khusus)
+  // Filter local untuk search query
   const filteredArtikelData = useMemo(() => {
-    if (!articlesData) return [];
+    if (!articlesData?.data) return [];
 
     let filtered = articlesData.data;
 
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter((artikel) =>
-        artikel.title.toLowerCase().includes(lowerQuery)
+      filtered = filtered.filter(
+        (artikel) =>
+          artikel.title.toLowerCase().includes(lowerQuery) ||
+          artikel.content
+            .replace(/<[^>]*>/g, "")
+            .toLowerCase()
+            .includes(lowerQuery)
       );
     }
 
@@ -64,128 +92,165 @@ export default function ArtikelPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "long",
       day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
-  // Featured Articles logic (misal 2 artikel terbaru dianggap featured)
+  // Featured Articles logic (2 artikel terbaru)
   const featuredArticles = useMemo(() => {
-    if (!articlesData) return [];
+    if (!articlesData?.data) return [];
     return articlesData.data.slice(0, 2);
   }, [articlesData]);
 
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
+
+  const isLoading = isLoadingArticles || isLoadingCategories;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50">
       {/* Header */}
-      <header className="sticky top-0 z-30">
-        <div className="max-w-md mx-auto px-4 py-4">
-          <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
-            <div className="flex items-center justify-between">
-              <Link href="/">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200"
-                >
-                  <Navigation className="w-5 h-5" />
-                </Button>
-              </Link>
-              <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Artikel Islami
-              </h1>
-              <div className="w-10 h-10"></div>
-            </div>
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-orange-100/50 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <Link href="/">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-10 h-10 p-0 rounded-full hover:bg-orange-100 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-orange-800" />
+              </Button>
+            </Link>
+            <h1 className="text-lg font-bold text-orange-900 font-comfortaa">
+              Artikel Islami
+            </h1>
+            <div className="w-10"></div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        {/* Search */}
-        <Card className="border-awqaf-border-light">
-          <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-awqaf-foreground-secondary" />
-              <Input
-                placeholder="Cari artikel..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 font-comfortaa"
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-orange-400" />
+          <Input
+            type="text"
+            placeholder="Cari artikel yang Anda butuhkan..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-12 h-12 rounded-2xl border-2 border-orange-100 focus:border-orange-300 focus:outline-none bg-white shadow-sm text-base font-comfortaa"
+          />
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 rounded-full bg-orange-100 hover:bg-orange-200 flex items-center justify-center transition-colors"
+            >
+              <X className="w-4 h-4 text-orange-600" />
+            </button>
+          )}
+        </div>
 
-        {/* Featured Articles */}
-        {!searchQuery &&
-          !selectedCategory &&
-          !isLoading &&
-          featuredArticles.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-awqaf-primary" />
-                <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
-                  Artikel Terbaru
-                </h2>
+        {/* Featured Section */}
+        {!searchQuery && selectedCategory === undefined && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-white" />
               </div>
+              <h2 className="text-lg font-bold text-orange-900 font-comfortaa">
+                Trending Hari Ini
+              </h2>
+            </div>
 
-              <div className="space-y-3">
-                {featuredArticles.map((artikel) => (
-                  <Link
-                    className="block"
-                    key={artikel.id}
-                    href={`/artikel/${artikel.id}`} // Menggunakan ID sesuai API
+            {isLoading ? (
+              <div className="grid gap-4">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Card
+                    key={i}
+                    className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-white to-orange-50/30"
                   >
-                    <Card className="border-awqaf-border-light hover:shadow-md transition-all duration-200 overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="h-48 bg-gray-200 animate-pulse" />
+                      <div className="p-5 space-y-3">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                        <div className="h-3 bg-gray-200 rounded animate-pulse w-full" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {featuredArticles.map((artikel, idx) => (
+                  <Link key={artikel.id} href={`/artikel/${artikel.id}`}>
+                    <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden bg-gradient-to-br from-white to-orange-50/30 group cursor-pointer">
                       <CardContent className="p-0">
-                        <div className="flex h-28">
+                        <div className="relative">
+                          {/* Featured Badge */}
+                          <div className="absolute top-3 left-3 z-10">
+                            <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white border-0 shadow-lg flex items-center gap-1 px-3">
+                              <Sparkles className="w-3 h-3" />
+                              #{idx + 1} Trending
+                            </Badge>
+                          </div>
+
                           {/* Image */}
-                          <div className="w-28 relative flex-shrink-0 bg-gray-100">
+                          <div className="h-48 bg-gradient-to-br from-orange-200 to-amber-200 relative overflow-hidden">
                             {artikel.image ? (
                               <Image
                                 src={artikel.image}
                                 alt={artikel.title}
                                 fill
-                                className="object-cover"
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <BookOpen className="w-8 h-8 text-awqaf-primary" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <BookOpen className="w-16 h-16 text-orange-400/50" />
                               </div>
                             )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+
+                            <div className="absolute bottom-3 left-3">
+                              <Badge
+                                variant="secondary"
+                                className="bg-white/90 text-orange-800 border-0"
+                              >
+                                {artikel.category.name}
+                              </Badge>
+                            </div>
                           </div>
 
-                          <div className="flex-1 p-3 flex flex-col justify-between">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge
-                                  variant="default"
-                                  className="text-[10px] h-5"
-                                >
-                                  {artikel.category.name}
-                                </Badge>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] h-5 bg-yellow-100 text-yellow-700"
-                                >
-                                  <Star className="w-3 h-3 mr-1" />
-                                  Baru
-                                </Badge>
-                              </div>
-                              <h3 className="font-semibold text-sm text-card-foreground font-comfortaa line-clamp-2 mb-1">
-                                {artikel.title}
-                              </h3>
-                            </div>
+                          {/* Content */}
+                          <div className="p-5">
+                            <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-700 transition-colors font-comfortaa">
+                              {artikel.title}
+                            </h3>
+                            <p className="text-sm text-gray-600 line-clamp-2 mb-3 font-comfortaa">
+                              {artikel.content
+                                .replace(/<[^>]*>/g, "")
+                                .substring(0, 120)}
+                              ...
+                            </p>
 
-                            <div className="flex items-center gap-2 text-[10px] text-awqaf-foreground-secondary font-comfortaa">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {formatDate(artikel.published_at)}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 text-xs text-gray-500 font-comfortaa">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  {formatDate(artikel.published_at)}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  5 min
+                                </div>
                               </div>
-                              {/* Read time simulasi karena tidak ada di API */}
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />5 min
+
+                              <div className="flex items-center gap-1 text-orange-600 text-sm font-medium group-hover:gap-2 transition-all font-comfortaa">
+                                Baca
+                                <ChevronRight className="w-4 h-4" />
                               </div>
                             </div>
                           </div>
@@ -195,125 +260,160 @@ export default function ArtikelPage() {
                   </Link>
                 ))}
               </div>
-            </div>
-          )}
-
-        {/* Filters */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-awqaf-primary" />
-            <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
-              Kategori
-            </h2>
+            )}
           </div>
+        )}
 
-          {/* Category Filter */}
-          <div className="space-y-2">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <Button
-                variant={selectedCategory === undefined ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(undefined)}
-                className="flex-shrink-0"
-              >
-                Semua
-              </Button>
-              {categoriesData?.data.map((cat) => (
-                <Button
-                  key={cat.id}
-                  variant={selectedCategory === cat.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className="flex-shrink-0"
-                >
-                  {cat.name}
-                </Button>
+        {/* Category Pills */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-orange-900 uppercase tracking-wide font-comfortaa">
+            Kategori
+          </h3>
+          {isLoadingCategories ? (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-shrink-0 rounded-full px-5 h-9 bg-gray-200 animate-pulse"
+                />
               ))}
             </div>
-          </div>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button
+                onClick={() => setSelectedCategory(undefined)}
+                className={`flex-shrink-0 rounded-full px-5 h-9 font-medium transition-all font-comfortaa ${
+                  selectedCategory === undefined
+                    ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                    : "border-2 border-orange-200 text-orange-700 hover:bg-orange-50 bg-white"
+                }`}
+              >
+                Semua
+              </button>
+              {categoriesData?.data.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex-shrink-0 rounded-full px-5 h-9 font-medium transition-all font-comfortaa ${
+                    selectedCategory === cat.id
+                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                      : "border-2 border-orange-200 text-orange-700 hover:bg-orange-50 bg-white"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Results Count */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600 font-comfortaa">
+            <span className="font-bold text-orange-700">
+              {filteredArtikelData.length}
+            </span>{" "}
+            artikel ditemukan
+          </p>
+          {(searchQuery || selectedCategory !== undefined) && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory(undefined);
+              }}
+              className="text-sm text-orange-600 hover:text-orange-700 font-medium font-comfortaa"
+            >
+              Reset Filter
+            </button>
+          )}
         </div>
 
         {/* Articles List */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
-              {isLoading
-                ? "Memuat..."
-                : `${filteredArtikelData.length} Artikel Ditemukan`}
-            </h2>
-          </div>
+        <div className="space-y-3">
+          {isLoading ? (
+            <ArticleSkeleton />
+          ) : filteredArtikelData.length > 0 ? (
+            filteredArtikelData.map((artikel) => (
+              <Link key={artikel.id} href={`/artikel/${artikel.id}`}>
+                <Card className="border border-orange-100 hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer bg-white">
+                  <CardContent className="p-0">
+                    <div className="flex gap-4 p-4">
+                      {/* Thumbnail */}
+                      <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center flex-shrink-0 overflow-hidden relative group-hover:scale-105 transition-transform">
+                        {artikel.image ? (
+                          <Image
+                            src={artikel.image}
+                            alt={artikel.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <BookOpen className="w-8 h-8 text-orange-400" />
+                        )}
+                      </div>
 
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="flex justify-center py-10">
-                <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary" />
-              </div>
-            ) : (
-              filteredArtikelData.map((artikel) => (
-                <Link
-                  className="block"
-                  key={artikel.id}
-                  href={`/artikel/${artikel.id}`} // Gunakan ID
-                >
-                  <Card className="border-awqaf-border-light hover:shadow-md transition-all duration-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                          {artikel.image ? (
-                            <Image
-                              src={artikel.image}
-                              alt={artikel.title}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <BookOpen className="w-6 h-6 text-awqaf-primary" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="secondary" className="text-xs">
-                              {artikel.category.name}
-                            </Badge>
-                          </div>
-                          <h3 className="font-semibold text-card-foreground font-comfortaa line-clamp-2 mb-1">
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <Badge
+                            variant="secondary"
+                            className="mb-2 text-xs bg-orange-100 text-orange-700 border-0"
+                          >
+                            {artikel.category.name}
+                          </Badge>
+                          <h3 className="font-bold text-base text-gray-900 line-clamp-2 mb-1 group-hover:text-orange-700 transition-colors font-comfortaa">
                             {artikel.title}
                           </h3>
-                          {/* Content Preview (Strip HTML tags simple) */}
-                          <p className="text-sm text-awqaf-foreground-secondary font-comfortaa line-clamp-2 mb-2">
+                          <p className="text-xs text-gray-600 line-clamp-2 font-comfortaa">
                             {artikel.content
-                              .replace(/<[^>]*>?/gm, "")
-                              .substring(0, 100)}
+                              .replace(/<[^>]*>/g, "")
+                              .substring(0, 80)}
                             ...
                           </p>
+                        </div>
 
-                          <div className="flex items-center justify-between text-xs text-awqaf-foreground-secondary font-comfortaa">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {formatDate(artikel.published_at)}
-                              </div>
-                            </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-2 font-comfortaa">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {formatDate(artikel.published_at)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            5 min
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))
-            )}
-          </div>
 
-          {!isLoading && filteredArtikelData.length === 0 && (
-            <Card className="border-awqaf-border-light">
-              <CardContent className="p-8 text-center">
-                <BookOpen className="w-12 h-12 text-awqaf-foreground-secondary mx-auto mb-4" />
-                <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
+                      {/* Arrow */}
+                      <div className="flex items-center">
+                        <ChevronRight className="w-5 h-5 text-orange-400 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))
+          ) : (
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-12 text-center">
+                <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-10 h-10 text-orange-400" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2 text-lg font-comfortaa">
                   Tidak ada artikel ditemukan
                 </h3>
-                <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Coba ubah kata kunci pencarian atau filter
+                <p className="text-sm text-gray-600 mb-4 font-comfortaa">
+                  Coba ubah kata kunci pencarian atau filter kategori
                 </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory(undefined);
+                  }}
+                  className="px-6 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg font-medium font-comfortaa"
+                >
+                  Lihat Semua Artikel
+                </button>
               </CardContent>
             </Card>
           )}

@@ -56,7 +56,7 @@ export default function ArticleCard({ article }: ArticleCardProps) {
                 {article.excerpt}
               </p>
 
-              <div className="flex items-center gap-4 text-xs text-awqaf-foreground-secondary">
+              {/* <div className="flex items-center gap-4 text-xs text-awqaf-foreground-secondary">
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   <span className="font-comfortaa">{article.readTime}</span>
@@ -65,7 +65,7 @@ export default function ArticleCard({ article }: ArticleCardProps) {
                   <Eye className="w-3 h-3" />
                   <span className="font-comfortaa">{article.views}</span>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </CardContent>

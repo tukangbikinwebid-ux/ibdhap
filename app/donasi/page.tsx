@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,34 +13,202 @@ import {
   CreditCard,
   Copy,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from "lucide-react";
 import DonationCarousel from "./components/DonationCarousel";
 import DonationNavigation from "./components/DonationNavigation";
-import DonationRecommendations from "./components/DonationRecommendations";
 import {
   popularDonations,
   donationCategories,
-  recommendedDonations,
-  Donation,
+  formatCurrency,
+  formatNumber,
+  getDaysRemaining,
 } from "./data/donations";
+import { useGetCampaignsQuery, useCreateDonationMutation } from "@/services/public/campaign.service";
+import { Campaign } from "@/types/public/campaign";
 import Image from "next/image";
+import ImageWithFallback from "./components/ImageWithFallback";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Clock, Users, MapPin } from "lucide-react";
+import ShareModal from "./components/ShareModal";
+import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
+
+// Loading Skeleton Component
+const DonationSkeleton = () => {
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i} className="border-awqaf-border-light overflow-hidden">
+          <div className="h-48 bg-gray-200 animate-pulse" />
+          <CardContent className="p-4 space-y-3">
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+            <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2" />
+            <div className="h-2 bg-gray-200 rounded animate-pulse w-full" />
+            <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Helper: Convert Campaign to Donation format
+const campaignToDonation = (campaign: Campaign): any => {
+  const progress =
+    campaign.target_amount > 0
+      ? Math.round((campaign.raised_amount / campaign.target_amount) * 100)
+      : 0;
+
+  return {
+    id: campaign.id.toString(),
+    title: campaign.title,
+    description: campaign.description.replace(/<[^>]*>/g, ""), // Remove HTML tags
+    image: campaign.image,
+    category: campaign.category.toLowerCase() as any,
+    targetAmount: campaign.target_amount,
+    currentAmount: campaign.raised_amount,
+    donorCount: 0, // API doesn't provide this
+    startDate: campaign.start_date,
+    endDate: campaign.end_date,
+    progress,
+    status: "active" as const,
+    organization: "Yayasan Awqaf Indonesia",
+    location: "Indonesia",
+  };
+};
 
 export default function DonasiPage() {
+  const router = useRouter();
+  
+  // State untuk Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
   // State untuk Modal Donasi
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(
-    null
-  );
-  const [paymentMethod, setPaymentMethod] = useState<"qris" | "bank">("qris");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [selectedDonation, setSelectedDonation] = useState<any | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"qris" | "bank_transfer" | "card">("qris");
+  const [paymentChannel, setPaymentChannel] = useState<"qris" | "bca" | "bni" | "bri" | "cimb" | "card">("qris");
   const [donationAmount, setDonationAmount] = useState<string>("");
+  const [donorName, setDonorName] = useState<string>("");
+  const [donorEmail, setDonorEmail] = useState<string>("");
+  const [donorPhone, setDonorPhone] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Mutation untuk create donation
+  const [createDonation, { isLoading: isCreatingDonation }] = useCreateDonationMutation();
+
+  // Fetch Campaigns from API
+  const {
+    data: campaignsData,
+    isLoading: isLoadingCampaigns,
+    isFetching: isFetchingCampaigns,
+  } = useGetCampaignsQuery({
+    page: currentPage,
+    paginate: itemsPerPage,
+  });
+
+  // Convert campaigns to donations format
+  const donations = useMemo(() => {
+    if (!campaignsData?.data) return [];
+    return campaignsData.data.map(campaignToDonation);
+  }, [campaignsData]);
+
+  // Pagination info
+  const paginationInfo = useMemo(() => {
+    if (!campaignsData) return null;
+    return {
+      currentPage: campaignsData.current_page,
+      lastPage: campaignsData.last_page,
+      total: campaignsData.total,
+      from: campaignsData.from,
+      to: campaignsData.to,
+    };
+  }, [campaignsData]);
 
   // Handler saat tombol donasi diklik
-  const handleDonateClick = (donation: Donation) => {
+  const handleDonateClick = (donation: any) => {
     setSelectedDonation(donation);
     setIsModalOpen(true);
-    setPaymentMethod("qris"); // Default ke QRIS
+    setPaymentMethod("qris");
+    setPaymentChannel("qris");
     setDonationAmount("");
+    setDonorName("");
+    setDonorEmail("");
+    setDonorPhone("");
+    setDescription("");
+  };
+
+  // Handler untuk share
+  const handleShare = (donation: any) => {
+    setSelectedDonation(donation);
+    setIsShareModalOpen(true);
+  };
+
+  // Handler untuk riwayat donasi
+  const handleRiwayatDonasi = () => {
+    if (selectedDonation) {
+      router.push(`/donasi/riwayat?campaign=${selectedDonation.id}`);
+    } else {
+      router.push("/donasi/riwayat");
+    }
+  };
+
+  // Handler submit donasi
+  const handleSubmitDonation = async () => {
+    if (!selectedDonation) return;
+
+    const amount = Number(donationAmount.replace(/\D/g, ""));
+    if (amount < 10000) {
+      alert("Minimum donasi adalah Rp 10.000");
+      return;
+    }
+
+    if (!donorName.trim()) {
+      alert("Nama donor wajib diisi");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await createDonation({
+        campaign: Number(selectedDonation.id),
+        body: {
+          donor_name: donorName,
+          donor_email: donorEmail || null,
+          donor_phone: donorPhone || null,
+          description: description || null,
+          payment_method: paymentMethod,
+          payment_channel: paymentChannel,
+          amount: amount,
+        },
+      }).unwrap();
+
+      // Redirect ke payment atau tampilkan success
+      if (result?.data?.payment?.account_number) {
+        // Jika QRIS, bisa redirect ke QR code
+        alert("Donasi berhasil dibuat! Silakan lakukan pembayaran.");
+        setIsModalOpen(false);
+        // Reset form
+        setDonationAmount("");
+        setDonorName("");
+        setDonorEmail("");
+        setDonorPhone("");
+        setDescription("");
+      }
+    } catch (error: any) {
+      alert(error?.data?.message || "Gagal membuat donasi. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handler Copy Rekening
@@ -91,12 +259,194 @@ export default function DonasiPage() {
           <DonationNavigation categories={donationCategories} />
         </section>
 
-        {/* Donation Recommendations */}
+        {/* Campaigns List from API */}
         <section>
-          <DonationRecommendations
-            donations={recommendedDonations}
-            onDonateClick={handleDonateClick}
-          />
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-card-foreground font-comfortaa">
+                  Daftar Donasi
+                </h3>
+                <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
+                  Pilih donasi yang ingin Anda dukung
+                </p>
+              </div>
+              {paginationInfo && (
+                <Badge
+                  variant="secondary"
+                  className="bg-awqaf-primary text-white text-xs px-2 py-1"
+                >
+                  {paginationInfo.total} Donasi
+                </Badge>
+              )}
+            </div>
+
+            {/* Loading State */}
+            {(isLoadingCampaigns || isFetchingCampaigns) && <DonationSkeleton />}
+
+            {/* Campaigns Grid */}
+            {!isLoadingCampaigns &&
+              !isFetchingCampaigns &&
+              donations.length > 0 && (
+                <>
+                  <div className="grid grid-cols-1 gap-4">
+                    {donations.map((donation) => {
+                      const daysRemaining = getDaysRemaining(donation.endDate);
+
+                      return (
+                        <Card
+                          key={donation.id}
+                          className="border-awqaf-border-light hover:shadow-lg transition-all duration-300 overflow-hidden group"
+                        >
+                          {/* Image */}
+                          <div className="relative h-48 overflow-hidden">
+                            <ImageWithFallback
+                              src={donation.image}
+                              alt={donation.title}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+
+                            {/* Overlay Badges */}
+                            <div className="absolute top-3 left-3 flex flex-col gap-2">
+                              <Badge className="bg-awqaf-primary text-white text-xs px-2 py-1">
+                                {donation.category.toUpperCase()}
+                              </Badge>
+                            </div>
+
+                            {/* Favorite Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-3 right-3 w-8 h-8 p-0 rounded-full bg-black/20 hover:bg-black/40 text-white"
+                            >
+                              <Heart className="w-4 h-4" />
+                            </Button>
+                          </div>
+
+                          <CardContent className="p-4">
+                            {/* Title and Organization */}
+                            <div className="mb-3">
+                              <h4 className="font-semibold text-card-foreground text-sm font-comfortaa mb-1 line-clamp-2">
+                                {donation.title}
+                              </h4>
+                              <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                                {donation.organization}
+                              </p>
+                            </div>
+
+                            {/* Description */}
+                            <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-3 line-clamp-2">
+                              {donation.description}
+                            </p>
+
+                            {/* Progress */}
+                            <div className="mb-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                                  Progress
+                                </span>
+                                <span className="text-xs font-medium text-awqaf-primary font-comfortaa">
+                                  {donation.progress}%
+                                </span>
+                              </div>
+                              <Progress
+                                value={donation.progress}
+                                className="h-1.5 bg-accent-100"
+                              />
+                              <div className="flex justify-between text-xs text-awqaf-foreground-secondary font-comfortaa mt-1">
+                                <span>{formatCurrency(donation.currentAmount)}</span>
+                                <span>{formatCurrency(donation.targetAmount)}</span>
+                              </div>
+                            </div>
+
+                            {/* Stats */}
+                            <div className="flex items-center justify-between mb-3 text-xs text-awqaf-foreground-secondary">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                <span className="font-comfortaa">
+                                  {daysRemaining} hari
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                <span className="font-comfortaa truncate max-w-20">
+                                  {donation.location}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Action Button */}
+                            <Button
+                              onClick={() => handleDonateClick(donation)}
+                              className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white text-xs font-comfortaa"
+                              size="sm"
+                            >
+                              Donasi Sekarang
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination */}
+                  {paginationInfo && paginationInfo.lastPage > 1 && (
+                    <div className="flex items-center justify-between mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1 || isFetchingCampaigns}
+                        className="border-awqaf-border-light font-comfortaa"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Sebelumnya
+                      </Button>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
+                          Halaman {paginationInfo.currentPage} dari{" "}
+                          {paginationInfo.lastPage}
+                        </span>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(paginationInfo.lastPage, prev + 1)
+                          )
+                        }
+                        disabled={
+                          currentPage === paginationInfo.lastPage ||
+                          isFetchingCampaigns
+                        }
+                        className="border-awqaf-border-light font-comfortaa"
+                      >
+                        Selanjutnya
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+
+            {/* Empty State */}
+            {!isLoadingCampaigns &&
+              !isFetchingCampaigns &&
+              donations.length === 0 && (
+                <Card className="border-awqaf-border-light">
+                  <CardContent className="p-6 text-center">
+                    <p className="text-awqaf-foreground-secondary font-comfortaa">
+                      Belum ada donasi tersedia saat ini
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+          </div>
         </section>
 
         {/* Quick Actions */}
@@ -122,6 +472,7 @@ export default function DonasiPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  onClick={() => handleShare(selectedDonation || donations[0])}
                   className="border-awqaf-border-light text-awqaf-foreground-secondary hover:border-awqaf-primary hover:text-awqaf-primary font-comfortaa"
                 >
                   <Share2 className="w-4 h-4 mr-2" />
@@ -129,6 +480,7 @@ export default function DonasiPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  onClick={handleRiwayatDonasi}
                   className="border-awqaf-border-light text-awqaf-foreground-secondary hover:border-awqaf-primary hover:text-awqaf-primary font-comfortaa"
                 >
                   <Gift className="w-4 h-4 mr-2" />
@@ -175,11 +527,56 @@ export default function DonasiPage() {
 
             {/* Modal Body */}
             <div className="p-6 space-y-6">
+              {/* Form Donasi */}
+              <div className="space-y-4">
+                {/* Nama Donor */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-gray-700 font-comfortaa">
+                    Nama Donor <span className="text-error">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="Masukkan nama Anda"
+                    value={donorName}
+                    onChange={(e) => setDonorName(e.target.value)}
+                    className="border-awqaf-border-light focus-visible:ring-awqaf-primary font-comfortaa"
+                    required
+                  />
+                </div>
+
+                {/* Email Donor */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-gray-700 font-comfortaa">
+                    Email (Opsional)
+                  </Label>
+                  <Input
+                    type="email"
+                    placeholder="email@example.com"
+                    value={donorEmail}
+                    onChange={(e) => setDonorEmail(e.target.value)}
+                    className="border-awqaf-border-light focus-visible:ring-awqaf-primary font-comfortaa"
+                  />
+                </div>
+
+                {/* Phone Donor */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-gray-700 font-comfortaa">
+                    No. Telepon (Opsional)
+                  </Label>
+                  <Input
+                    type="tel"
+                    placeholder="081234567890"
+                    value={donorPhone}
+                    onChange={(e) => setDonorPhone(e.target.value)}
+                    className="border-awqaf-border-light focus-visible:ring-awqaf-primary font-comfortaa"
+                  />
+                </div>
+
               {/* Input Nominal */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700 font-comfortaa">
-                  Nominal Donasi (Rp)
-                </label>
+                  <Label className="text-sm font-bold text-gray-700 font-comfortaa">
+                    Nominal Donasi (Rp) <span className="text-error">*</span>
+                  </Label>
                 <Input
                   type="text"
                   placeholder="0"
@@ -188,26 +585,53 @@ export default function DonasiPage() {
                     const val = e.target.value.replace(/\D/g, "");
                     setDonationAmount(formatRupiah(val));
                   }}
-                  className="text-lg font-bold text-awqaf-primary border-awqaf-border-light focus-visible:ring-awqaf-primary"
+                    className="text-lg font-bold text-awqaf-primary border-awqaf-border-light focus-visible:ring-awqaf-primary font-comfortaa"
+                    required
                 />
+                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                    Minimum donasi: Rp 10.000
+                  </p>
                 <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
-                  {["10.000", "50.000", "100.000"].map((amt) => (
+                    {["10.000", "50.000", "100.000", "500.000", "1.000.000"].map((amt) => (
                     <button
                       key={amt}
+                        type="button"
                       onClick={() => setDonationAmount(amt)}
-                      className="px-3 py-1 text-xs bg-accent-50 text-awqaf-primary rounded-full border border-accent-100 hover:bg-accent-100 transition-colors whitespace-nowrap"
+                        className="px-3 py-1 text-xs bg-accent-50 text-awqaf-primary rounded-full border border-accent-100 hover:bg-accent-100 transition-colors whitespace-nowrap font-comfortaa"
                     >
                       Rp {amt}
                     </button>
                   ))}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-gray-700 font-comfortaa">
+                    Pesan/Doa (Opsional)
+                  </Label>
+                  <textarea
+                    placeholder="Tuliskan pesan atau doa Anda..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full min-h-[80px] px-3 py-2 rounded-md border border-awqaf-border-light bg-background text-sm font-comfortaa focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-awqaf-primary resize-none"
+                  />
                 </div>
               </div>
 
               {/* Payment Method Tabs */}
-              <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl">
+              <div className="space-y-3">
+                <Label className="text-sm font-bold text-gray-700 font-comfortaa">
+                  Metode Pembayaran
+                </Label>
+                <div className="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-xl">
                 <button
-                  onClick={() => setPaymentMethod("qris")}
-                  className={`py-2 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod("qris");
+                      setPaymentChannel("qris");
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all font-comfortaa ${
                     paymentMethod === "qris"
                       ? "bg-white text-awqaf-primary shadow-sm"
                       : "text-gray-500 hover:text-gray-700"
@@ -216,15 +640,64 @@ export default function DonasiPage() {
                   <QrCode className="w-4 h-4" /> QRIS
                 </button>
                 <button
-                  onClick={() => setPaymentMethod("bank")}
-                  className={`py-2 px-4 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${
-                    paymentMethod === "bank"
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod("bank_transfer");
+                      setPaymentChannel("bca");
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all font-comfortaa ${
+                      paymentMethod === "bank_transfer"
                       ? "bg-white text-awqaf-primary shadow-sm"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   <CreditCard className="w-4 h-4" /> Transfer
                 </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod("card");
+                      setPaymentChannel("card");
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all font-comfortaa ${
+                      paymentMethod === "card"
+                        ? "bg-white text-awqaf-primary shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" /> Card
+                  </button>
+                </div>
+
+                {/* Payment Channel Selection for Bank Transfer */}
+                {paymentMethod === "bank_transfer" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-gray-700 font-comfortaa">
+                      Pilih Bank
+                    </Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { value: "bca", label: "BCA" },
+                        { value: "bni", label: "BNI" },
+                        { value: "bri", label: "BRI" },
+                        { value: "cimb", label: "CIMB" },
+                      ].map((bank) => (
+                        <button
+                          key={bank.value}
+                          type="button"
+                          onClick={() => setPaymentChannel(bank.value as any)}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold transition-all font-comfortaa ${
+                            paymentChannel === bank.value
+                              ? "bg-awqaf-primary text-white"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {bank.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Payment Content */}
@@ -305,12 +778,37 @@ export default function DonasiPage() {
 
             {/* Modal Footer */}
             <div className="p-4 border-t border-gray-100 bg-gray-50 sticky bottom-0 z-10">
-              <Button className="w-full bg-awqaf-primary font-bold font-comfortaa hover:bg-awqaf-primary/90">
-                Konfirmasi Pembayaran
+              <Button
+                onClick={handleSubmitDonation}
+                disabled={isSubmitting || isCreatingDonation || !donorName.trim() || !donationAmount}
+                className="w-full bg-awqaf-primary font-bold font-comfortaa hover:bg-awqaf-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting || isCreatingDonation ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  "Konfirmasi Pembayaran"
+                )}
               </Button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Modal */}
+      {selectedDonation && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          donation={{
+            title: selectedDonation.title,
+            image: selectedDonation.image,
+            description: selectedDonation.description,
+            id: selectedDonation.id,
+          }}
+        />
       )}
     </div>
   );

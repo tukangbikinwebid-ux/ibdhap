@@ -110,16 +110,49 @@ export default function Home() {
       isha: "Isya",
     };
 
-    if (currentPrayerKey) {
-      return {
-        title: prayerNames[currentPrayerKey],
-        time: prayerTimes[currentPrayerKey],
-      };
+    // Fungsi untuk mengkonversi waktu string (HH:MM) ke menit
+    const parseTime = (timeStr: string): number => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+
+    // Dapatkan waktu saat ini dalam menit
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Konversi semua waktu sholat ke menit
+    const times = {
+      fajr: parseTime(prayerTimes.fajr),
+      dhuhr: parseTime(prayerTimes.dhuhr),
+      asr: parseTime(prayerTimes.asr),
+      maghrib: parseTime(prayerTimes.maghrib),
+      isha: parseTime(prayerTimes.isha),
+    };
+
+    // Tentukan sholat yang sedang aktif berdasarkan waktu saat ini
+    type PrayerKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+    let activePrayer: PrayerKey | null = null;
+
+    // Logika: cek waktu saat ini berada di rentang waktu sholat mana
+    if (currentMinutes >= times.fajr && currentMinutes < times.dhuhr) {
+      activePrayer = "fajr";
+    } else if (currentMinutes >= times.dhuhr && currentMinutes < times.asr) {
+      activePrayer = "dhuhr";
+    } else if (currentMinutes >= times.asr && currentMinutes < times.maghrib) {
+      activePrayer = "asr";
+    } else if (currentMinutes >= times.maghrib && currentMinutes < times.isha) {
+      activePrayer = "maghrib";
+    } else if (currentMinutes >= times.isha || currentMinutes < times.fajr) {
+      // Setelah Isya atau sebelum Subuh (malam hari)
+      activePrayer = "isha";
     }
 
+    // Gunakan activePrayer jika ada, jika tidak gunakan currentPrayerKey dari hook, atau fallback ke Subuh
+    const prayerKey: PrayerKey = (activePrayer || currentPrayerKey || "fajr") as PrayerKey;
+
     return {
-      title: "Subuh",
-      time: prayerTimes.fajr,
+      title: prayerNames[prayerKey],
+      time: prayerTimes[prayerKey],
     };
   }, [prayerTimes, currentPrayerKey]);
 
