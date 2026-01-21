@@ -11,15 +11,19 @@ import {
   Languages,
   Loader2,
   Library,
+  Navigation,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import {
   useGetEbookCategoriesQuery,
   useGetEbookByCategoryQuery,
 } from "@/services/public/e-book.service";
+import { useI18n } from "@/app/hooks/useI18n";
 
 export default function EBookPage() {
+  const { t } = useI18n();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null
   );
@@ -62,7 +66,7 @@ export default function EBookPage() {
   const getCategoryName = (id: number | null) => {
     return (
       categoriesData?.data.find((cat) => cat.id === id)?.name ||
-      "Kategori Pilihan"
+      t("ebook.selectedCategory")
     );
   };
 
@@ -84,12 +88,25 @@ export default function EBookPage() {
       {/* Header */}
       <header className="bg-background/80 backdrop-blur-md shadow-sm border-b border-awqaf-border-light sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa">
-            E-Book Islam
-          </h1>
-          <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-            Koleksi buku digital Islam
-          </p>
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 text-awqaf-primary"
+              >
+                <Navigation className="w-5 h-5" />
+              </Button>
+            </Link>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa">
+                {t("ebook.title")}
+              </h1>
+              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
+                {t("ebook.subtitle")}
+              </p>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -97,7 +114,7 @@ export default function EBookPage() {
         {/* Categories Grid (Loading State) */}
         {isLoadingCategories ? (
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {[1, 2].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className="bg-card rounded-2xl p-4 h-24 animate-pulse bg-gray-200"
@@ -135,60 +152,6 @@ export default function EBookPage() {
           </div>
         )}
 
-        {/* --- BANNER KAMUS ISTILAH --- */}
-        <Link href="/kamus-istilah" className="block mb-4">
-          <div className="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl p-4 text-white shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
-            {/* Decorative BG */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl group-hover:scale-110 transition-transform duration-500"></div>
-
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                  <BookA className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold font-comfortaa text-sm">
-                    Kamus Istilah
-                  </h3>
-                  <p className="text-xs text-white/80 font-comfortaa">
-                    Cari definisi kata dalam Islam
-                  </p>
-                </div>
-              </div>
-              <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </div>
-        </Link>
-
-        {/* --- BANNER BAHASA ARAB --- */}
-        <Link href="/bahasa-arab" className="block mb-6">
-          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-4 text-white shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
-            {/* Decorative BG */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl group-hover:scale-110 transition-transform duration-500"></div>
-
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                  <Languages className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold font-comfortaa text-sm">
-                    Bahasa Arab
-                  </h3>
-                  <p className="text-xs text-white/80 font-comfortaa">
-                    Pelajari kosa kata harian & travel
-                  </p>
-                </div>
-              </div>
-              <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </div>
-        </Link>
-
         {/* Books List Section */}
         <div className="bg-card rounded-2xl shadow-sm p-6 border border-awqaf-border-light mb-6 min-h-[300px]">
           <div className="flex items-center justify-between mb-4">
@@ -202,15 +165,20 @@ export default function EBookPage() {
 
           {isLoadingBooks ? (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="flex gap-4 p-4 rounded-xl border border-gray-100"
+                  className="flex gap-4 p-4 rounded-xl border border-gray-100 animate-pulse"
                 >
-                  <div className="w-12 h-16 bg-gray-200 rounded animate-pulse" />
+                  <div className="w-16 h-20 bg-gray-200 rounded-lg flex-shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
-                    <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-3/4 bg-gray-200 rounded" />
+                    <div className="h-3 w-1/2 bg-gray-200 rounded" />
+                    <div className="flex gap-4 mt-2">
+                      <div className="h-3 w-12 bg-gray-200 rounded" />
+                      <div className="h-3 w-12 bg-gray-200 rounded" />
+                      <div className="h-3 w-12 bg-gray-200 rounded" />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -219,7 +187,7 @@ export default function EBookPage() {
             <div className="text-center py-10">
               <Library className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500 font-comfortaa">
-                Belum ada buku di kategori ini.
+                {t("ebook.noBooksInCategory")}
               </p>
             </div>
           ) : (
@@ -272,7 +240,7 @@ export default function EBookPage() {
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3 text-awqaf-foreground-secondary" />
                           <span className="text-[10px] text-awqaf-foreground-secondary font-comfortaa">
-                            {meta.pages} hlm
+                            {meta.pages} {t("ebook.pages")}
                           </span>
                         </div>
                       </div>
@@ -288,10 +256,10 @@ export default function EBookPage() {
         <div className="bg-gradient-to-r from-accent-100 to-accent-200 rounded-2xl p-6 border border-accent-200">
           <div className="text-center">
             <h4 className="font-semibold text-awqaf-primary font-comfortaa mb-2">
-              Download Gratis
+              {t("ebook.freeDownload")}
             </h4>
             <p className="text-awqaf-foreground-secondary text-sm font-comfortaa">
-              Semua e-book tersedia gratis untuk pembelajaran dan dakwah
+              {t("ebook.freeDownloadDescription")}
             </p>
           </div>
         </div>

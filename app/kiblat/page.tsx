@@ -18,6 +18,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/app/hooks/useI18n";
 
 interface Location {
   latitude: number;
@@ -62,6 +63,7 @@ const KAABA_LAT = 21.4225;
 const KAABA_LNG = 39.8262;
 
 export default function QiblaPage() {
+  const { t, locale } = useI18n();
   const [location, setLocation] = useState<Location | null>(null);
   const [qiblaData, setQiblaData] = useState<QiblaData | null>(null);
   const [compassHeading, setCompassHeading] = useState<number | null>(null);
@@ -93,7 +95,15 @@ export default function QiblaPage() {
       const response = await fetch(
         `https://api.aladhan.com/v1/qibla/${lat}/${lng}`
       );
-      if (!response.ok) throw new Error("Gagal mengambil data arah kiblat");
+      const errorMessages: Record<string, string> = {
+        id: "Gagal mengambil data arah kiblat",
+        en: "Failed to fetch Qibla direction data",
+        ar: "فشل في جلب بيانات اتجاه القبلة",
+        fr: "Échec de la récupération des données de direction de la Qibla",
+        kr: "키블라 방향 데이터를 가져오지 못했습니다",
+        jp: "キブラの方向データの取得に失敗しました",
+      };
+      if (!response.ok) throw new Error(errorMessages[locale] || errorMessages.id);
 
       const data = await response.json();
       const direction = data.data.direction; // Direction relative to North
@@ -150,7 +160,15 @@ export default function QiblaPage() {
 
     try {
       if (!navigator.geolocation) {
-        throw new Error("Geolocation tidak didukung oleh browser ini");
+        const errorMessages: Record<string, string> = {
+          id: "Geolocation tidak didukung oleh browser ini",
+          en: "Geolocation is not supported by this browser",
+          ar: "الموقع الجغرافي غير مدعوم في هذا المتصفح",
+          fr: "La géolocalisation n'est pas prise en charge par ce navigateur",
+          kr: "이 브라우저에서 지리적 위치를 지원하지 않습니다",
+          jp: "このブラウザでは位置情報がサポートされていません",
+        };
+        throw new Error(errorMessages[locale] || errorMessages.id);
       }
 
       const position = await new Promise<GeolocationPosition>(
@@ -176,23 +194,49 @@ export default function QiblaPage() {
 
       // Reverse geocoding to get city name
       try {
+        const localeMap: Record<string, string> = {
+          id: "id",
+          en: "en",
+          ar: "ar",
+          fr: "fr",
+          kr: "ko",
+          jp: "ja",
+        };
+        const unknownLocation: Record<string, { city: string; country: string }> = {
+          id: { city: "Lokasi tidak diketahui", country: "Negara tidak diketahui" },
+          en: { city: "Unknown location", country: "Unknown country" },
+          ar: { city: "موقع غير معروف", country: "دولة غير معروفة" },
+          fr: { city: "Emplacement inconnu", country: "Pays inconnu" },
+          kr: { city: "알 수 없는 위치", country: "알 수 없는 국가" },
+          jp: { city: "不明な場所", country: "不明な国" },
+        };
         const response = await fetch(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=id`
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${localeMap[locale] || "id"}`
         );
         const data = await response.json();
+        const unknown = unknownLocation[locale] || unknownLocation.id;
 
         setLocation({
           latitude,
           longitude,
-          city: data.city || data.locality || "Lokasi tidak diketahui",
-          country: data.countryName || "Negara tidak diketahui",
+          city: data.city || data.locality || unknown.city,
+          country: data.countryName || unknown.country,
         });
       } catch {
+        const unknownLocation: Record<string, { city: string; country: string }> = {
+          id: { city: "Lokasi tidak diketahui", country: "Negara tidak diketahui" },
+          en: { city: "Unknown location", country: "Unknown country" },
+          ar: { city: "موقع غير معروف", country: "دولة غير معروفة" },
+          fr: { city: "Emplacement inconnu", country: "Pays inconnu" },
+          kr: { city: "알 수 없는 위치", country: "알 수 없는 국가" },
+          jp: { city: "不明な場所", country: "不明な国" },
+        };
+        const unknown = unknownLocation[locale] || unknownLocation.id;
         setLocation({
           latitude,
           longitude,
-          city: "Lokasi tidak diketahui",
-          country: "Negara tidak diketahui",
+          city: unknown.city,
+          country: unknown.country,
         });
       }
 
@@ -203,15 +247,53 @@ export default function QiblaPage() {
       setPermissionStatus("granted");
     } catch (err: unknown) {
       const geoError = err as GeolocationPositionError;
-      let errorMessage = "Terjadi kesalahan saat mendapatkan lokasi";
-
+      const errorMessages: Record<string, Record<number, string>> = {
+        id: {
+          1: "Akses lokasi ditolak. Silakan izinkan akses lokasi di pengaturan browser.",
+          2: "Lokasi tidak tersedia. Pastikan GPS aktif.",
+          3: "Timeout mendapatkan lokasi. Silakan coba lagi.",
+          0: "Terjadi kesalahan saat mendapatkan lokasi",
+        },
+        en: {
+          1: "Location access denied. Please allow location access in browser settings.",
+          2: "Location unavailable. Make sure GPS is active.",
+          3: "Timeout getting location. Please try again.",
+          0: "An error occurred while getting location",
+        },
+        ar: {
+          1: "تم رفض الوصول إلى الموقع. يرجى السماح بالوصول إلى الموقع في إعدادات المتصفح.",
+          2: "الموقع غير متاح. تأكد من تفعيل GPS.",
+          3: "انتهت مهلة الحصول على الموقع. يرجى المحاولة مرة أخرى.",
+          0: "حدث خطأ أثناء الحصول على الموقع",
+        },
+        fr: {
+          1: "Accès à la localisation refusé. Veuillez autoriser l'accès à la localisation dans les paramètres du navigateur.",
+          2: "Localisation indisponible. Assurez-vous que le GPS est actif.",
+          3: "Délai d'attente de la localisation expiré. Veuillez réessayer.",
+          0: "Une erreur s'est produite lors de l'obtention de la localisation",
+        },
+        kr: {
+          1: "위치 액세스가 거부되었습니다. 브라우저 설정에서 위치 액세스를 허용하세요.",
+          2: "위치를 사용할 수 없습니다. GPS가 활성화되어 있는지 확인하세요.",
+          3: "위치 가져오기 시간 초과. 다시 시도하세요.",
+          0: "위치를 가져오는 중 오류가 발생했습니다",
+        },
+        jp: {
+          1: "位置情報へのアクセスが拒否されました。ブラウザの設定で位置情報へのアクセスを許可してください。",
+          2: "位置情報が利用できません。GPSが有効になっていることを確認してください。",
+          3: "位置情報の取得がタイムアウトしました。もう一度お試しください。",
+          0: "位置情報の取得中にエラーが発生しました",
+        },
+      };
+      const messages = errorMessages[locale] || errorMessages.id;
+      let errorMessage = messages[0];
+      
       if (geoError.code === 1) {
-        errorMessage =
-          "Akses lokasi ditolak. Silakan izinkan akses lokasi di pengaturan browser.";
+        errorMessage = messages[1];
       } else if (geoError.code === 2) {
-        errorMessage = "Lokasi tidak tersedia. Pastikan GPS aktif.";
+        errorMessage = messages[2];
       } else if (geoError.code === 3) {
-        errorMessage = "Timeout mendapatkan lokasi. Silakan coba lagi.";
+        errorMessage = messages[3];
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
@@ -221,7 +303,7 @@ export default function QiblaPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   // Request permission (iOS) and enable compass
   const enableCompass = async () => {
@@ -338,24 +420,24 @@ export default function QiblaPage() {
 
   const formatDistance = (distance: number): string => {
     if (distance < 1) {
-      return `${Math.round(distance * 1000)} meter`;
+      const unit = locale === "id" ? "meter" : locale === "en" ? "meters" : locale === "ar" ? "متر" : locale === "fr" ? "mètres" : locale === "kr" ? "미터" : "メートル";
+      return `${Math.round(distance * 1000)} ${unit}`;
     }
     return `${distance.toFixed(1)} km`;
   };
 
   const getDirectionText = (direction: number): string => {
-    const directions = [
-      "Utara",
-      "Timur Laut",
-      "Timur",
-      "Tenggara",
-      "Selatan",
-      "Barat Daya",
-      "Barat",
-      "Barat Laut",
-    ];
+    const directions: Record<string, string[]> = {
+      id: ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"],
+      en: ["North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"],
+      ar: ["الشمال", "الشمال الشرقي", "الشرق", "الجنوب الشرقي", "الجنوب", "الجنوب الغربي", "الغرب", "الشمال الغربي"],
+      fr: ["Nord", "Nord-est", "Est", "Sud-est", "Sud", "Sud-ouest", "Ouest", "Nord-ouest"],
+      kr: ["북", "북동", "동", "남동", "남", "남서", "서", "북서"],
+      jp: ["北", "北東", "東", "南東", "南", "南西", "西", "北西"],
+    };
+    const dirs = directions[locale] || directions.id;
     const index = Math.round(direction / 45) % 8;
-    return directions[index];
+    return dirs[index];
   };
 
   // Get accuracy badge color
@@ -373,16 +455,7 @@ export default function QiblaPage() {
   };
 
   const getAccuracyText = () => {
-    switch (accuracy) {
-      case "high":
-        return "Akurasi Tinggi";
-      case "medium":
-        return "Akurasi Sedang";
-      case "low":
-        return "Akurasi Rendah";
-      default:
-        return "Mendeteksi...";
-    }
+    return t(`qibla.accuracy.${accuracy || "detecting"}`);
   };
 
   return (
@@ -403,7 +476,7 @@ export default function QiblaPage() {
               </Link>
               <div className="text-center">
                 <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                  Arah Kiblat
+                  {t("qibla.title")}
                 </h1>
                 {location && (
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
@@ -438,10 +511,10 @@ export default function QiblaPage() {
                 <Navigation className="w-8 h-8 text-awqaf-primary" />
               </div>
               <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
-                Mendeteksi Lokasi...
+                {t("qibla.detectingLocation")}
               </h3>
               <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                Pastikan GPS aktif dan izinkan akses lokasi
+                {t("qibla.ensureGpsActive")}
               </p>
             </CardContent>
           </Card>
@@ -455,7 +528,7 @@ export default function QiblaPage() {
                 <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="font-medium text-red-800 font-comfortaa mb-1">
-                    Gagal Mendapatkan Lokasi
+                    {t("qibla.failedToGetLocation")}
                   </p>
                   <p className="text-sm text-red-700 font-comfortaa mb-3">
                     {error}
@@ -466,7 +539,7 @@ export default function QiblaPage() {
                     className="bg-red-600 hover:bg-red-700 text-white font-comfortaa"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Coba Lagi
+                    {t("qibla.tryAgain")}
                   </Button>
                 </div>
               </div>
@@ -497,12 +570,12 @@ export default function QiblaPage() {
                     {isAligned ? (
                       <>
                         <CheckCircle className="w-4 h-4" />
-                        Anda Menghadap Kiblat!
+                        {t("qibla.facingQibla")}
                       </>
                     ) : (
                       <>
                         <Target className="w-4 h-4" />
-                        Putar perangkat ke arah jarum
+                        {t("qibla.rotateDevice")}
                       </>
                     )}
                   </p>
@@ -614,7 +687,7 @@ export default function QiblaPage() {
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Compass className="w-4 h-4 text-awqaf-primary" />
                     <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      Arah Kiblat
+                      {t("qibla.qiblaDirection")}
                     </p>
                   </div>
                   <p className="text-xl font-bold text-awqaf-primary font-comfortaa">
@@ -628,7 +701,7 @@ export default function QiblaPage() {
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <MapPin className="w-4 h-4 text-awqaf-primary" />
                     <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      Jarak ke Ka&apos;bah
+                      {t("qibla.distanceToKaaba")}
                     </p>
                   </div>
                   <p className="text-xl font-bold text-awqaf-primary font-comfortaa">
@@ -644,7 +717,7 @@ export default function QiblaPage() {
                   className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white font-comfortaa"
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
-                  Aktifkan Kompas Real-time
+                  {t("qibla.enableRealtimeCompass")}
                 </Button>
               )}
 
@@ -652,7 +725,7 @@ export default function QiblaPage() {
               {isCompassEnabled && (
                 <div className="flex items-center justify-center gap-2 text-sm text-awqaf-foreground-secondary font-comfortaa">
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>Kompas aktif - Gerakkan perangkat Anda</span>
+                  <span>{t("qibla.compassActive")}</span>
                 </div>
               )}
             </CardContent>
@@ -694,24 +767,24 @@ export default function QiblaPage() {
               </div>
               <div>
                 <p className="font-semibold text-card-foreground font-comfortaa text-sm mb-2">
-                  Tips Akurasi Maksimal
+                  {t("qibla.accuracyTips")}
                 </p>
                 <ul className="text-xs text-awqaf-foreground-secondary font-comfortaa space-y-1">
                   <li className="flex items-start gap-2">
                     <span className="text-awqaf-primary">•</span>
-                    Aktifkan GPS/Lokasi di pengaturan perangkat
+                    {t("qibla.tips.enableGps")}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-awqaf-primary">•</span>
-                    Jauhkan dari benda logam atau magnet
+                    {t("qibla.tips.avoidMetal")}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-awqaf-primary">•</span>
-                    Kalibrasi kompas dengan gerakan angka 8
+                    {t("qibla.tips.calibrateCompass")}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-awqaf-primary">•</span>
-                    Pegang perangkat secara horizontal
+                    {t("qibla.tips.holdHorizontal")}
                   </li>
                 </ul>
               </div>
@@ -729,16 +802,15 @@ export default function QiblaPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-card-foreground font-comfortaa text-sm mb-1">
-                    Kalibrasi Kompas
+                    {t("qibla.compassCalibration")}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-2">
-                    Jika jarum tidak akurat, gerakkan perangkat membentuk angka 8
-                    di udara beberapa kali untuk mengkalibrasi sensor kompas.
+                    {t("qibla.calibrationDescription")}
                   </p>
                   <div className="flex items-center gap-2">
                     <div className="text-2xl">∞</div>
                     <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      Gerakan kalibrasi
+                      {t("qibla.calibrationMovement")}
                     </span>
                   </div>
                 </div>

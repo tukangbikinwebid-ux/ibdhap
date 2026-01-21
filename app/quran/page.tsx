@@ -16,6 +16,8 @@ import { useRouter } from "next/navigation";
 // Import service API
 import { useGetSurahsQuery } from "@/services/public/quran.service";
 import { Surah } from "@/types/public/quran";
+// Import i18n
+import { useI18n } from "@/app/hooks/useI18n";
 
 // Mapping Juz untuk setiap surah berdasarkan standar Al-Quran
 // Mapping ini menunjukkan juz pertama di mana surah dimulai
@@ -144,6 +146,7 @@ const getSurahJuz = (surahId: number): number => {
 };
 
 export default function QuranPage() {
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedJuz, setSelectedJuz] = useState<number | null>(null);
@@ -263,10 +266,10 @@ export default function QuranPage() {
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
             <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
-              Al-Qur&apos;an
+              {t("quran.title")}
             </h1>
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
-              Kitab suci umat Islam
+              {t("quran.subtitle")}
             </p>
           </div>
         </div>
@@ -280,7 +283,7 @@ export default function QuranPage() {
               <Search className="w-5 h-5 text-awqaf-foreground-secondary" />
               <Input
                 type="text"
-                placeholder="Cari surah (Latin, Arti, Arab)..."
+                placeholder={t("quran.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 border-0 bg-transparent text-awqaf-foreground placeholder-awqaf-foreground-secondary font-comfortaa focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -307,10 +310,10 @@ export default function QuranPage() {
                 <BookOpen className="w-6 h-6 text-awqaf-primary" />
               </div>
               <h3 className="font-semibold text-card-foreground text-sm font-comfortaa mb-1">
-                Baca Al-Qur&apos;an
+                {t("quran.readQuran")}
               </h3>
               <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                Mulai dari Al-Fatihah
+                {t("quran.startFromFatihah")}
               </p>
             </CardContent>
           </Card>
@@ -324,10 +327,10 @@ export default function QuranPage() {
                 <Bookmark className="w-6 h-6 text-info" />
               </div>
               <h3 className="font-semibold text-card-foreground text-sm font-comfortaa mb-1">
-                Bookmark
+                {t("quran.bookmark")}
               </h3>
               <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                {bookmarkedSurahs.length} surah tersimpan
+                {bookmarkedSurahs.length} {t("quran.surahSaved")}
               </p>
             </CardContent>
           </Card>
@@ -338,13 +341,13 @@ export default function QuranPage() {
           <DialogContent className="border-awqaf-border-light p-0">
             <DialogHeader className="p-4">
               <DialogTitle className="font-comfortaa">
-                Surah Tersimpan
+                {t("quran.savedSurahs")}
               </DialogTitle>
             </DialogHeader>
             <div className="px-4 pb-4">
               {bookmarkedSurahsWithDetails.length === 0 ? (
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center py-6">
-                  Belum ada surah yang dibookmark
+                  {t("quran.noBookmarks")}
                 </p>
               ) : (
                 <div className="space-y-2 max-h-80 overflow-y-auto mobile-scroll">
@@ -359,7 +362,7 @@ export default function QuranPage() {
                           {surah.id}. {surah.transliteration}
                         </p>
                         <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                          {surah.name} • {surah.total_verses} ayat
+                          {surah.name} • {surah.total_verses} {t("quran.verses")}
                         </p>
                       </div>
                     </div>
@@ -377,7 +380,7 @@ export default function QuranPage() {
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-awqaf-primary" />
                 <h3 className="font-semibold text-card-foreground font-comfortaa">
-                  Baru Dibaca
+                  {t("quran.recentlyRead")}
                 </h3>
               </div>
 
@@ -404,10 +407,10 @@ export default function QuranPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-card-foreground font-comfortaa">
-                Semua Surah
+                {t("quran.allSurahs")}
               </h3>
               <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                {isLoading ? "Memuat..." : `${filteredSurahs.length} surah`}
+                {isLoading ? t("quran.loading") : `${filteredSurahs.length} ${t("quran.surah")}`}
               </span>
             </div>
 

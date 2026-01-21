@@ -19,6 +19,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/app/hooks/useI18n";
 
 // --- TIPE DATA ---
 interface HeirInput {
@@ -46,6 +47,7 @@ interface WarisData {
 const STORAGE_KEY = "kalkulator-waris-data";
 
 export default function WarisCalculatorPage() {
+  const { t } = useI18n();
   const [totalHarta, setTotalHarta] = useState<string>("");
   // Default: Meninggal Laki-laki (ada Istri), Meninggal Perempuan (ada Suami)
   const [deceasedGender, setDeceasedGender] = useState<"male" | "female">(
@@ -308,7 +310,7 @@ export default function WarisCalculatorPage() {
                 </Button>
               </Link>
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Kalkulator Waris
+                {t("inheritance.title")}
               </h1>
               <Button
                 variant="ghost"
@@ -339,13 +341,13 @@ export default function WarisCalculatorPage() {
         <Card className="border-awqaf-border-light">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-comfortaa text-awqaf-foreground-secondary flex items-center gap-2">
-              <Banknote className="w-4 h-4" /> Informasi Harta & Pewaris
+              <Banknote className="w-4 h-4" /> {t("inheritance.inheritanceInfo")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label className="text-xs mb-1 block">
-                Jenis Kelamin Pewaris (Yang Meninggal)
+                {t("inheritance.deceasedGender")}
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 <Button
@@ -355,7 +357,7 @@ export default function WarisCalculatorPage() {
                   }
                   onClick={() => handleGenderSwitch("male")}
                 >
-                  Laki-laki
+                  {t("inheritance.male")}
                 </Button>
                 <Button
                   variant={deceasedGender === "female" ? "default" : "outline"}
@@ -364,14 +366,14 @@ export default function WarisCalculatorPage() {
                   }
                   onClick={() => handleGenderSwitch("female")}
                 >
-                  Perempuan
+                  {t("inheritance.female")}
                 </Button>
               </div>
             </div>
 
             <div>
               <Label className="text-xs mb-1 block">
-                Total Harta Warisan (Rp)
+                {t("inheritance.totalInheritance")}
               </Label>
               <Input
                 type="text"
@@ -397,20 +399,20 @@ export default function WarisCalculatorPage() {
         <Card className="border-awqaf-border-light">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-comfortaa text-awqaf-foreground-secondary flex items-center gap-2">
-              <Users className="w-4 h-4" /> Ahli Waris
+              <Users className="w-4 h-4" /> {t("inheritance.heirs")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { id: "father", label: "Ayah", max: 1 },
-              { id: "mother", label: "Ibu", max: 1 },
+              { id: "father", label: t("inheritance.father"), max: 1 },
+              { id: "mother", label: t("inheritance.mother"), max: 1 },
               {
                 id: deceasedGender === "male" ? "wife" : "husband",
-                label: deceasedGender === "male" ? "Istri" : "Suami",
+                label: deceasedGender === "male" ? t("inheritance.wife") : t("inheritance.husband"),
                 max: deceasedGender === "male" ? 4 : 1,
               },
-              { id: "son", label: "Anak Laki-laki", max: 20 },
-              { id: "daughter", label: "Anak Perempuan", max: 20 },
+              { id: "son", label: t("inheritance.son"), max: 20 },
+              { id: "daughter", label: t("inheritance.daughter"), max: 20 },
             ].map((item) => (
               <div
                 key={item.id}
@@ -449,7 +451,7 @@ export default function WarisCalculatorPage() {
               className="w-full mt-4 bg-awqaf-primary font-comfortaa"
               onClick={calculateWaris}
             >
-              <Calculator className="w-4 h-4 mr-2" /> Hitung Pembagian
+              <Calculator className="w-4 h-4 mr-2" /> {t("inheritance.calculate")}
             </Button>
           </CardContent>
         </Card>
@@ -459,10 +461,10 @@ export default function WarisCalculatorPage() {
           <div className="animate-in slide-in-from-bottom-4 fade-in">
             <div className="flex items-center justify-between mb-2 px-1">
               <h3 className="font-bold text-awqaf-primary font-comfortaa">
-                Hasil Perhitungan
+                {t("inheritance.calculationResult")}
               </h3>
               <Badge variant="outline" className="text-xs">
-                Total: {formatRupiah(result.total_inheritance)}
+                {t("inheritance.total")} {formatRupiah(result.total_inheritance)}
               </Badge>
             </div>
 
@@ -481,7 +483,7 @@ export default function WarisCalculatorPage() {
                           </h4>
                           {item.count > 1 && (
                             <Badge className="bg-accent-100 text-awqaf-primary hover:bg-accent-200 border-0 text-[10px]">
-                              {item.count} Orang
+                              {item.count} {t("inheritance.people")}
                             </Badge>
                           )}
                         </div>
@@ -490,21 +492,21 @@ export default function WarisCalculatorPage() {
                             variant="secondary"
                             className="text-[10px] h-5"
                           >
-                            Bagian: {item.share_fraction}
+                            {t("inheritance.share")} {item.share_fraction}
                           </Badge>
                           {item.heir_type.includes("Asabah") && (
                             <Badge
                               variant="outline"
                               className="text-[10px] h-5 border-yellow-500 text-yellow-600 bg-yellow-50"
                             >
-                              Sisa Harta
+                              {t("inheritance.remaining")}
                             </Badge>
                           )}
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-gray-500 font-comfortaa">
-                          Per orang
+                          {t("inheritance.perPerson")}
                         </p>
                         <p className="font-bold text-awqaf-primary font-comfortaa text-lg">
                           {formatRupiah(item.amount_per_person)}
@@ -513,7 +515,7 @@ export default function WarisCalculatorPage() {
                     </div>
                     {item.count > 1 && (
                       <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
-                        <span>Total Golongan:</span>
+                        <span>{t("inheritance.totalGroup")}</span>
                         <span className="font-mono font-medium">
                           {formatRupiah(item.total_amount)}
                         </span>
@@ -532,13 +534,10 @@ export default function WarisCalculatorPage() {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-bold text-teal-800 font-comfortaa">
-                        Sisa Harta (Radd)
+                        {t("inheritance.remainingInheritance")}
                       </p>
                       <p className="text-xs text-teal-600">
-                        Terdapat sisa harta yang tidak habis dibagi oleh Ashabul
-                        Furud. Sisa ini {formatRupiah(result.surplus_radd)}{" "}
-                        biasanya dikembalikan ke ahli waris nasab sebanding
-                        bagian mereka.
+                        {t("inheritance.remainingDescription")}
                       </p>
                     </div>
                   </CardContent>
@@ -547,9 +546,7 @@ export default function WarisCalculatorPage() {
 
               {/* Disclaimer */}
               <p className="text-[10px] text-center text-gray-400 mt-4 px-4 leading-tight">
-                *Perhitungan ini menggunakan simulasi dasar untuk keluarga inti.
-                Untuk kasus kompleks (Kakek, Nenek, Saudara, Kalalah), mohon
-                konsultasikan dengan Ulama atau ahli waris terpercaya.
+                {t("inheritance.disclaimer")}
               </p>
             </div>
           </div>

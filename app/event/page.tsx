@@ -18,10 +18,12 @@ import Link from "next/link";
 import Image from "next/image";
 // Import Service & Type
 import { useGetEventsQuery } from "@/services/public/event.service";
+import { useI18n } from "@/app/hooks/useI18n";
 
 type FilterType = "all" | "online" | "offline";
 
 export default function EventPage() {
+  const { t, locale } = useI18n();
   const [filter, setFilter] = useState<FilterType>("all");
 
   // Fetch Events from API
@@ -37,16 +39,25 @@ export default function EventPage() {
   // Helper Format Tanggal & Jam
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString);
+    const localeMap: Record<string, string> = {
+      id: "id-ID",
+      en: "en-US",
+      ar: "ar-SA",
+      fr: "fr-FR",
+      kr: "ko-KR",
+      jp: "ja-JP",
+    };
+    const currentLocale = localeMap[locale] || "id-ID";
     return {
-      day: date.toLocaleDateString("id-ID", { day: "numeric" }),
-      month: date.toLocaleDateString("id-ID", { month: "short" }),
-      fullDate: date.toLocaleDateString("id-ID", {
+      day: date.toLocaleDateString(currentLocale, { day: "numeric" }),
+      month: date.toLocaleDateString(currentLocale, { month: "short" }),
+      fullDate: date.toLocaleDateString(currentLocale, {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       }),
-      time: date.toLocaleTimeString("id-ID", {
+      time: date.toLocaleTimeString(currentLocale, {
         hour: "2-digit",
         minute: "2-digit",
       }),
@@ -82,10 +93,10 @@ export default function EventPage() {
             </Link>
             <div>
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Agenda & Kajian
+                {t("event.title")}
               </h1>
               <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                Temukan majelis ilmu terdekat
+                {t("event.subtitle")}
               </p>
             </div>
           </div>
@@ -96,9 +107,9 @@ export default function EventPage() {
         {/* Filters */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[
-            { id: "all", label: "Semua", icon: Calendar },
-            { id: "online", label: "Online", icon: Video },
-            { id: "offline", label: "Offline", icon: MapPin },
+            { id: "all", label: t("event.all"), icon: Calendar },
+            { id: "online", label: t("event.online"), icon: Video },
+            { id: "offline", label: t("event.offline"), icon: MapPin },
           ].map((item) => (
             <Button
               key={item.id}
@@ -123,12 +134,12 @@ export default function EventPage() {
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary mb-2" />
               <p className="text-sm text-gray-500 font-comfortaa">
-                Memuat agenda...
+                {t("event.loading")}
               </p>
             </div>
           ) : isError ? (
             <div className="text-center py-12 text-red-500 font-comfortaa text-sm">
-              Gagal memuat data event.
+              {t("event.failedToLoad")}
             </div>
           ) : filteredEvents.length > 0 ? (
             filteredEvents.map((evt) => {
@@ -222,7 +233,7 @@ export default function EventPage() {
                               window.open(evt.registration_link, "_blank")
                             }
                           >
-                            Daftar Sekarang{" "}
+                            {t("event.registerNow")}{" "}
                             <ExternalLink className="w-3 h-3 ml-2" />
                           </Button>
                         </div>
@@ -239,10 +250,10 @@ export default function EventPage() {
                 <Ticket className="w-10 h-10 text-gray-300" />
               </div>
               <h3 className="font-bold text-gray-800 font-comfortaa">
-                Tidak ada event
+                {t("event.noEvents")}
               </h3>
               <p className="text-sm text-gray-500 font-comfortaa">
-                Belum ada jadwal untuk kategori ini.
+                {t("event.noEventsInCategory")}
               </p>
             </div>
           )}

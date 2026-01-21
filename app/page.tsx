@@ -12,17 +12,36 @@ import ProgressWidget from "./components/ProgressWidget";
 import FeatureNavigation from "./components/FeatureNavigation";
 import ArticleCard from "./components/ArticleCard";
 import SearchModal from "./components/SearchModal";
-import NotificationButton from "./components/NotificationButton";
+import LanguageSwitcher from "./components/LanguageSwitcher";
 // Import Services
 import { useGetArticlesQuery } from "@/services/public/article.service";
 import { usePrayerTracker } from "@/app/prayer-tracker/hooks/usePrayerTracker";
-import { useGetSurahsQuery } from "@/services/public/quran.service"; // Tambahkan import ini
+import { useGetSurahsQuery } from "@/services/public/quran.service";
+// Import i18n
+import { useI18n } from "./hooks/useI18n";
+import { getCurrentLocale } from "@/lib/i18n";
 
 export default function Home() {
+  const { t, locale } = useI18n();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const currentHour = new Date().getHours();
-  const greeting =
-    currentHour < 12 ? "Pagi" : currentHour < 18 ? "Siang" : "Malam";
+  
+  // Get greeting based on locale
+  const getGreeting = () => {
+    const hour = currentHour;
+    const greetings: Record<string, { morning: string; afternoon: string; evening: string }> = {
+      id: { morning: "Pagi", afternoon: "Siang", evening: "Malam" },
+      en: { morning: "Morning", afternoon: "Afternoon", evening: "Evening" },
+      ar: { morning: "صباح", afternoon: "ظهر", evening: "مساء" },
+      fr: { morning: "Matin", afternoon: "Après-midi", evening: "Soir" },
+      kr: { morning: "아침", afternoon: "오후", evening: "저녁" },
+      jp: { morning: "朝", afternoon: "午後", evening: "夜" },
+    };
+    const greetingSet = greetings[locale] || greetings.id;
+    return hour < 12 ? greetingSet.morning : hour < 18 ? greetingSet.afternoon : greetingSet.evening;
+  };
+  
+  const greeting = getGreeting();
 
   // 1. Fetch Data
   const { data: articlesData, isLoading: isLoadingArticles } =
@@ -35,7 +54,7 @@ export default function Home() {
 
   // 2. Local State for Last Quran Activity
   const [lastQuranActivity, setLastQuranActivity] = useState(
-    "Belum ada aktivitas"
+    t("home.loading")
   );
 
   useEffect(() => {
@@ -43,7 +62,16 @@ export default function Home() {
 
     if (lastRead) {
       const parsed = JSON.parse(lastRead);
-      setLastQuranActivity(`${parsed.surahName} : Ayat ${parsed.verse}`);
+      const verseTexts: Record<string, string> = {
+        id: "Ayat",
+        en: "Verse",
+        ar: "آية",
+        fr: "Verset",
+        kr: "절",
+        jp: "節",
+      };
+      const verseText = verseTexts[locale] || verseTexts.id;
+      setLastQuranActivity(`${parsed.surahName} : ${verseText} ${parsed.verse}`);
     } else {
       // Fallback ke recent ID
       const recent = localStorage.getItem("quran-recent");
@@ -57,13 +85,33 @@ export default function Home() {
           )?.transliteration;
 
           // Gunakan nama jika ada, jika tidak fallback sementara ke ID
+          const surahTexts: Record<string, string> = {
+            id: "Surah",
+            en: "Surah",
+            ar: "سورة",
+            fr: "Sourate",
+            kr: "수라",
+            jp: "スーラ",
+          };
+          const surahText = surahTexts[locale] || surahTexts.id;
+          const suffix = locale === "id" ? " ke-" : locale === "en" ? " " : locale === "ar" ? " " : locale === "fr" ? " " : locale === "kr" ? " " : " ";
           setLastQuranActivity(
-            surahName ? `Surah ${surahName}` : `Surah ke-${surahId}`
+            surahName ? `${surahText} ${surahName}` : `${surahText}${suffix}${surahId}`
           );
         }
+      } else {
+        const noActivityTexts: Record<string, string> = {
+          id: "Belum ada aktivitas",
+          en: "No activity yet",
+          ar: "لا يوجد نشاط",
+          fr: "Aucune activité",
+          kr: "활동 없음",
+          jp: "活動なし",
+        };
+        setLastQuranActivity(noActivityTexts[locale] || noActivityTexts.id);
       }
     }
-  }, [surahList]); // Re-run ketika surahList tersedia
+  }, [surahList, locale]); // Re-run ketika surahList atau locale berubah
 
   // ... (Sisa kode helpers formatDate, latestArticles, prayerWidgetData sama seperti sebelumnya)
   // ... (Tidak ada perubahan pada helpers)
@@ -71,7 +119,15 @@ export default function Home() {
   // Helpers (disertakan kembali agar lengkap)
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("id-ID", {
+    const localeMap: Record<string, string> = {
+      id: "id-ID",
+      en: "en-US",
+      ar: "ar-SA",
+      fr: "fr-FR",
+      kr: "ko-KR",
+      jp: "ja-JP",
+    };
+    return date.toLocaleDateString(localeMap[locale] || "id-ID", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -97,17 +153,55 @@ export default function Home() {
       publishedAt: formatDate(artikel.published_at),
       image: artikel.image,
     }));
-  }, [articlesData]);
+  }, [articlesData, locale]);
 
   const prayerWidgetData = useMemo(() => {
-    if (!prayerTimes) return { title: "Memuat...", time: "--:--" };
+    if (!prayerTimes) return { title: t("home.loading"), time: "--:--" };
 
-    const prayerNames: Record<string, string> = {
-      fajr: "Subuh",
-      dhuhr: "Dzuhur",
-      asr: "Ashar",
-      maghrib: "Maghrib",
-      isha: "Isya",
+    // Prayer names based on locale - using i18n translations
+    const prayerNames: Record<string, Record<string, string>> = {
+      id: {
+        fajr: t("prayer.prayerNames.fajr"),
+        dhuhr: t("prayer.prayerNames.dhuhr"),
+        asr: t("prayer.prayerNames.asr"),
+        maghrib: t("prayer.prayerNames.maghrib"),
+        isha: t("prayer.prayerNames.isha"),
+      },
+      en: {
+        fajr: t("prayer.prayerNames.fajr"),
+        dhuhr: t("prayer.prayerNames.dhuhr"),
+        asr: t("prayer.prayerNames.asr"),
+        maghrib: t("prayer.prayerNames.maghrib"),
+        isha: t("prayer.prayerNames.isha"),
+      },
+      ar: {
+        fajr: t("prayer.prayerNames.fajr"),
+        dhuhr: t("prayer.prayerNames.dhuhr"),
+        asr: t("prayer.prayerNames.asr"),
+        maghrib: t("prayer.prayerNames.maghrib"),
+        isha: t("prayer.prayerNames.isha"),
+      },
+      fr: {
+        fajr: t("prayer.prayerNames.fajr"),
+        dhuhr: t("prayer.prayerNames.dhuhr"),
+        asr: t("prayer.prayerNames.asr"),
+        maghrib: t("prayer.prayerNames.maghrib"),
+        isha: t("prayer.prayerNames.isha"),
+      },
+      kr: {
+        fajr: t("prayer.prayerNames.fajr"),
+        dhuhr: t("prayer.prayerNames.dhuhr"),
+        asr: t("prayer.prayerNames.asr"),
+        maghrib: t("prayer.prayerNames.maghrib"),
+        isha: t("prayer.prayerNames.isha"),
+      },
+      jp: {
+        fajr: t("prayer.prayerNames.fajr"),
+        dhuhr: t("prayer.prayerNames.dhuhr"),
+        asr: t("prayer.prayerNames.asr"),
+        maghrib: t("prayer.prayerNames.maghrib"),
+        isha: t("prayer.prayerNames.isha"),
+      },
     };
 
     // Fungsi untuk mengkonversi waktu string (HH:MM) ke menit
@@ -151,10 +245,10 @@ export default function Home() {
     const prayerKey: PrayerKey = (activePrayer || currentPrayerKey || "fajr") as PrayerKey;
 
     return {
-      title: prayerNames[prayerKey],
+      title: prayerNames[locale]?.[prayerKey] || prayerNames.id[prayerKey],
       time: prayerTimes[prayerKey],
     };
-  }, [prayerTimes, currentPrayerKey]);
+  }, [prayerTimes, currentPrayerKey, locale]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
@@ -175,9 +269,11 @@ export default function Home() {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                    IbadahApp
+                    {t("home.title")}
                   </h1>
-                  <HijriDate />
+                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
+                    {t("home.subtitle")}
+                  </p>
                 </div>
               </div>
 
@@ -187,19 +283,20 @@ export default function Home() {
                     variant="ghost"
                     size="sm"
                     className="w-10 h-10 p-0 rounded-full bg-accent-100 hover:bg-accent-200 hover:text-awqaf-primary transition-colors duration-200"
-                    title="Store"
+                    title={t("widgets.store")}
                   >
                     <ShoppingBag className="w-5 h-5 text-awqaf-primary" />
                   </Button>
                 </Link>
 
-                <NotificationButton />
+                <LanguageSwitcher />
 
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-10 h-10 p-0 rounded-full bg-accent-100 hover:bg-accent-200 hover:text-awqaf-primary transition-colors duration-200"
                   onClick={() => setIsSearchOpen(true)}
+                  title={t("common.search")}
                 >
                   <Search className="w-5 h-5 text-awqaf-primary hover:text-awqaf-primary transition-colors duration-200" />
                 </Button>
@@ -214,7 +311,15 @@ export default function Home() {
         <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
           <CardContent className="p-6 text-center">
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa mb-2">
-              Selamat {greeting}
+              {locale === "ar" ? (
+                <>
+                  {greeting} {t("home.greeting")}
+                </>
+              ) : (
+                <>
+                  {t("home.greeting")} {greeting}
+                </>
+              )}
             </h2>
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa mb-3">
               <span className="font-tajawal text-awqaf-primary">
@@ -224,8 +329,17 @@ export default function Home() {
               Assalamu&apos;alaikum
             </p>
             <p className="text-xs text-awqaf-foreground-secondary font-comfortaa italic">
-              &quot;Dan barangsiapa yang bertakwa kepada Allah, niscaya Dia akan
-              mengadakan baginya jalan keluar.&quot;
+              {(() => {
+                const quotes: Record<string, string> = {
+                  id: "Dan barangsiapa yang bertakwa kepada Allah, niscaya Dia akan mengadakan baginya jalan keluar.",
+                  en: "And whoever fears Allah - He will make for him a way out.",
+                  ar: "ومن يتق الله يجعل له مخرجا",
+                  fr: "Et quiconque craint Allah, Il lui donnera une issue.",
+                  kr: "하나님을 두려워하는 자에게는 그가 길을 열어주실 것이다.",
+                  jp: "アッラーを畏れる者には、彼は道を開いてくださる。",
+                };
+                return quotes[locale] || quotes.id;
+              })()}
             </p>
             <p className="text-xs text-awqaf-primary font-tajawal mt-2">
               - QS. At-Talaq: 2
@@ -237,7 +351,7 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-4">
           <WidgetCard
             type="prayer"
-            title="Waktu Sholat"
+            title={t("widgets.prayer")}
             subtitle={prayerWidgetData.title}
             time={prayerWidgetData.time}
             status="current"
@@ -245,8 +359,18 @@ export default function Home() {
           />
           <WidgetCard
             type="activity"
-            title="Aktivitas Terakhir"
-            subtitle="Baca Al-Qur'an"
+            title={(() => {
+              const titles: Record<string, string> = {
+                id: "Aktivitas Terakhir",
+                en: "Last Activity",
+                ar: "النشاط الأخير",
+                fr: "Dernière activité",
+                kr: "마지막 활동",
+                jp: "最後の活動",
+              };
+              return titles[locale] || titles.id;
+            })()}
+            subtitle={t("widgets.quran")}
             activity={lastQuranActivity}
             icon={<BookOpen className="w-4 h-4 text-info" />}
           />
@@ -262,7 +386,17 @@ export default function Home() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
-              Artikel Terbaru
+              {(() => {
+                const titles: Record<string, string> = {
+                  id: "Artikel Terbaru",
+                  en: "Latest Articles",
+                  ar: "المقالات الأخيرة",
+                  fr: "Derniers articles",
+                  kr: "최신 기사",
+                  jp: "最新記事",
+                };
+                return titles[locale] || titles.id;
+              })()}
             </h2>
             <Link href="/artikel">
               <Button
@@ -270,7 +404,7 @@ export default function Home() {
                 size="sm"
                 className="text-awqaf-foreground-secondary hover:text-awqaf-primary hover:bg-accent-100 font-comfortaa transition-colors duration-200"
               >
-                Lihat Semua
+                {t("home.viewAll")}
               </Button>
             </Link>
           </div>
@@ -286,7 +420,17 @@ export default function Home() {
               ))
             ) : (
               <p className="text-center text-sm text-gray-500 py-4 font-comfortaa">
-                Belum ada artikel terbaru.
+                {(() => {
+                  const messages: Record<string, string> = {
+                    id: "Belum ada artikel terbaru.",
+                    en: "No latest articles yet.",
+                    ar: "لا توجد مقالات جديدة",
+                    fr: "Aucun article récent pour le moment.",
+                    kr: "최신 기사가 없습니다.",
+                    jp: "最新の記事はまだありません。",
+                  };
+                  return messages[locale] || messages.id;
+                })()}
               </p>
             )}
           </div>

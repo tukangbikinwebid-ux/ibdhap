@@ -26,6 +26,7 @@ import Image from "next/image";
 // Sesuaikan path import service
 import { useGetPublicPlacesQuery } from "@/services/public/masjid-halal.service";
 import { Place } from "@/types/public/place";
+import { useI18n } from "@/app/hooks/useI18n";
 
 // Mapping Interface
 interface Masjid extends Place {
@@ -56,6 +57,7 @@ interface Location {
 }
 
 export default function MasjidPage() {
+  const { t, locale } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<
     "all" | "masjid" | "mushola"
@@ -94,7 +96,15 @@ export default function MasjidPage() {
 
     try {
       if (!navigator.geolocation) {
-        throw new Error("Geolocation tidak didukung oleh browser ini");
+        const errorMessages: Record<string, string> = {
+          id: "Geolocation tidak didukung oleh browser ini",
+          en: "Geolocation is not supported by this browser",
+          ar: "الموقع الجغرافي غير مدعوم في هذا المتصفح",
+          fr: "La géolocalisation n'est pas prise en charge par ce navigateur",
+          kr: "이 브라우저에서 지리적 위치를 지원하지 않습니다",
+          jp: "このブラウザでは位置情報がサポートされていません",
+        };
+        throw new Error(errorMessages[locale] || errorMessages.id);
       }
 
       const position = await new Promise<GeolocationPosition>(
@@ -110,30 +120,64 @@ export default function MasjidPage() {
       const { latitude, longitude } = position.coords;
 
       try {
+        const localeMap: Record<string, string> = {
+          id: "id",
+          en: "en",
+          ar: "ar",
+          fr: "fr",
+          kr: "ko",
+          jp: "ja",
+        };
+        const unknownLocation: Record<string, { city: string; country: string }> = {
+          id: { city: "Lokasi Anda", country: "Indonesia" },
+          en: { city: "Your Location", country: "Indonesia" },
+          ar: { city: "موقعك", country: "إندونيسيا" },
+          fr: { city: "Votre localisation", country: "Indonésie" },
+          kr: { city: "귀하의 위치", country: "인도네시아" },
+          jp: { city: "あなたの場所", country: "インドネシア" },
+        };
         const response = await fetch(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=id`
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${localeMap[locale] || "id"}`
         );
         const data = await response.json();
+        const unknown = unknownLocation[locale] || unknownLocation.id;
 
         setUserLocation({
           latitude,
           longitude,
-          city: data.city || data.locality || "Lokasi Anda",
-          country: data.countryName || "Indonesia",
+          city: data.city || data.locality || unknown.city,
+          country: data.countryName || unknown.country,
         });
       } catch {
+        const unknownLocation: Record<string, { city: string; country: string }> = {
+          id: { city: "Lokasi Terkini", country: "Indonesia" },
+          en: { city: "Current Location", country: "Indonesia" },
+          ar: { city: "الموقع الحالي", country: "إندونيسيا" },
+          fr: { city: "Localisation actuelle", country: "Indonésie" },
+          kr: { city: "현재 위치", country: "인도네시아" },
+          jp: { city: "現在の場所", country: "インド네시아" },
+        };
+        const unknown = unknownLocation[locale] || unknownLocation.id;
         setUserLocation({
           latitude,
           longitude,
-          city: "Lokasi Terkini",
-          country: "Indonesia",
+          city: unknown.city,
+          country: unknown.country,
         });
       }
     } catch (err: unknown) {
+      const errorMessages: Record<string, string> = {
+        id: "Terjadi kesalahan saat mendapatkan lokasi",
+        en: "An error occurred while getting location",
+        ar: "حدث خطأ أثناء الحصول على الموقع",
+        fr: "Une erreur s'est produite lors de l'obtention de la localisation",
+        kr: "위치를 가져오는 중 오류가 발생했습니다",
+        jp: "位置情報の取得中にエラーが発生しました",
+      };
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "Terjadi kesalahan saat mendapatkan lokasi";
+          : errorMessages[locale] || errorMessages.id;
       setLocationError(errorMessage);
     } finally {
       setIsLocating(false);
@@ -216,11 +260,22 @@ export default function MasjidPage() {
 
   // Helpers
   const formatDistance = (distance?: number): string => {
-    if (!distance) return "Jarak tidak diketahui";
-    if (distance < 1) {
-      return `${Math.round(distance * 1000)} meter`;
+    if (!distance) {
+      const unknownMessages: Record<string, string> = {
+        id: "Jarak tidak diketahui",
+        en: "Distance unknown",
+        ar: "المسافة غير معروفة",
+        fr: "Distance inconnue",
+        kr: "거리 알 수 없음",
+        jp: "距離不明",
+      };
+      return unknownMessages[locale] || unknownMessages.id;
     }
-    return `${distance.toFixed(1)} km`;
+    if (distance < 1) {
+      const unit = locale === "id" ? "meter" : locale === "en" ? "meters" : locale === "ar" ? "متر" : locale === "fr" ? "mètres" : locale === "kr" ? "미터" : "メートル";
+      return `${Math.round(distance * 1000)} ${unit}`;
+    }
+    return `${distance.toFixed(1)} ${t("mosque.km")}`;
   };
 
   const formatCapacity = (capacity: number): string => {
@@ -256,7 +311,7 @@ export default function MasjidPage() {
                 </Button>
               </Link>
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Masjid & Mushola
+                {t("mosque.title")}
               </h1>
               <Button
                 variant="ghost"
@@ -300,10 +355,10 @@ export default function MasjidPage() {
                 ) : (
                   <div>
                     <p className="font-medium text-card-foreground font-comfortaa">
-                      Lokasi belum terdeteksi
+                      {t("mosque.locationNotDetected")}
                     </p>
                     <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      Aktifkan GPS
+                      {t("mosque.activateGps")}
                     </p>
                   </div>
                 )}
@@ -339,7 +394,7 @@ export default function MasjidPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-awqaf-foreground-secondary" />
                 <Input
-                  placeholder="Cari masjid atau mushola..."
+                  placeholder={locale === "id" ? "Cari masjid atau mushola..." : locale === "en" ? "Search mosque or prayer room..." : locale === "ar" ? "ابحث عن مسجد أو مصلى..." : locale === "fr" ? "Rechercher une mosquée ou une salle de prière..." : locale === "kr" ? "모스크나 기도실 검색..." : "モスクや礼拝室を検索..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 font-comfortaa"
@@ -353,10 +408,10 @@ export default function MasjidPage() {
                     <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
                       <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                     </div>
-                    Radius Pencarian
+                    {t("mosque.searchRadius")}
                   </label>
                   <span className="text-xs font-bold text-awqaf-primary bg-accent-50 px-2 py-1 rounded-full">
-                    {radius[0]} km
+                    {radius[0]} {t("mosque.km")}
                   </span>
                 </div>
                 <Slider
@@ -369,7 +424,7 @@ export default function MasjidPage() {
                   className="w-full"
                 />
                 <p className="text-[10px] text-gray-400 text-center font-comfortaa">
-                  Geser untuk memperluas jangkauan area
+                  {t("mosque.dragToExpand")}
                 </p>
               </div>
             </CardContent>
@@ -383,7 +438,7 @@ export default function MasjidPage() {
               onClick={() => setSelectedType("all")}
               className="flex-shrink-0"
             >
-              Semua
+              {t("mosque.all")}
             </Button>
             <Button
               variant={selectedType === "masjid" ? "default" : "outline"}
@@ -391,7 +446,7 @@ export default function MasjidPage() {
               onClick={() => setSelectedType("masjid")}
               className="flex-shrink-0"
             >
-              Masjid
+              {t("mosque.mosque")}
             </Button>
             <Button
               variant={selectedType === "mushola" ? "default" : "outline"}
@@ -399,7 +454,7 @@ export default function MasjidPage() {
               onClick={() => setSelectedType("mushola")}
               className="flex-shrink-0"
             >
-              Mushola
+              {t("mosque.mushola")}
             </Button>
             <div className="flex-shrink-0 flex items-center gap-1 ml-2">
               <Filter className="w-4 h-4 text-awqaf-foreground-secondary" />
@@ -408,9 +463,9 @@ export default function MasjidPage() {
                 onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
                 className="text-sm bg-transparent border-none outline-none text-awqaf-foreground-secondary"
               >
-                <option value="distance">Jarak</option>
-                <option value="rating">Rating</option>
-                <option value="name">Nama</option>
+                <option value="distance">{t("mosque.distance")}</option>
+                <option value="rating">{t("mosque.rating")}</option>
+                <option value="name">{t("mosque.name")}</option>
               </select>
             </div>
           </div>
@@ -421,8 +476,8 @@ export default function MasjidPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
               {isLoadingPlaces
-                ? "Memuat..."
-                : `${filteredMasjidData.length} Tempat Ibadah Ditemukan`}
+                ? t("mosque.loading")
+                : `${filteredMasjidData.length} ${t("mosque.placesFound")}`}
             </h2>
           </div>
 
@@ -431,7 +486,7 @@ export default function MasjidPage() {
               <div className="text-center py-10">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto text-awqaf-primary" />
                 <p className="text-sm text-gray-500 mt-2 font-comfortaa">
-                  Mencari tempat ibadah terdekat ({radius[0]} km)...
+                  {t("mosque.searchingNearby")} ({radius[0]} {t("mosque.km")})...
                 </p>
               </div>
             ) : (
@@ -472,8 +527,8 @@ export default function MasjidPage() {
                             className="text-xs"
                           >
                             {masjid.type?.toLowerCase().includes("mushola")
-                              ? "Mushola"
-                              : "Masjid"}
+                              ? t("mosque.mushola")
+                              : t("mosque.mosque")}
                           </Badge>
                         </div>
                         <div
@@ -508,7 +563,7 @@ export default function MasjidPage() {
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-awqaf-foreground-secondary" />
                         <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                          {masjid.isOpen ? "Buka 24 Jam" : "Tutup"}
+                          {masjid.isOpen ? t("mosque.open24Hours") : t("mosque.closed")}
                         </span>
                       </div>
                     </div>
@@ -516,7 +571,7 @@ export default function MasjidPage() {
                     {/* Facilities */}
                     <div>
                       <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-2">
-                        Fasilitas:
+                        {t("mosque.facilities")}
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {masjid.facilities.slice(0, 4).map((facility, idx) => (
@@ -547,7 +602,7 @@ export default function MasjidPage() {
                           window.open(url, "_blank");
                         }}
                       >
-                        <Car className="w-4 h-4 mr-2" /> Navigasi
+                        <Car className="w-4 h-4 mr-2" /> {t("mosque.navigate")}
                       </Button>
                       {masjid.contact?.website && (
                         <Button
@@ -572,11 +627,10 @@ export default function MasjidPage() {
               <CardContent className="p-8 text-center">
                 <MapPin className="w-12 h-12 text-awqaf-foreground-secondary mx-auto mb-4" />
                 <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
-                  Tidak ada tempat ibadah ditemukan
+                  {t("mosque.noPlacesFound")}
                 </h3>
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Coba perluas radius pencarian menjadi{" "}
-                  {Math.min(radius[0] + 5, 50)} km
+                  {t("mosque.expandRadius")} {Math.min(radius[0] + 5, 50)} {t("mosque.km")}
                 </p>
               </CardContent>
             </Card>

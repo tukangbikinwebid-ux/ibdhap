@@ -23,6 +23,7 @@ import {
   useGetArticleCategoriesQuery,
   useGetArticlesQuery,
 } from "@/services/public/article.service";
+import { useI18n } from "@/app/hooks/useI18n";
 
 // Loading Skeleton
 const ArticleSkeleton = () => {
@@ -47,6 +48,7 @@ const ArticleSkeleton = () => {
 };
 
 export default function ArtikelPage() {
+  const { t, locale } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>(
     undefined
@@ -91,7 +93,15 @@ export default function ArtikelPage() {
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("id-ID", {
+    const localeMap: Record<string, string> = {
+      id: "id-ID",
+      en: "en-US",
+      ar: "ar-SA",
+      fr: "fr-FR",
+      kr: "ko-KR",
+      jp: "ja-JP",
+    };
+    return date.toLocaleDateString(localeMap[locale] || "id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -126,7 +136,7 @@ export default function ArtikelPage() {
               </Button>
             </Link>
             <h1 className="text-lg font-bold text-orange-900 font-comfortaa">
-              Artikel Islami
+              {t("article.title")}
             </h1>
             <div className="w-10"></div>
           </div>
@@ -139,7 +149,7 @@ export default function ArtikelPage() {
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-orange-400" />
           <Input
             type="text"
-            placeholder="Cari artikel yang Anda butuhkan..."
+            placeholder={t("article.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-12 h-12 rounded-2xl border-2 border-orange-100 focus:border-orange-300 focus:outline-none bg-white shadow-sm text-base font-comfortaa"
@@ -162,7 +172,7 @@ export default function ArtikelPage() {
                 <TrendingUp className="w-4 h-4 text-white" />
               </div>
               <h2 className="text-lg font-bold text-orange-900 font-comfortaa">
-                Trending Hari Ini
+                {t("article.trendingToday")}
               </h2>
             </div>
 
@@ -244,12 +254,12 @@ export default function ArtikelPage() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Clock className="w-3.5 h-3.5" />
-                                  5 min
+                                  5 {t("article.min")}
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-1 text-orange-600 text-sm font-medium group-hover:gap-2 transition-all font-comfortaa">
-                                Baca
+                                {t("article.read")}
                                 <ChevronRight className="w-4 h-4" />
                               </div>
                             </div>
@@ -267,7 +277,7 @@ export default function ArtikelPage() {
         {/* Category Pills */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold text-orange-900 uppercase tracking-wide font-comfortaa">
-            Kategori
+            {t("article.category")}
           </h3>
           {isLoadingCategories ? (
             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -288,7 +298,7 @@ export default function ArtikelPage() {
                     : "border-2 border-orange-200 text-orange-700 hover:bg-orange-50 bg-white"
                 }`}
               >
-                Semua
+                {t("article.all")}
               </button>
               {categoriesData?.data.map((cat) => (
                 <button
@@ -313,7 +323,7 @@ export default function ArtikelPage() {
             <span className="font-bold text-orange-700">
               {filteredArtikelData.length}
             </span>{" "}
-            artikel ditemukan
+            {t("article.articlesFound")}
           </p>
           {(searchQuery || selectedCategory !== undefined) && (
             <button
@@ -323,7 +333,7 @@ export default function ArtikelPage() {
               }}
               className="text-sm text-orange-600 hover:text-orange-700 font-medium font-comfortaa"
             >
-              Reset Filter
+              {t("article.resetFilter")}
             </button>
           )}
         </div>
@@ -379,7 +389,7 @@ export default function ArtikelPage() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            5 min
+                            5 {t("article.min")}
                           </div>
                         </div>
                       </div>
@@ -400,10 +410,10 @@ export default function ArtikelPage() {
                   <BookOpen className="w-10 h-10 text-orange-400" />
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2 text-lg font-comfortaa">
-                  Tidak ada artikel ditemukan
+                  {t("article.noArticlesFound")}
                 </h3>
                 <p className="text-sm text-gray-600 mb-4 font-comfortaa">
-                  Coba ubah kata kunci pencarian atau filter kategori
+                  {t("article.tryDifferentKeyword")}
                 </p>
                 <button
                   onClick={() => {
@@ -412,7 +422,7 @@ export default function ArtikelPage() {
                   }}
                   className="px-6 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg font-medium font-comfortaa"
                 >
-                  Lihat Semua Artikel
+                  {t("article.viewAllArticles")}
                 </button>
               </CardContent>
             </Card>

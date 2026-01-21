@@ -36,6 +36,7 @@ import {
   getHijriDayOfWeek,
   type HariBesar,
 } from "./data-hari-besar";
+import { useI18n } from "@/app/hooks/useI18n";
 
 interface CalendarDay {
   day: number;
@@ -45,6 +46,7 @@ interface CalendarDay {
 }
 
 export default function KalenderHijriyahPage() {
+  const { t, locale } = useI18n();
   const [currentHijriDate, setCurrentHijriDate] = useState(toHijriyah(new Date()));
   const [selectedHariBesar, setSelectedHariBesar] = useState<HariBesar | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -203,7 +205,7 @@ export default function KalenderHijriyahPage() {
               </Link>
               <div className="text-center">
                 <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                  Kalender Hijriyah
+                  {t("hijriCalendar.title")}
                 </h1>
                 <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
                   {currentHijriDate.year} H
@@ -214,7 +216,7 @@ export default function KalenderHijriyahPage() {
                 size="sm"
                 onClick={goToToday}
                 className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200"
-                title="Hari Ini"
+                title={t("hijriCalendar.today")}
               >
                 <Clock className="w-5 h-5" />
               </Button>
@@ -241,7 +243,7 @@ export default function KalenderHijriyahPage() {
                 {currentHijriDate.day} {namaBulanHijriyah[currentHijriDate.month - 1]}
               </h2>
               <p className="text-sm text-center font-comfortaa opacity-90">
-                {new Date().toLocaleDateString("id-ID", {
+                {new Date().toLocaleDateString(locale === "id" ? "id-ID" : locale === "en" ? "en-US" : locale === "ar" ? "ar-SA" : locale === "fr" ? "fr-FR" : locale === "kr" ? "ko-KR" : "ja-JP", {
                   weekday: "long",
                   year: "numeric",
                   month: "long",
@@ -263,7 +265,7 @@ export default function KalenderHijriyahPage() {
                 className="flex items-center gap-2 font-comfortaa"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Sebelumnya
+                {t("hijriCalendar.previous")}
               </Button>
 
               <div className="text-center">
@@ -281,7 +283,7 @@ export default function KalenderHijriyahPage() {
                 onClick={goToNextMonth}
                 className="flex items-center gap-2 font-comfortaa"
               >
-                Selanjutnya
+                {t("hijriCalendar.next")}
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -349,11 +351,11 @@ export default function KalenderHijriyahPage() {
               <div className="flex flex-wrap gap-3 text-xs font-comfortaa">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-awqaf-primary"></div>
-                  <span className="text-awqaf-foreground-secondary">Hari Besar</span>
+                  <span className="text-awqaf-foreground-secondary">{t("hijriCalendar.importantDay")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                  <span className="text-awqaf-foreground-secondary">Hari Ini</span>
+                  <span className="text-awqaf-foreground-secondary">{t("hijriCalendar.todayMarker")}</span>
                 </div>
               </div>
             </div>
@@ -365,7 +367,7 @@ export default function KalenderHijriyahPage() {
           <div className="flex items-center gap-2">
             <Star className="w-5 h-5 text-awqaf-primary" />
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
-              Hari Besar {namaBulanHijriyah[currentHijriDate.month - 1]}
+              {t("hijriCalendar.importantDays")} {namaBulanHijriyah[currentHijriDate.month - 1]}
             </h2>
             {hariBesarThisMonth.length > 0 && (
               <Badge variant="secondary" className="bg-awqaf-primary text-white">
@@ -421,7 +423,7 @@ export default function KalenderHijriyahPage() {
               <CardContent className="p-6 text-center">
                 <Sparkles className="w-12 h-12 text-awqaf-foreground-secondary mx-auto mb-4" />
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Tidak ada hari besar di bulan ini
+                  {t("hijriCalendar.noImportantDays")}
                 </p>
               </CardContent>
             </Card>
@@ -435,11 +437,10 @@ export default function KalenderHijriyahPage() {
               <Info className="w-5 h-5 text-awqaf-primary flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-card-foreground font-comfortaa mb-1">
-                  Informasi
+                  {t("hijriCalendar.information")}
                 </h4>
                 <p className="text-xs text-awqaf-foreground-secondary font-comfortaa leading-relaxed">
-                  Klik pada tanggal di kalender untuk melihat detail hari besar. 
-                  Tanggal yang memiliki tanda titik atau ikon adalah hari-hari penting dalam Islam.
+                  {t("hijriCalendar.infoDescription")}
                 </p>
               </div>
             </div>
@@ -485,7 +486,7 @@ export default function KalenderHijriyahPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <BookOpen className="w-5 h-5 text-awqaf-primary" />
                     <h4 className="font-semibold text-card-foreground font-comfortaa">
-                      Penjelasan
+                      {t("hijriCalendar.explanation")}
                     </h4>
                   </div>
                   <p className="text-sm text-awqaf-foreground-secondary font-comfortaa leading-relaxed">
@@ -498,7 +499,7 @@ export default function KalenderHijriyahPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <Info className="w-5 h-5 text-blue-600" />
                       <h4 className="font-semibold text-blue-900 font-comfortaa">
-                        Tanggal Terpilih
+                        {t("hijriCalendar.selectedDate")}
                       </h4>
                     </div>
                     <p className="text-sm text-blue-800 font-comfortaa">

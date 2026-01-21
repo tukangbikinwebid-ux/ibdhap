@@ -22,6 +22,7 @@ export const apiSlice = createApi({
     "PublicProducts",
     "PublicArticleCategories",
     "PublicArticles",
+    "PublicLocales",
     "QuranSurahs",
     "QuranSurahDetail",
     "HadithBooks",

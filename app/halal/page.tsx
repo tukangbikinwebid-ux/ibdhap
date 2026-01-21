@@ -17,6 +17,7 @@ import {
   Restaurant as RestaurantData,
   MenuItem,
 } from "./data/restaurants";
+import { useI18n } from "@/app/hooks/useI18n";
 
 interface City {
   id: string;
@@ -36,6 +37,7 @@ interface FilterOptions {
 }
 
 export default function HalalPage() {
+  const { t } = useI18n();
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [filteredRestaurants, setFilteredRestaurants] = useState<
     RestaurantData[]
@@ -218,16 +220,16 @@ export default function HalalPage() {
                 </Link>
                 <div>
                   <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                    Restoran Halal
+                    {t("halal.title")}
                   </h1>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Temukan tempat makan halal terdekat
+                    {t("halal.subtitle")}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge className="bg-success text-white text-xs px-2 py-1">
-                  Halal Certified
+                  {t("halal.halalCertified")}
                 </Badge>
               </div>
             </div>
@@ -256,13 +258,13 @@ export default function HalalPage() {
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-awqaf-primary" />
                   <span className="text-sm font-medium text-awqaf-primary font-comfortaa">
-                    {filteredRestaurants.length} restoran halal ditemukan
+                    {filteredRestaurants.length} {t("halal.restaurantsFound")}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-warning" />
                   <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    di {selectedCity.name}
+                    {t("halal.in")} {selectedCity.name}
                   </span>
                 </div>
               </div>
@@ -282,7 +284,7 @@ export default function HalalPage() {
             }`}
             onClick={() => setActiveTab("restaurants")}
           >
-            Restoran
+            {t("halal.restaurants")}
           </Button>
           <Button
             variant={activeTab === "menu" ? "default" : "ghost"}
@@ -295,7 +297,7 @@ export default function HalalPage() {
             onClick={() => setActiveTab("menu")}
             disabled={!selectedRestaurant}
           >
-            Menu
+            {t("halal.menu")}
           </Button>
         </div>
 
@@ -319,10 +321,10 @@ export default function HalalPage() {
                     <Filter className="w-8 h-8 text-awqaf-foreground-secondary" />
                   </div>
                   <h3 className="text-lg font-semibold text-awqaf-foreground-secondary font-comfortaa mb-2">
-                    Tidak ada restoran ditemukan
+                    {t("halal.noRestaurantsFound")}
                   </h3>
                   <p className="text-sm text-awqaf-foreground-tertiary font-comfortaa">
-                    Coba ubah filter atau pilih kota lain
+                    {t("halal.tryDifferentFilter")}
                   </p>
                 </CardContent>
               </Card>
@@ -345,7 +347,7 @@ export default function HalalPage() {
                       {selectedRestaurant.name}
                     </h3>
                     <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                      {selectedRestaurant.menu.length} menu tersedia
+                      {selectedRestaurant.menu.length} {t("halal.menuAvailable")}
                     </p>
                   </div>
                 </div>
@@ -371,8 +373,7 @@ export default function HalalPage() {
         <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
           <CardContent className="p-4 text-center">
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa mb-2">
-              &quot;Makanlah dari rezeki yang halal dan baik yang telah Allah
-              berikan kepadamu&quot;
+              &quot;{t("halal.motivationalQuote")}&quot;
             </p>
             <p className="text-xs text-awqaf-primary font-tajawal">
               - QS. Al-Baqarah: 172

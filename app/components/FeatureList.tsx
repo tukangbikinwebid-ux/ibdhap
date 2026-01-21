@@ -148,6 +148,22 @@ const features: Feature[] = [
     category: "Edukasi",
   },
   {
+    id: "kamus-istilah",
+    name: "Kamus Istilah",
+    description: "Kamus istialah Islami dan tips kehidupan Muslim",
+    icon: BookOpen,
+    href: "/kamus-istilah",
+    category: "Edukasi",
+  },
+  {
+    id: "bahasa-arab",
+    name: "Bahasa Arab",
+    description: "Bahasa Arab untuk membaca Al-Qur'an dengan benar",
+    icon: BookOpen,
+    href: "/bahasa-arab",
+    category: "Edukasi",
+  },
+  {
     id: "tanya-ustadz",
     name: "Tanya Ustaz",
     description: "Konsultasi keagamaan dengan ustaz berpengalaman",

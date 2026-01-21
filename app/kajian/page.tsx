@@ -19,6 +19,8 @@ import {
   useGetUstadzListQuery,
   useGetKajianListQuery,
 } from "@/services/public/kajian.service";
+// Import i18n
+import { useI18n } from "@/app/hooks/useI18n";
 
 // Loading Skeleton Component
 const KajianSkeleton = () => {
@@ -42,6 +44,7 @@ const KajianSkeleton = () => {
 };
 
 export default function KajianPage() {
+  const { t, locale } = useI18n();
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [selectedUstadzId, setSelectedUstadzId] = useState<number | undefined>(
     undefined
@@ -127,10 +130,10 @@ export default function KajianPage() {
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
             <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
-              Kajian Islam
+              {t("kajian.title")}
             </h1>
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
-              Belajar dan memperdalam ilmu agama
+              {t("kajian.subtitle")}
             </p>
           </div>
         </div>
@@ -146,10 +149,10 @@ export default function KajianPage() {
               </div>
               <div>
                 <h2 className="font-semibold text-awqaf-primary font-comfortaa">
-                  Kajian Islam Terbaru
+                  {t("kajian.latestKajian")}
                 </h2>
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Dengarkan kajian pilihan dari para ustadz
+                  {t("kajian.listenKajian")}
                 </p>
               </div>
             </div>
@@ -163,7 +166,7 @@ export default function KajianPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-awqaf-foreground-secondary" />
               <Input
                 type="text"
-                placeholder="Cari kajian, ustadz, atau topik..."
+                placeholder={t("kajian.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-10 border-awqaf-border-light bg-background text-awqaf-foreground placeholder-awqaf-foreground-secondary font-comfortaa focus-visible:ring-2 focus-visible:ring-awqaf-primary"
@@ -181,7 +184,7 @@ export default function KajianPage() {
               {/* Sort select */}
               <div className="flex-1">
                 <label className="block text-xs mb-1 text-awqaf-foreground-secondary font-comfortaa">
-                  Urutkan
+                  {t("kajian.sortBy")}
                 </label>
                 <select
                   value={sortBy}
@@ -190,15 +193,15 @@ export default function KajianPage() {
                   }
                   className="w-full h-10 px-3 rounded-md border border-awqaf-border-light bg-background text-sm font-comfortaa focus:outline-none focus:ring-2 focus:ring-awqaf-primary"
                 >
-                  <option value="newest">Terbaru</option>
-                  <option value="oldest">Terlama</option>
+                  <option value="newest">{t("kajian.newest")}</option>
+                  <option value="oldest">{t("kajian.oldest")}</option>
                 </select>
               </div>
 
               {/* Ustadz select */}
               <div className="flex-1">
                 <label className="block text-xs mb-1 text-awqaf-foreground-secondary font-comfortaa">
-                  Ustadz
+                  {t("kajian.ustadz")}
                 </label>
                 <select
                   value={selectedUstadzId || ""}
@@ -210,7 +213,7 @@ export default function KajianPage() {
                   className="w-full h-10 px-3 rounded-md border border-awqaf-border-light bg-background text-sm font-comfortaa focus:outline-none focus:ring-2 focus:ring-awqaf-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoadingUstadz}
                 >
-                  <option value="">Semua Ustadz</option>
+                  <option value="">{t("kajian.allUstadz")}</option>
                   {ustadzData?.data.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
@@ -227,7 +230,7 @@ export default function KajianPage() {
                   className="px-3 py-2 rounded-md text-sm border bg-background border-awqaf-border-light hover:bg-accent-50 hover:text-awqaf-primary transition-colors duration-200 flex items-center gap-2 font-comfortaa"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Reset Filter
+                  {t("kajian.resetFilter")}
                 </button>
               </div>
             )}
@@ -239,11 +242,11 @@ export default function KajianPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-card-foreground font-comfortaa">
-                Daftar Kajian
+                {t("kajian.kajianList")}
               </h3>
               {!isLoadingKajian && filteredKajian.length > 0 && (
                 <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                  {filteredKajian.length} kajian
+                  {filteredKajian.length} {t("kajian.kajian")}
                 </span>
               )}
             </div>
@@ -271,11 +274,19 @@ export default function KajianPage() {
                             {formatDuration(k.duration)}
                           </div>
                           <div>
-                            {new Date(k.created_at).toLocaleDateString("id-ID", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
+                            {new Date(k.created_at).toLocaleDateString(
+                              locale === "id" ? "id-ID" :
+                              locale === "en" ? "en-US" :
+                              locale === "ar" ? "ar-SA" :
+                              locale === "fr" ? "fr-FR" :
+                              locale === "kr" ? "ko-KR" :
+                              locale === "jp" ? "ja-JP" : "id-ID",
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
                           </div>
                           {/* Views simulation since API doesn't provide it yet */}
                           <div className="flex items-center gap-1">
@@ -292,15 +303,15 @@ export default function KajianPage() {
               <div className="text-center py-10">
                 <p className="text-awqaf-foreground-secondary font-comfortaa text-sm mb-2">
                   {searchQuery || selectedUstadzId
-                    ? "Tidak ada kajian yang sesuai dengan filter"
-                    : "Belum ada kajian ditemukan"}
+                    ? t("kajian.noKajianMatch")
+                    : t("kajian.noKajianFound")}
                 </p>
                 {hasActiveFilters && (
                   <button
                     onClick={resetFilters}
                     className="text-awqaf-primary hover:underline font-comfortaa text-sm"
                   >
-                    Reset filter
+                    {t("kajian.resetFilter")}
                   </button>
                 )}
               </div>
@@ -313,10 +324,10 @@ export default function KajianPage() {
           <CardContent className="p-6">
             <div className="text-center">
               <h4 className="font-semibold text-awqaf-primary font-comfortaa mb-2">
-                Akses Cepat
+                {t("kajian.quickAccess")}
               </h4>
               <p className="text-awqaf-foreground-secondary text-sm font-comfortaa">
-                Dapatkan notifikasi kajian terbaru dan jadwal live streaming
+                {t("kajian.getNotifications")}
               </p>
             </div>
           </CardContent>

@@ -33,6 +33,8 @@ import {
   useGetHadithBookDetailQuery,
 } from "@/services/public/hadith.service";
 import { Hadith as ApiHadith, HadithBook } from "@/types/public/hadith";
+// Import i18n
+import { useI18n } from "@/app/hooks/useI18n";
 
 // Extend local type for UI state
 interface HadithUI extends ApiHadith {
@@ -40,6 +42,7 @@ interface HadithUI extends ApiHadith {
 }
 
 export default function HadithPage() {
+  const { t, locale } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedBookId, setSelectedBookId] = useState<string>("bukhari"); // Default Bukhari
@@ -136,7 +139,7 @@ export default function HadithPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Hadist Pilihan",
+          title: t("hadith.selectedHadith"),
           text: text,
         });
       } catch (err) {
@@ -193,7 +196,7 @@ export default function HadithPage() {
                 </Button>
               </Link>
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Hadist & Sunnah
+                {t("hadith.title")}
               </h1>
               <div className="w-10 h-10"></div>
             </div>
@@ -208,7 +211,7 @@ export default function HadithPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-comfortaa flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-awqaf-primary" />
-                Hadist Pilihan
+                {t("hadith.selectedHadith")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -248,7 +251,7 @@ export default function HadithPage() {
                         : ""
                     }`}
                   />
-                  Favorit
+                  {t("hadith.favorite")}
                 </Button>
                 <Button
                   variant="outline"
@@ -269,7 +272,7 @@ export default function HadithPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-awqaf-foreground-secondary" />
               <Input
-                placeholder="Cari dalam halaman ini..."
+                placeholder={t("hadith.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 font-comfortaa"
@@ -295,13 +298,13 @@ export default function HadithPage() {
                       size="sm"
                       className="flex-shrink-0 gap-1"
                     >
-                      <Filter className="w-3 h-3" /> Semua Kitab
+                      <Filter className="w-3 h-3" /> {t("hadith.allBooks")}
                     </Button>
                   </DrawerTrigger>
                   <DrawerContent className="border-awqaf-border-light max-h-[80vh]">
                     <DrawerHeader>
                       <DrawerTitle className="font-comfortaa">
-                        Pilih Kitab Hadits
+                        {t("hadith.selectBook")}
                       </DrawerTitle>
                     </DrawerHeader>
                     <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto">
@@ -322,7 +325,7 @@ export default function HadithPage() {
                               {book.name}
                             </span>
                             <span className="text-[10px] opacity-70">
-                              {book.available} hadits
+                              {book.available} {t("hadith.hadiths")}
                             </span>
                           </div>
                         </Button>
@@ -352,10 +355,10 @@ export default function HadithPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
-              {hadithDetailData?.name || "Daftar Hadits"}
+              {hadithDetailData?.name || t("hadith.hadithList")}
             </h2>
             <span className="text-xs text-gray-500">
-              Menampilkan {rangeFrom}-
+              {t("hadith.showing")} {rangeFrom}-
               {Math.min(rangeTo, hadithDetailData?.available || 0)}
             </span>
           </div>
@@ -412,9 +415,7 @@ export default function HadithPage() {
                               : ""
                           }`}
                         />
-                        {favorites.has(`${selectedBookId}-${hadith.number}`)
-                          ? "Favorit"
-                          : "Favorit"}
+                        {t("hadith.favorite")}
                       </Button>
                       <Button
                         variant="outline"
@@ -447,10 +448,10 @@ export default function HadithPage() {
               <CardContent className="p-8 text-center">
                 <BookOpen className="w-12 h-12 text-awqaf-foreground-secondary mx-auto mb-4" />
                 <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
-                  Tidak ada hadist ditemukan
+                  {t("hadith.noHadithFound")}
                 </h3>
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Coba ubah kata kunci pencarian
+                  {t("hadith.tryDifferentKeyword")}
                 </p>
               </CardContent>
             </Card>
@@ -464,7 +465,7 @@ export default function HadithPage() {
                 onClick={handlePrevPage}
                 disabled={rangeFrom <= 1 || isFetching}
               >
-                Sebelumnya
+                {t("hadith.previous")}
               </Button>
               <Button
                 onClick={handleNextPage}
@@ -473,7 +474,7 @@ export default function HadithPage() {
                 }
                 className="bg-awqaf-primary"
               >
-                Selanjutnya
+                {t("hadith.next")}
               </Button>
             </div>
           )}

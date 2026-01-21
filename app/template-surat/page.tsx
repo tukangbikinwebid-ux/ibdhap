@@ -19,6 +19,7 @@ import Link from "next/link";
 // Import Services & Types
 import { useGetTemplateLettersQuery } from "@/services/public/template-surat.service";
 import Swal from "sweetalert2"; // Import SweetAlert2
+import { useI18n } from "@/app/hooks/useI18n";
 
 // Categories untuk filter UI (Client side filtering)
 // Note: Idealnya kategori ini juga didapat dari API atau unique values dari data API
@@ -31,6 +32,7 @@ const CATEGORIES = [
 ];
 
 export default function TemplateSuratPage() {
+  const { t, locale } = useI18n();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -88,11 +90,20 @@ export default function TemplateSuratPage() {
 
   const handleDownload = (url: string) => {
     if (!url) {
+      const errorMessages: Record<string, { title: string; text: string }> = {
+        id: { title: "Gagal", text: "Link download tidak tersedia" },
+        en: { title: "Failed", text: "Download link is not available" },
+        ar: { title: "فشل", text: "رابط التحميل غير متاح" },
+        fr: { title: "Échec", text: "Le lien de téléchargement n'est pas disponible" },
+        kr: { title: "실패", text: "다운로드 링크를 사용할 수 없습니다" },
+        jp: { title: "失敗", text: "ダウンロードリンクが利用できません" },
+      };
+      const error = errorMessages[locale] || errorMessages.id;
       Swal.fire({
         icon: "error",
-        title: "Gagal",
-        text: "Link download tidak tersedia",
-        confirmButtonColor: "#d33", // Optional: customize button color
+        title: error.title,
+        text: error.text,
+        confirmButtonColor: "#d33",
       });
       return;
     }
@@ -116,7 +127,7 @@ export default function TemplateSuratPage() {
                 </Button>
               </Link>
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Template Surat
+                {t("templateLetter.title")}
               </h1>
               <div className="w-10 h-10" /> {/* Spacer untuk centering */}
             </div>
@@ -131,7 +142,7 @@ export default function TemplateSuratPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Cari surat..."
+              placeholder={t("templateLetter.searchPlaceholder")}
               className="pl-9 bg-white border-awqaf-border-light font-comfortaa focus-visible:ring-awqaf-primary"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -164,20 +175,20 @@ export default function TemplateSuratPage() {
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary mb-2" />
               <p className="text-sm text-gray-500 font-comfortaa">
-                Memuat template...
+                {t("templateLetter.loading")}
               </p>
             </div>
           ) : isError ? (
             <div className="text-center py-10">
               <p className="text-red-500 font-comfortaa mb-2">
-                Gagal memuat data.
+                {t("templateLetter.failedToLoad")}
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.location.reload()}
               >
-                Coba Lagi
+                {t("templateLetter.tryAgain")}
               </Button>
             </div>
           ) : filteredTemplates.length > 0 ? (
@@ -221,7 +232,7 @@ export default function TemplateSuratPage() {
                           onClick={() => handleDownload(template.attachment)}
                         >
                           <Download className="w-3 h-3 mr-1.5" />
-                          Unduh
+                          {t("templateLetter.download")}
                         </Button>
                       </div>
                     </div>
@@ -236,10 +247,10 @@ export default function TemplateSuratPage() {
                 <FileJson className="w-8 h-8 text-gray-400" />
               </div>
               <p className="text-gray-900 font-medium font-comfortaa">
-                Tidak ditemukan
+                {t("templateLetter.notFound")}
               </p>
               <p className="text-xs text-gray-500 font-comfortaa">
-                Coba cari dengan kata kunci lain
+                {t("templateLetter.tryDifferentKeyword")}
               </p>
             </div>
           )}
@@ -252,10 +263,10 @@ export default function TemplateSuratPage() {
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-bold text-sm font-comfortaa">
-                  Butuh format lain?
+                  {t("templateLetter.needOtherFormat")}
                 </p>
                 <p className="text-xs text-white/80 font-comfortaa">
-                  Hubungi admin untuk request surat.
+                  {t("templateLetter.contactAdmin")}
                 </p>
               </div>
               <Button

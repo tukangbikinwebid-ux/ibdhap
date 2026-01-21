@@ -36,6 +36,7 @@ import { Clock, MapPin } from "lucide-react";
 import ShareModal from "./components/ShareModal";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/app/hooks/useI18n";
 
 // Loading Skeleton Component
 const DonationSkeleton = () => {
@@ -96,6 +97,7 @@ const campaignToDonation = (campaign: Campaign): ConvertedDonation => {
 };
 
 export default function DonasiPage() {
+  const { t, locale } = useI18n();
   const router = useRouter();
   
   // State untuk Pagination
@@ -181,12 +183,20 @@ export default function DonasiPage() {
 
     const amount = Number(donationAmount.replace(/\D/g, ""));
     if (amount < 10000) {
-      alert("Minimum donasi adalah Rp 10.000");
+      alert(t("donation.minimumDonation"));
       return;
     }
 
     if (!donorName.trim()) {
-      alert("Nama donor wajib diisi");
+      const errorMessages: Record<string, string> = {
+        id: "Nama donor wajib diisi",
+        en: "Donor name is required",
+        ar: "اسم المتبرع مطلوب",
+        fr: "Le nom du donateur est requis",
+        kr: "기부자 이름은 필수입니다",
+        jp: "寄付者名は必須です",
+      };
+      alert(errorMessages[locale] || errorMessages.id);
       return;
     }
 
@@ -209,7 +219,7 @@ export default function DonasiPage() {
       // Redirect ke payment atau tampilkan success
       if (result?.data?.payment?.account_number) {
         // Jika QRIS, bisa redirect ke QR code
-        alert("Donasi berhasil dibuat! Silakan lakukan pembayaran.");
+        alert(t("donation.donationSuccess"));
         setIsModalOpen(false);
         // Reset form
         setDonationAmount("");
@@ -219,11 +229,19 @@ export default function DonasiPage() {
         setDescription("");
       }
     } catch (error) {
+      const errorMessages: Record<string, string> = {
+        id: "Gagal membuat donasi. Silakan coba lagi.",
+        en: "Failed to create donation. Please try again.",
+        ar: "فشل إنشاء التبرع. يرجى المحاولة مرة أخرى.",
+        fr: "Échec de la création du don. Veuillez réessayer.",
+        kr: "기부 생성에 실패했습니다. 다시 시도하세요.",
+        jp: "寄付の作成に失敗しました。もう一度お試しください。",
+      };
       const errorMessage =
         error && typeof error === "object" && "data" in error
           ? (error.data as { message?: string })?.message
           : undefined;
-      alert(errorMessage || "Gagal membuat donasi. Silakan coba lagi.");
+      alert(errorMessage || errorMessages[locale] || errorMessages.id);
     } finally {
       setIsSubmitting(false);
     }
@@ -251,12 +269,11 @@ export default function DonasiPage() {
             <div className="flex items-center justify-center gap-2 mb-4">
               <Gift className="w-8 h-8" />
               <h1 className="text-2xl font-bold font-comfortaa">
-                Donasi & Sedekah
+                {t("donation.title")}
               </h1>
             </div>
             <p className="text-white/90 font-comfortaa max-w-2xl mx-auto">
-              Berikan donasi terbaik Anda untuk kemaslahatan umat. Setiap rupiah
-              yang Anda berikan akan membantu sesama yang membutuhkan.
+              {t("donation.subtitle")}
             </p>
           </div>
         </div>
@@ -284,10 +301,10 @@ export default function DonasiPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-card-foreground font-comfortaa">
-                  Daftar Donasi
+                  {t("donation.donationList")}
                 </h3>
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Pilih donasi yang ingin Anda dukung
+                  {t("donation.selectDonation")}
                 </p>
               </div>
               {paginationInfo && (
@@ -295,7 +312,7 @@ export default function DonasiPage() {
                   variant="secondary"
                   className="bg-awqaf-primary text-white text-xs px-2 py-1"
                 >
-                  {paginationInfo.total} Donasi
+                  {paginationInfo.total} {t("donation.donations")}
                 </Badge>
               )}
             </div>
@@ -363,7 +380,7 @@ export default function DonasiPage() {
                             <div className="mb-3">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                                  Progress
+                                  {t("donation.progress")}
                                 </span>
                                 <span className="text-xs font-medium text-awqaf-primary font-comfortaa">
                                   {donation.progress}%
@@ -384,7 +401,7 @@ export default function DonasiPage() {
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 <span className="font-comfortaa">
-                                  {daysRemaining} hari
+                                  {daysRemaining} {t("donation.days")}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
@@ -401,7 +418,7 @@ export default function DonasiPage() {
                               className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white text-xs font-comfortaa"
                               size="sm"
                             >
-                              Donasi Sekarang
+                              {t("donation.donateNow")}
                             </Button>
                           </CardContent>
                         </Card>
@@ -420,12 +437,12 @@ export default function DonasiPage() {
                         className="border-awqaf-border-light font-comfortaa"
                       >
                         <ChevronLeft className="w-4 h-4 mr-1" />
-                        Sebelumnya
+                        {t("donation.previous")}
                       </Button>
 
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                          Halaman {paginationInfo.currentPage} dari{" "}
+                          {t("donation.page")} {paginationInfo.currentPage} {t("donation.of")}{" "}
                           {paginationInfo.lastPage}
                         </span>
                       </div>
@@ -444,7 +461,7 @@ export default function DonasiPage() {
                         }
                         className="border-awqaf-border-light font-comfortaa"
                       >
-                        Selanjutnya
+                        {t("donation.next")}
                         <ChevronRight className="w-4 h-4 ml-1" />
                       </Button>
                     </div>
@@ -459,7 +476,7 @@ export default function DonasiPage() {
                 <Card className="border-awqaf-border-light">
                   <CardContent className="p-6 text-center">
                     <p className="text-awqaf-foreground-secondary font-comfortaa">
-                      Belum ada donasi tersedia saat ini
+                      {t("donation.noDonationsAvailable")}
                     </p>
                   </CardContent>
                 </Card>
@@ -473,10 +490,10 @@ export default function DonasiPage() {
             <CardContent className="p-6">
               <div className="text-center mb-6">
                 <h3 className="text-lg font-semibold text-card-foreground font-comfortaa mb-2">
-                  Butuh Bantuan?
+                  {t("donation.needHelp")}
                 </h3>
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Tim kami siap membantu Anda dalam proses donasi
+                  {t("donation.helpDescription")}
                 </p>
               </div>
 
@@ -486,7 +503,7 @@ export default function DonasiPage() {
                   className="border-awqaf-border-light text-awqaf-foreground-secondary hover:border-awqaf-primary hover:text-awqaf-primary font-comfortaa"
                 >
                   <Heart className="w-4 h-4 mr-2" />
-                  Donasi Favorit
+                  {t("donation.favoriteDonation")}
                 </Button>
                 <Button
                   variant="outline"
@@ -494,7 +511,7 @@ export default function DonasiPage() {
                   className="border-awqaf-border-light text-awqaf-foreground-secondary hover:border-awqaf-primary hover:text-awqaf-primary font-comfortaa"
                 >
                   <Share2 className="w-4 h-4 mr-2" />
-                  Bagikan
+                  {t("donation.share")}
                 </Button>
                 <Button
                   variant="outline"
@@ -502,7 +519,7 @@ export default function DonasiPage() {
                   className="border-awqaf-border-light text-awqaf-foreground-secondary hover:border-awqaf-primary hover:text-awqaf-primary font-comfortaa"
                 >
                   <Gift className="w-4 h-4 mr-2" />
-                  Riwayat Donasi
+                  {t("donation.donationHistory")}
                 </Button>
               </div>
             </CardContent>
@@ -514,9 +531,7 @@ export default function DonasiPage() {
           <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
             <CardContent className="p-6 text-center">
               <p className="text-sm text-awqaf-primary font-comfortaa mb-2">
-                &quot;Sesungguhnya sedekah itu akan memadamkan panas kubur bagi
-                pelakunya, dan sesungguhnya di hari kiamat seorang mukmin akan
-                berlindung di bawah naungan sedekahnya&quot;
+                &quot;{t("donation.motivationalQuote")}&quot;
               </p>
               <p className="text-xs text-awqaf-foreground-secondary font-tajawal">
                 - HR. Thabrani
@@ -550,11 +565,11 @@ export default function DonasiPage() {
                 {/* Nama Donor */}
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-gray-700 font-comfortaa">
-                    Nama Donor <span className="text-error">*</span>
+                    {t("donation.donorName")} <span className="text-error">*</span>
                   </Label>
                   <Input
                     type="text"
-                    placeholder="Masukkan nama Anda"
+                    placeholder={locale === "id" ? "Masukkan nama Anda" : locale === "en" ? "Enter your name" : locale === "ar" ? "أدخل اسمك" : locale === "fr" ? "Entrez votre nom" : locale === "kr" ? "이름을 입력하세요" : "お名前を入力してください"}
                     value={donorName}
                     onChange={(e) => setDonorName(e.target.value)}
                     className="border-awqaf-border-light focus-visible:ring-awqaf-primary font-comfortaa"
@@ -565,7 +580,7 @@ export default function DonasiPage() {
                 {/* Email Donor */}
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-gray-700 font-comfortaa">
-                    Email (Opsional)
+                    {t("donation.emailOptional")}
                   </Label>
                   <Input
                     type="email"
@@ -579,7 +594,7 @@ export default function DonasiPage() {
                 {/* Phone Donor */}
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-gray-700 font-comfortaa">
-                    No. Telepon (Opsional)
+                    {t("donation.phoneOptional")}
                   </Label>
                   <Input
                     type="tel"
@@ -593,7 +608,7 @@ export default function DonasiPage() {
               {/* Input Nominal */}
               <div className="space-y-2">
                   <Label className="text-sm font-bold text-gray-700 font-comfortaa">
-                    Nominal Donasi (Rp) <span className="text-error">*</span>
+                    {t("donation.donationAmountRequired")} <span className="text-error">*</span>
                   </Label>
                 <Input
                   type="text"
@@ -607,7 +622,7 @@ export default function DonasiPage() {
                     required
                 />
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Minimum donasi: Rp 10.000
+                    {t("donation.minimumDonation")}
                   </p>
                 <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
                     {["10.000", "50.000", "100.000", "500.000", "1.000.000"].map((amt) => (
@@ -626,10 +641,10 @@ export default function DonasiPage() {
                 {/* Description */}
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-gray-700 font-comfortaa">
-                    Pesan/Doa (Opsional)
+                    {t("donation.messageOptional")}
                   </Label>
                   <textarea
-                    placeholder="Tuliskan pesan atau doa Anda..."
+                    placeholder={locale === "id" ? "Tuliskan pesan atau doa Anda..." : locale === "en" ? "Write your message or prayer..." : locale === "ar" ? "اكتب رسالتك أو دعاءك..." : locale === "fr" ? "Écrivez votre message ou prière..." : locale === "kr" ? "메시지나 기도를 작성하세요..." : "メッセージや祈りを書いてください..."}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full min-h-[80px] px-3 py-2 rounded-md border border-awqaf-border-light bg-background text-sm font-comfortaa focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-awqaf-primary resize-none"
@@ -640,7 +655,7 @@ export default function DonasiPage() {
               {/* Payment Method Tabs */}
               <div className="space-y-3">
                 <Label className="text-sm font-bold text-gray-700 font-comfortaa">
-                  Metode Pembayaran
+                  {t("donation.paymentMethod")}
                 </Label>
                 <div className="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-xl">
                 <button
@@ -691,7 +706,7 @@ export default function DonasiPage() {
                 {paymentMethod === "bank_transfer" && (
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-gray-700 font-comfortaa">
-                      Pilih Bank
+                      {t("donation.selectBank")}
                     </Label>
                     <div className="grid grid-cols-4 gap-2">
                       {[
@@ -748,8 +763,7 @@ export default function DonasiPage() {
                     </div>
 
                     <p className="text-xs text-gray-500 font-comfortaa">
-                      Scan QRIS di atas menggunakan e-wallet (Gopay, OVO, Dana)
-                      atau Mobile Banking.
+                      {t("donation.scanQRIS")}
                     </p>
                   </div>
                 ) : (
@@ -770,7 +784,7 @@ export default function DonasiPage() {
 
                     <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm relative">
                       <p className="text-xs text-gray-500 text-left mb-1">
-                        Nomor Rekening
+                        {t("donation.accountNumber")}
                       </p>
                       <div className="flex items-center justify-between">
                         <p className="text-lg font-mono font-bold text-awqaf-primary tracking-wider">
@@ -790,8 +804,7 @@ export default function DonasiPage() {
                     </div>
 
                     <p className="text-xs text-gray-500 font-comfortaa">
-                      Mohon transfer sesuai nominal hingga 3 digit terakhir
-                      untuk verifikasi otomatis.
+                      {t("donation.transferInstructions")}
                     </p>
                   </div>
                 )}
@@ -808,10 +821,10 @@ export default function DonasiPage() {
                 {isSubmitting || isCreatingDonation ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Memproses...
+                    {t("donation.processing")}
                   </>
                 ) : (
-                  "Konfirmasi Pembayaran"
+                  t("donation.confirmPayment")
                 )}
               </Button>
             </div>

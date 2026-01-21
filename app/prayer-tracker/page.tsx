@@ -10,8 +10,10 @@ import PrayerChecklist from "./components/PrayerChecklist";
 import MonthlyProgress from "./components/MonthlyProgress";
 import { usePrayerTracker } from "./hooks/usePrayerTracker";
 import { Card, CardContent } from "@/components/ui/card";
+import { useI18n } from "@/app/hooks/useI18n";
 
 export default function PrayerTrackerPage() {
+  const { t } = useI18n();
   const {
     todayData,
     dailyData,
@@ -31,7 +33,7 @@ export default function PrayerTrackerPage() {
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-awqaf-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-awqaf-foreground-secondary font-comfortaa">
-            Memuat jadwal sholat...
+            {t("prayerTracker.loading")}
           </p>
         </div>
       </div>
@@ -57,10 +59,10 @@ export default function PrayerTrackerPage() {
                 </Link>
                 <div>
                   <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                    Prayer Tracker
+                    {t("prayerTracker.title")}
                   </h1>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Pantau progress sholat harian
+                    {t("prayerTracker.subtitle")}
                   </p>
                 </div>
               </div>
@@ -88,7 +90,7 @@ export default function PrayerTrackerPage() {
             }`}
             onClick={() => setActiveTab("today")}
           >
-            Hari Ini
+            {t("prayerTracker.today")}
           </Button>
           <Button
             variant={activeTab === "monthly" ? "default" : "ghost"}
@@ -100,7 +102,7 @@ export default function PrayerTrackerPage() {
             }`}
             onClick={() => setActiveTab("monthly")}
           >
-            Bulanan
+            {t("prayerTracker.monthly")}
           </Button>
         </div>
 
@@ -125,7 +127,7 @@ export default function PrayerTrackerPage() {
               />
             ) : (
               <div className="text-center py-4 text-sm text-gray-500">
-                Gagal memuat jadwal sholat. Periksa koneksi internet.
+                {t("prayerTracker.failedToLoad")}
               </div>
             )}
           </div>
@@ -145,7 +147,7 @@ export default function PrayerTrackerPage() {
         <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
           <CardContent className="p-4 text-center">
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa mb-2">
-              &quot;Dan dirikanlah sholat untuk mengingat-Ku&quot;
+              &quot;{t("prayerTracker.motivationalQuote")}&quot;
             </p>
             <p className="text-xs text-awqaf-primary font-tajawal">
               - QS. Thaha: 14

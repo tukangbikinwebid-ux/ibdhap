@@ -16,6 +16,7 @@ import {
   Navigation,
 } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/app/hooks/useI18n";
 
 interface TajwidRule {
   id: string;
@@ -155,6 +156,7 @@ const tajwidLessons: Lesson[] = [
 ];
 
 export default function TajwidPage() {
+  const { t } = useI18n();
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [selectedRule, setSelectedRule] = useState<TajwidRule | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -238,16 +240,7 @@ export default function TajwidPage() {
   };
 
   const getDifficultyText = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "Mudah";
-      case "medium":
-        return "Sedang";
-      case "hard":
-        return "Sulit";
-      default:
-        return "Tidak diketahui";
-    }
+    return t(`tajwid.difficulty.${difficulty as "easy" | "medium" | "hard"}`) || t("tajwid.difficulty.unknown");
   };
 
   const getCategoryIcon = (category: string) => {
@@ -266,18 +259,7 @@ export default function TajwidPage() {
   };
 
   const getCategoryName = (category: string) => {
-    switch (category) {
-      case "makharij":
-        return "Makharijul Huruf";
-      case "sifat":
-        return "Sifatul Huruf";
-      case "ahkam":
-        return "Ahkamul Huruf";
-      case "wafq":
-        return "Wafq";
-      default:
-        return "Kategori";
-    }
+    return t(`tajwid.categories.${category as "makharij" | "sifat" | "ahkam" | "wafq"}`) || t("tajwid.categories.category");
   };
 
   const getOverallProgress = () => {
@@ -308,7 +290,7 @@ export default function TajwidPage() {
                 </Button>
               </Link>
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                Belajar Tajwid
+                {t("tajwid.title")}
               </h1>
               <div className="w-10 h-10"></div>
             </div>
@@ -322,14 +304,14 @@ export default function TajwidPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-comfortaa flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-awqaf-primary" />
-              Progress Belajar
+              {t("tajwid.learningProgress")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-awqaf-foreground-secondary font-comfortaa">
-                  Progress Keseluruhan
+                  {t("tajwid.overallProgress")}
                 </span>
                 <span className="text-awqaf-primary font-comfortaa font-medium">
                   {getOverallProgress().toFixed(0)}%
@@ -344,7 +326,7 @@ export default function TajwidPage() {
                   {completedLessons.size}
                 </p>
                 <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                  Pelajaran Selesai
+                  {t("tajwid.lessonsCompleted")}
                 </p>
               </div>
               <div>
@@ -352,7 +334,7 @@ export default function TajwidPage() {
                   {Object.values(userProgress).filter((p) => p === 100).length}
                 </p>
                 <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                  Materi Dikuasai
+                  {t("tajwid.materialsMastered")}
                 </p>
               </div>
             </div>
@@ -363,7 +345,7 @@ export default function TajwidPage() {
         {!selectedLesson && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
-              Pilih Pelajaran
+              {t("tajwid.selectLesson")}
             </h2>
 
             {tajwidLessons.map((lesson) => (
@@ -387,12 +369,12 @@ export default function TajwidPage() {
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="secondary" className="text-xs">
-                            {lesson.rules.length} materi
+                            {lesson.rules.length} {t("tajwid.materials")}
                           </Badge>
                           {completedLessons.has(lesson.id) && (
                             <Badge className="bg-green-100 text-green-800 text-xs">
                               <CheckCircle className="w-3 h-3 mr-1" />
-                              Selesai
+                              {t("tajwid.completed")}
                             </Badge>
                           )}
                         </div>
@@ -408,7 +390,7 @@ export default function TajwidPage() {
                         /{lesson.rules.length}
                       </div>
                       <div className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                        selesai
+                        {t("tajwid.finished")}
                       </div>
                     </div>
                   </div>
@@ -499,7 +481,7 @@ export default function TajwidPage() {
                 onClick={() => setSelectedRule(null)}
                 className="hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200"
               >
-                ← Kembali
+                ← {t("tajwid.back")}
               </Button>
               <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
                 {selectedRule.name}
@@ -517,18 +499,18 @@ export default function TajwidPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-card-foreground font-comfortaa mb-2">
-                    Penjelasan
-                  </h4>
+                <h4 className="font-medium text-card-foreground font-comfortaa mb-2">
+                  {t("tajwid.explanation")}
+                </h4>
                   <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
                     {selectedRule.description}
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-card-foreground font-comfortaa mb-2">
-                    Contoh
-                  </h4>
+                <h4 className="font-medium text-card-foreground font-comfortaa mb-2">
+                  {t("tajwid.example")}
+                </h4>
                   <div className="bg-accent-50 p-4 rounded-lg">
                     <p className="text-2xl font-tajawal text-center text-awqaf-primary">
                       {selectedRule.example}
@@ -562,7 +544,7 @@ export default function TajwidPage() {
                     ) : (
                       <Play className="w-4 h-4 mr-2" />
                     )}
-                    {isPlaying ? "Pause" : "Dengarkan"}
+                    {isPlaying ? t("tajwid.pause") : t("tajwid.listen")}
                   </Button>
 
                   <Button
@@ -587,12 +569,12 @@ export default function TajwidPage() {
                     {userProgress[selectedRule.id] === 100 ? (
                       <>
                         <CheckCircle className="w-4 h-4 mr-2" />
-                        Sudah Dikuasai
+                        {t("tajwid.alreadyMastered")}
                       </>
                     ) : (
                       <>
                         <Star className="w-4 h-4 mr-2" />
-                        Tandai Selesai
+                        {t("tajwid.markComplete")}
                       </>
                     )}
                   </Button>

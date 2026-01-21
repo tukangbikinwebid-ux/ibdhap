@@ -21,8 +21,10 @@ import {
   useGetUstadzListQuery,
 } from "@/services/public/kajian.service";
 import { QnAUstadz } from "@/types/public/kajian";
+import { useI18n } from "@/app/hooks/useI18n";
 
 export default function TanyaUstadzPage() {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUstadzId, setSelectedUstadzId] = useState<string>(""); // Filter by Ustadz
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -123,16 +125,15 @@ export default function TanyaUstadzPage() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-3xl font-bold font-comfortaa mb-4">
-              Tanya Ustadz
+              {t("askUstadz.title")}
             </h1>
             <p className="text-lg text-white/90 font-comfortaa mb-6 max-w-2xl mx-auto">
-              Ajukan pertanyaan tentang Islam kepada ustadz yang berkompeten.
-              Dapatkan jawaban yang tepat dan terpercaya.
+              {t("askUstadz.subtitle")}
             </p>
             <Link href="/tanya-ustadz/form">
               <Button className="bg-white text-awqaf-primary hover:bg-white/90 font-comfortaa">
                 <MessageCircle className="w-4 h-4 mr-2" />
-                Ajukan Pertanyaan
+                {t("askUstadz.askQuestion")}
               </Button>
             </Link>
           </div>
@@ -152,7 +153,7 @@ export default function TanyaUstadzPage() {
                     {totalQuestions}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Total Pertanyaan
+                    {t("askUstadz.totalQuestions")}
                   </p>
                 </CardContent>
               </Card>
@@ -164,7 +165,7 @@ export default function TanyaUstadzPage() {
                     {answeredCount}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Terjawab
+                    {t("askUstadz.answered")}
                   </p>
                 </CardContent>
               </Card>
@@ -176,7 +177,7 @@ export default function TanyaUstadzPage() {
                     {totalCategories}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Ustadz Aktif
+                    {t("askUstadz.activeUstadz")}
                   </p>
                 </CardContent>
               </Card>
@@ -188,7 +189,7 @@ export default function TanyaUstadzPage() {
                     {popularQuestions.length}
                   </p>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    Populer
+                    {t("askUstadz.popular")}
                   </p>
                 </CardContent>
               </Card>
@@ -211,10 +212,10 @@ export default function TanyaUstadzPage() {
             <div id="questions-list">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-card-foreground font-comfortaa">
-                  Daftar Pertanyaan
+                  {t("askUstadz.questionList")}
                 </h2>
                 <Badge className="bg-awqaf-primary/10 text-awqaf-primary border-awqaf-primary/20 font-comfortaa">
-                  {isLoadingQnA ? "..." : filteredQuestions.length} pertanyaan
+                  {isLoadingQnA ? "..." : filteredQuestions.length} {t("askUstadz.questions")}
                 </Badge>
               </div>
 
@@ -244,7 +245,7 @@ export default function TanyaUstadzPage() {
             <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
               <CardContent className="p-4 text-center">
                 <p className="text-sm text-awqaf-primary font-comfortaa mb-1">
-                  &quot;Menuntut ilmu adalah kewajiban bagi setiap muslim&quot;
+                  &quot;{t("askUstadz.motivationalQuote")}&quot;
                 </p>
                 <p className="text-xs text-awqaf-foreground-secondary font-tajawal">
                   - HR. Ibnu Majah

@@ -12,6 +12,7 @@ import {
   Info,
   Check,
 } from "lucide-react";
+import { useI18n } from "@/app/hooks/useI18n";
 
 const DHIKR_OPTIONS = [
   { id: "subhanallah", label: "Subhanallah", arabic: "سُبْحَانَ اللّٰهِ" },
@@ -25,6 +26,7 @@ const DHIKR_OPTIONS = [
 const TARGET_OPTIONS = [33, 99, 100, 1000];
 
 export default function TasbihPage() {
+  const { t, locale } = useI18n();
   const [count, setCount] = useState(0);
   const [target, setTarget] = useState(33);
   const [dhikrId, setDhikrId] = useState("subhanallah");
@@ -78,7 +80,7 @@ export default function TasbihPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-emerald-100/50">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-emerald-800">Tasbih Digital</h1>
+          <h1 className="text-lg font-bold text-emerald-800">{t("tasbih.title")}</h1>
           <div className="flex gap-2">
             <Button
               variant="ghost"
@@ -106,7 +108,7 @@ export default function TasbihPage() {
           <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-300">
               <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-3xl">
-                <h2 className="text-lg font-bold text-gray-900">Pengaturan</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t("tasbih.settings")}</h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -121,7 +123,7 @@ export default function TasbihPage() {
                 {/* Pilihan Dzikir */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
-                    Pilih Dzikir
+                    {t("tasbih.selectDhikr")}
                   </h3>
                   <div className="space-y-2">
                     {DHIKR_OPTIONS.map((opt) => (
@@ -155,7 +157,7 @@ export default function TasbihPage() {
                 {/* Pilihan Target */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-bold text-emerald-800 uppercase tracking-wide">
-                    Target Hitungan
+                    {t("tasbih.targetCount")}
                   </h3>
                   <div className="grid grid-cols-4 gap-2">
                     {TARGET_OPTIONS.map((t) => (
@@ -183,7 +185,7 @@ export default function TasbihPage() {
           <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md animate-in slide-in-from-bottom duration-300">
               <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-3xl">
-                <h2 className="text-lg font-bold text-gray-900">Panduan</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t("tasbih.guide")}</h2>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -200,7 +202,7 @@ export default function TasbihPage() {
                     1
                   </div>
                   <p className="text-gray-600 text-sm pt-1">
-                    Tekan lingkaran besar untuk menambah hitungan dzikir
+                    {t("tasbih.guideStep1")}
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -208,7 +210,7 @@ export default function TasbihPage() {
                     2
                   </div>
                   <p className="text-gray-600 text-sm pt-1">
-                    Klik ikon pengaturan untuk mengubah jenis dzikir dan target
+                    {t("tasbih.guideStep2")}
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -216,7 +218,7 @@ export default function TasbihPage() {
                     3
                   </div>
                   <p className="text-gray-600 text-sm pt-1">
-                    Gunakan tombol reset untuk memulai hitungan dari awal
+                    {t("tasbih.guideStep3")}
                   </p>
                 </div>
               </div>
@@ -233,11 +235,11 @@ export default function TasbihPage() {
               <p className="text-lg font-medium text-gray-700">{currentDhikr.label}</p>
               <div className="mt-4 flex items-center justify-center gap-2">
                 <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-0 px-3 py-1">
-                  Target: {target}
+                  {t("tasbih.targetCount")}: {target}
                 </Badge>
                 {isComplete && (
                   <Badge className="bg-green-500 text-white border-0 px-3 py-1">
-                    ✓ Selesai
+                    ✓ {t("tasbih.completed")}
                   </Badge>
                 )}
               </div>
@@ -283,7 +285,7 @@ export default function TasbihPage() {
                     {count}
                   </span>
                   <p className="text-white/90 text-sm mt-2 uppercase tracking-widest">
-                    Tekan
+                    {t("tasbih.press")}
                   </p>
                 </div>
               </button>
@@ -297,7 +299,7 @@ export default function TasbihPage() {
               className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 px-8 py-6 rounded-2xl font-medium"
             >
               <RotateCcw className="w-5 h-5" />
-              Reset Hitungan
+              {t("tasbih.resetCount")}
             </Button>
           </div>
 
@@ -309,18 +311,18 @@ export default function TasbihPage() {
                   <p className="text-3xl font-bold text-emerald-600">
                     {count}
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">Hitungan Saat Ini</p>
+                  <p className="text-xs text-gray-600 mt-1">{t("tasbih.currentCount")}</p>
                 </div>
                 <div>
                   <p className="text-3xl font-bold text-teal-600">
                     {Math.round(progressPercentage)}%
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">Progress</p>
+                  <p className="text-xs text-gray-600 mt-1">{t("tasbih.progress")}</p>
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t border-emerald-200">
                 <p className="text-xs text-gray-500">
-                  Terakhir direset: {lastReset.toLocaleString("id-ID", {
+                  {t("tasbih.lastReset")} {lastReset.toLocaleString(locale === "id" ? "id-ID" : locale === "en" ? "en-US" : locale === "ar" ? "ar-SA" : locale === "fr" ? "fr-FR" : locale === "kr" ? "ko-KR" : "ja-JP", {
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}
