@@ -29,10 +29,12 @@ import {
 import { Progress } from "@/components/ui/progress";
 // Import Service
 import { useGetSurahDetailQuery } from "@/services/public/quran.service";
+import { useI18n } from "@/app/hooks/useI18n";
 
 export default function SurahDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { locale } = useI18n();
   const surahId = params.id as string;
 
   // Fetch Detail Surah
@@ -42,9 +44,8 @@ export default function SurahDetailPage() {
     isError,
   } = useGetSurahDetailQuery({
     surat: surahId,
-    lang: "id",
+    lang: locale,
   });
-
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -57,7 +58,7 @@ export default function SurahDetailPage() {
   // Load bookmarked verses
   useEffect(() => {
     const savedBookmarks = localStorage.getItem(
-      `quran-verse-bookmarks-${surahId}`
+      `quran-verse-bookmarks-${surahId}`,
     );
     if (savedBookmarks) {
       setBookmarkedVerses(JSON.parse(savedBookmarks));
@@ -77,7 +78,7 @@ export default function SurahDetailPage() {
     if (surah) {
       const data = {
         surahName: surah.transliteration,
-        verse: 1, 
+        verse: 1,
         page: 1,
       };
       localStorage.setItem("quran-last-read", JSON.stringify(data));
@@ -174,7 +175,7 @@ export default function SurahDetailPage() {
     setBookmarkedVerses(newBookmarks);
     localStorage.setItem(
       `quran-verse-bookmarks-${surahId}`,
-      JSON.stringify(newBookmarks)
+      JSON.stringify(newBookmarks),
     );
   };
 
@@ -209,7 +210,9 @@ export default function SurahDetailPage() {
 
     // Update localStorage
     const savedMemorization = localStorage.getItem("quran-memorization");
-    const allMemorization = savedMemorization ? JSON.parse(savedMemorization) : {};
+    const allMemorization = savedMemorization
+      ? JSON.parse(savedMemorization)
+      : {};
     allMemorization[surahId] = newMemorized;
     localStorage.setItem("quran-memorization", JSON.stringify(allMemorization));
   };
@@ -221,7 +224,9 @@ export default function SurahDetailPage() {
     setMemorizedVerses(allVerseIds);
 
     const savedMemorization = localStorage.getItem("quran-memorization");
-    const allMemorization = savedMemorization ? JSON.parse(savedMemorization) : {};
+    const allMemorization = savedMemorization
+      ? JSON.parse(savedMemorization)
+      : {};
     allMemorization[surahId] = allVerseIds;
     localStorage.setItem("quran-memorization", JSON.stringify(allMemorization));
   };
@@ -231,7 +236,9 @@ export default function SurahDetailPage() {
     setMemorizedVerses([]);
 
     const savedMemorization = localStorage.getItem("quran-memorization");
-    const allMemorization = savedMemorization ? JSON.parse(savedMemorization) : {};
+    const allMemorization = savedMemorization
+      ? JSON.parse(savedMemorization)
+      : {};
     delete allMemorization[surahId];
     localStorage.setItem("quran-memorization", JSON.stringify(allMemorization));
   };
@@ -333,8 +340,8 @@ export default function SurahDetailPage() {
                               {size === "sm"
                                 ? "Kecil"
                                 : size === "md"
-                                ? "Sedang"
-                                : "Besar"}
+                                  ? "Sedang"
+                                  : "Besar"}
                             </Button>
                           ))}
                         </div>
@@ -443,11 +450,15 @@ export default function SurahDetailPage() {
                   </span>
                 </div>
                 <span className="text-sm font-bold text-success font-comfortaa">
-                  {memorizedVerses.length} / {surah.total_verses} ({memorizationProgress}%)
+                  {memorizedVerses.length} / {surah.total_verses} (
+                  {memorizationProgress}%)
                 </span>
               </div>
-              <Progress value={memorizationProgress} className="h-2 bg-accent-100 mb-2" />
-              
+              <Progress
+                value={memorizationProgress}
+                className="h-2 bg-accent-100 mb-2"
+              />
+
               <div className="flex items-center gap-2">
                 <Button
                   variant={showMemorizationMode ? "default" : "outline"}
@@ -456,7 +467,9 @@ export default function SurahDetailPage() {
                   className="flex-1 font-comfortaa text-xs"
                 >
                   <GraduationCap className="w-3 h-3 mr-1" />
-                  {showMemorizationMode ? "Mode Hafalan Aktif" : "Aktifkan Mode Hafalan"}
+                  {showMemorizationMode
+                    ? "Mode Hafalan Aktif"
+                    : "Aktifkan Mode Hafalan"}
                 </Button>
                 {showMemorizationMode && (
                   <Drawer>
@@ -514,10 +527,10 @@ export default function SurahDetailPage() {
 
           {surah.verses.map((verse) => {
             const isMemorized = memorizedVerses.includes(verse.id);
-            
+
             return (
-              <Card 
-                key={verse.id} 
+              <Card
+                key={verse.id}
                 className={`border-awqaf-border-light transition-all ${
                   isMemorized ? "bg-success/5 border-success/30" : ""
                 }`}
@@ -526,15 +539,17 @@ export default function SurahDetailPage() {
                   <div className="flex items-start gap-4">
                     {/* Verse Number or Memorization Checkbox */}
                     {showMemorizationMode ? (
-                      <div 
+                      <div
                         className="flex-shrink-0 mt-1 cursor-pointer"
                         onClick={() => handleMemorizationToggle(verse.id)}
                       >
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                          isMemorized 
-                            ? "bg-success text-white" 
-                            : "bg-accent-100 border-2 border-awqaf-border-light"
-                        }`}>
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            isMemorized
+                              ? "bg-success text-white"
+                              : "bg-accent-100 border-2 border-awqaf-border-light"
+                          }`}
+                        >
                           {isMemorized ? (
                             <CheckCircle2 className="w-5 h-5" />
                           ) : (
@@ -566,8 +581,8 @@ export default function SurahDetailPage() {
                             fontSize === "sm"
                               ? "text-xl"
                               : fontSize === "md"
-                              ? "text-2xl"
-                              : "text-3xl"
+                                ? "text-2xl"
+                                : "text-3xl"
                           }`}
                         >
                           {verse.text}
@@ -582,8 +597,8 @@ export default function SurahDetailPage() {
                               fontSize === "sm"
                                 ? "text-sm"
                                 : fontSize === "md"
-                                ? "text-base"
-                                : "text-lg"
+                                  ? "text-base"
+                                  : "text-lg"
                             }`}
                           >
                             {verse.translation}

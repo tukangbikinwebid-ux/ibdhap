@@ -17,11 +17,45 @@ import {
 import Image from "next/image";
 // Import Service
 import { useGetKajianListQuery } from "@/services/public/kajian.service";
+// Import i18n
+import { useI18n } from "@/app/hooks/useI18n";
+import { Kajian } from "@/types/public/kajian";
 
 export default function KajianDetailPage() {
+  const { locale } = useI18n(); // Ambil locale
   const params = useParams();
   const router = useRouter();
   const kajianId = Number(params.id);
+
+  // --- HELPER TRANSLATION ---
+  const getKajianContent = (item: Kajian) => {
+    // 1. Cari translation sesuai locale aktif
+    const localized = item.translations.find((t) => t.locale === locale);
+
+    // 2. Jika ada dan title tidak kosong
+    if (localized && localized.title) {
+      return {
+        title: localized.title,
+        description: localized.description,
+      };
+    }
+
+    // 3. Fallback ke 'id' jika locale aktif kosong
+    const idFallback = item.translations.find((t) => t.locale === "id");
+    if (idFallback && idFallback.title) {
+      return {
+        title: idFallback.title,
+        description: idFallback.description,
+      };
+    }
+
+    // 4. Fallback terakhir ke root object
+    return {
+      title: item.title,
+      description: item.description,
+    };
+  };
+  // --------------------------
 
   // Fetch Kajian List untuk mencari detail (Workaround jika belum ada endpoint detail spesifik)
   // Idealnya ada endpoint: /public/ustadz/kajian/:id
@@ -32,8 +66,14 @@ export default function KajianDetailPage() {
 
   const kajian = useMemo(
     () => kajianData?.data.find((k) => k.id === kajianId),
-    [kajianData, kajianId]
+    [kajianData, kajianId],
   );
+
+  // Localized Content State
+  const content = useMemo(() => {
+    if (!kajian) return { title: "", description: "" };
+    return getKajianContent(kajian);
+  }, [kajian, locale]); // Recalculate if locale changes
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -80,7 +120,7 @@ export default function KajianDetailPage() {
     if (!el) return;
     el.currentTime = Math.max(
       0,
-      Math.min(duration || 0, el.currentTime + secs)
+      Math.min(duration || 0, el.currentTime + secs),
     );
   };
 
@@ -143,7 +183,7 @@ export default function KajianDetailPage() {
         <Card className="border-awqaf-border-light">
           <CardContent className="p-4 space-y-2">
             <h2 className="font-semibold text-card-foreground font-comfortaa text-lg leading-tight">
-              {kajian.title}
+              {content.title}
             </h2>
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
               {kajian.ustadz?.name} •{" "}
@@ -155,7 +195,7 @@ export default function KajianDetailPage() {
             </p>
             <div
               className="text-sm text-awqaf-foreground-secondary font-comfortaa mt-2"
-              dangerouslySetInnerHTML={{ __html: kajian.description }}
+              dangerouslySetInnerHTML={{ __html: content.description || "" }}
             />
           </CardContent>
         </Card>

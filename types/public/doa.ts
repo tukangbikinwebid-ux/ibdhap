@@ -1,4 +1,15 @@
-// Tipe Data untuk Kategori Doa
+export interface TypeTranslation {
+  id: number;
+  doa_category_id: number;
+  locale: string;
+  name: string;
+  title: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+  translation: string;
+  ustadz_kajian_id: number;
+}
 export interface DoaCategory {
   id: number;
   name: string;
@@ -6,6 +17,7 @@ export interface DoaCategory {
   description: string;
   created_at: string;
   updated_at: string;
+  translations: TypeTranslation[];
 }
 
 // Tipe Data untuk Doa
@@ -22,6 +34,7 @@ export interface Doa {
   created_at: string;
   updated_at: string;
   category: DoaCategory;
+  translations: TypeTranslation[];
 }
 
 // Params untuk Get Categories List

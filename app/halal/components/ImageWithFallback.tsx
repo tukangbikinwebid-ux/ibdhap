@@ -23,7 +23,7 @@ export default function ImageWithFallback({
 }: ImageWithFallbackProps) {
   const [imageError, setImageError] = useState(false);
 
-  if (imageError) {
+  if (imageError || !src) {
     return (
       <div
         className={`w-full h-full bg-accent-100 flex items-center justify-center ${className}`}
@@ -43,6 +43,7 @@ export default function ImageWithFallback({
       height={height}
       className={className}
       onError={() => setImageError(true)}
+      unoptimized
     />
   );
 }

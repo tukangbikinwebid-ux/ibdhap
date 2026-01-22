@@ -6,13 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, X, Star, MapPin } from "lucide-react";
 
-interface FilterOptions {
+export interface FilterOptions {
   searchQuery: string;
   minRating: number;
   maxDistance: number;
-  categories: string[];
-  priceRange: string[];
-  sortBy: "rating" | "distance" | "price" | "name";
+  sortBy: "rating" | "distance" | "name";
 }
 
 interface SearchFilterProps {
@@ -20,27 +18,9 @@ interface SearchFilterProps {
   onSearch: (query: string) => void;
 }
 
-const categories = [
-  "Restoran",
-  "Warung",
-  "Kafe",
-  "Fast Food",
-  "Bakery",
-  "Dessert",
-  "Minuman",
-  "Street Food",
-];
-
-const priceRanges = [
-  { label: "Rp", value: "budget" },
-  { label: "Rp Rp", value: "moderate" },
-  { label: "Rp Rp Rp", value: "expensive" },
-];
-
 const sortOptions = [
   { label: "Rating Tertinggi", value: "rating" },
   { label: "Jarak Terdekat", value: "distance" },
-  { label: "Harga Terendah", value: "price" },
   { label: "Nama A-Z", value: "name" },
 ];
 
@@ -53,9 +33,7 @@ export default function SearchFilter({
     searchQuery: "",
     minRating: 0,
     maxDistance: 10,
-    categories: [],
-    priceRange: [],
-    sortBy: "rating",
+    sortBy: "distance",
   });
 
   const handleSearchChange = (query: string) => {
@@ -69,30 +47,12 @@ export default function SearchFilter({
     onFilterChange(updatedFilters);
   };
 
-  const handleCategoryToggle = (category: string) => {
-    const newCategories = filters.categories.includes(category)
-      ? filters.categories.filter((c) => c !== category)
-      : [...filters.categories, category];
-
-    handleFilterChange({ categories: newCategories });
-  };
-
-  const handlePriceRangeToggle = (priceRange: string) => {
-    const newPriceRange = filters.priceRange.includes(priceRange)
-      ? filters.priceRange.filter((p) => p !== priceRange)
-      : [...filters.priceRange, priceRange];
-
-    handleFilterChange({ priceRange: newPriceRange });
-  };
-
   const clearAllFilters = () => {
     const clearedFilters: FilterOptions = {
       searchQuery: "",
       minRating: 0,
       maxDistance: 10,
-      categories: [],
-      priceRange: [],
-      sortBy: "rating",
+      sortBy: "distance",
     };
     setFilters(clearedFilters);
     onFilterChange(clearedFilters);
@@ -101,15 +61,12 @@ export default function SearchFilter({
   const getActiveFiltersCount = () => {
     let count = 0;
     if (filters.minRating > 0) count++;
-    if (filters.maxDistance < 10) count++;
-    if (filters.categories.length > 0) count++;
-    if (filters.priceRange.length > 0) count++;
+    if (filters.maxDistance !== 10) count++;
     return count;
   };
 
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
       <Card className="border-awqaf-border-light">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
@@ -141,12 +98,10 @@ export default function SearchFilter({
         </CardContent>
       </Card>
 
-      {/* Filter Panel */}
       {isFilterOpen && (
         <Card className="border-awqaf-border-light">
           <CardContent className="p-4">
             <div className="space-y-4">
-              {/* Header */}
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-card-foreground text-sm font-comfortaa">
                   Filter & Urutkan
@@ -162,7 +117,6 @@ export default function SearchFilter({
                 </Button>
               </div>
 
-              {/* Sort By */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-card-foreground font-comfortaa">
                   Urutkan berdasarkan:
@@ -192,7 +146,6 @@ export default function SearchFilter({
                 </div>
               </div>
 
-              {/* Rating Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-card-foreground font-comfortaa">
                   Rating minimum:
@@ -210,7 +163,7 @@ export default function SearchFilter({
                         minRating: parseFloat(e.target.value),
                       })
                     }
-                    className="flex-1"
+                    className="flex-1 accent-awqaf-primary"
                   />
                   <span className="text-sm font-medium text-card-foreground font-comfortaa min-w-[40px]">
                     {filters.minRating}+
@@ -218,17 +171,16 @@ export default function SearchFilter({
                 </div>
               </div>
 
-              {/* Distance Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-card-foreground font-comfortaa">
-                  Jarak maksimal:
+                  Radius Pencarian (API):
                 </label>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-awqaf-primary" />
                   <input
                     type="range"
                     min="1"
-                    max="20"
+                    max="50"
                     step="1"
                     value={filters.maxDistance}
                     onChange={(e) =>
@@ -236,104 +188,16 @@ export default function SearchFilter({
                         maxDistance: parseInt(e.target.value),
                       })
                     }
-                    className="flex-1"
+                    className="flex-1 accent-awqaf-primary"
                   />
                   <span className="text-sm font-medium text-card-foreground font-comfortaa min-w-[50px]">
                     {filters.maxDistance} km
                   </span>
                 </div>
               </div>
-
-              {/* Category Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-card-foreground font-comfortaa">
-                  Kategori:
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((category) => (
-                    <Button
-                      key={category}
-                      variant={
-                        filters.categories.includes(category)
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handleCategoryToggle(category)}
-                      className={`text-xs font-comfortaa ${
-                        filters.categories.includes(category)
-                          ? "bg-awqaf-primary text-white"
-                          : "border-awqaf-border-light text-awqaf-foreground-secondary hover:border-awqaf-primary hover:text-awqaf-primary"
-                      }`}
-                    >
-                      {category}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Range Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-card-foreground font-comfortaa">
-                  Rentang harga:
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {priceRanges.map((range) => (
-                    <Button
-                      key={range.value}
-                      variant={
-                        filters.priceRange.includes(range.value)
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handlePriceRangeToggle(range.value)}
-                      className={`text-xs font-comfortaa ${
-                        filters.priceRange.includes(range.value)
-                          ? "bg-awqaf-primary text-white"
-                          : "border-awqaf-border-light text-awqaf-foreground-secondary hover:border-awqaf-primary hover:text-awqaf-primary"
-                      }`}
-                    >
-                      {range.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Active Filters */}
-      {getActiveFiltersCount() > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {filters.minRating > 0 && (
-            <Badge className="bg-warning text-white text-xs px-2 py-1">
-              Rating {filters.minRating}+
-            </Badge>
-          )}
-          {filters.maxDistance < 10 && (
-            <Badge className="bg-info text-white text-xs px-2 py-1">
-              &lt; {filters.maxDistance} km
-            </Badge>
-          )}
-          {filters.categories.map((category) => (
-            <Badge
-              key={category}
-              className="bg-success text-white text-xs px-2 py-1"
-            >
-              {category}
-            </Badge>
-          ))}
-          {filters.priceRange.map((range) => (
-            <Badge
-              key={range}
-              className="bg-error text-white text-xs px-2 py-1"
-            >
-              {priceRanges.find((p) => p.value === range)?.label}
-            </Badge>
-          ))}
-        </div>
       )}
     </div>
   );

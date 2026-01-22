@@ -170,7 +170,7 @@ export default function QuranPage() {
   const [endVerse, setEndVerse] = useState<string>("1");
 
   // Fetch API
-  const { data: apiSurahs, isLoading } = useGetSurahsQuery({ lang: "id" });
+  const { data: apiSurahs, isLoading } = useGetSurahsQuery({ lang: locale });
 
   // Mapping data API ke struktur internal jika perlu, atau gunakan langsung
   const allSurahs = useMemo(() => {

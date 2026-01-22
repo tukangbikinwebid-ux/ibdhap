@@ -1,5 +1,5 @@
 // services/quran.service.ts
-import { apiSlice } from "@/services/base-query"; // Sesuaikan path import base-query
+import { apiSlice } from "@/services/base-query";
 import {
   Surah,
   SurahDetail,
@@ -9,16 +9,38 @@ import {
   GetSurahDetailParams,
 } from "@/types/public/quran";
 
+// Daftar bahasa yang didukung oleh API (sesuai list Anda)
+const SUPPORTED_API_LANGUAGES = [
+  "ar",
+  "bn",
+  "en",
+  "es",
+  "fr",
+  "id",
+  "ru",
+  "sv",
+  "tr",
+  "ur",
+  "zh",
+  "transliteration",
+];
+
+// Jika user memilih 'jp' atau 'kr' (yang tidak ada di API), akan fallback ke 'en' atau 'id'
+const getValidApiLang = (lang?: string): string => {
+  if (!lang) return "id";
+  return SUPPORTED_API_LANGUAGES.includes(lang) ? lang : "en";
+};
+
 export const quranApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // 📖 Get List of Surahs
-    // Endpoint: /public/quran/surahs?lang=en
     getSurahs: builder.query<Surah[], GetSurahsParams>({
       query: (params) => ({
         url: "/public/quran/surahs",
         method: "GET",
         params: {
-          lang: params.lang ?? "id", // Default ke 'id' jika tidak ada
+          // Gunakan helper validasi
+          lang: getValidApiLang(params.lang),
         },
       }),
       transformResponse: (response: SurahListResponse) => {
@@ -30,14 +52,14 @@ export const quranApi = apiSlice.injectEndpoints({
       providesTags: ["QuranSurahs"],
     }),
 
-    // 📖 Get Surah Detail (Ayat & Audio)
-    // Endpoint: /public/quran/surahs/:surat?lang=en
+    // 📖 Get Surah Detail
     getSurahDetail: builder.query<SurahDetail, GetSurahDetailParams>({
       query: ({ surat, lang }) => ({
         url: `/public/quran/surahs/${surat}`,
         method: "GET",
         params: {
-          lang: lang ?? "id",
+          // Gunakan helper validasi
+          lang: getValidApiLang(lang),
         },
       }),
       transformResponse: (response: SurahDetailResponse) => {

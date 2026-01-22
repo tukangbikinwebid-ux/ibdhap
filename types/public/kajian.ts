@@ -1,4 +1,5 @@
 import { User } from "../user";
+import { TypeTranslation } from "./doa";
 
 // Tipe Data untuk Ustadz
 export interface Ustadz {
@@ -23,6 +24,7 @@ export interface Kajian {
   updated_at: string;
   audio: string; // URL audio file
   ustadz: Ustadz; // Nested relation
+  translations: TypeTranslation[];
 }
 
 // Params untuk Get Ustadz List

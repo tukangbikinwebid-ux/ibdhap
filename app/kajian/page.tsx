@@ -21,6 +21,8 @@ import {
 } from "@/services/public/kajian.service";
 // Import i18n
 import { useI18n } from "@/app/hooks/useI18n";
+// Import Type (Asumsi tipe Kajian sudah update ada translations)
+import { Kajian } from "@/types/public/kajian";
 
 // Loading Skeleton Component
 const KajianSkeleton = () => {
@@ -47,7 +49,7 @@ export default function KajianPage() {
   const { t, locale } = useI18n();
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [selectedUstadzId, setSelectedUstadzId] = useState<number | undefined>(
-    undefined
+    undefined,
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -59,6 +61,37 @@ export default function KajianPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // --- HELPER TRANSLATION ---
+  // Fungsi untuk mendapatkan konten kajian sesuai bahasa aktif
+  const getKajianContent = (item: Kajian) => {
+    // 1. Cari translation sesuai locale aktif
+    const localized = item.translations.find((t) => t.locale === locale);
+
+    // 2. Jika ada dan title tidak kosong
+    if (localized && localized.title) {
+      return {
+        title: localized.title,
+        description: localized.description,
+      };
+    }
+
+    // 3. Fallback ke 'id' jika locale aktif kosong
+    const idFallback = item.translations.find((t) => t.locale === "id");
+    if (idFallback && idFallback.title) {
+      return {
+        title: idFallback.title,
+        description: idFallback.description,
+      };
+    }
+
+    // 4. Fallback terakhir ke root object
+    return {
+      title: item.title,
+      description: item.description,
+    };
+  };
+  // --------------------------
 
   // 1. Fetch Ustadz List (untuk filter dropdown)
   const { data: ustadzData, isLoading: isLoadingUstadz } =
@@ -87,12 +120,17 @@ export default function KajianPage() {
     // Filter by search query
     if (debouncedSearchQuery) {
       const query = debouncedSearchQuery.toLowerCase();
-      list = list.filter(
-        (k) =>
-          k.title.toLowerCase().includes(query) ||
-          k.description?.toLowerCase().includes(query) ||
+      list = list.filter((k) => {
+        // Gunakan konten yang sudah dilokalisasi untuk pencarian
+        const content = getKajianContent(k);
+
+        return (
+          content.title.toLowerCase().includes(query) ||
+          (content.description &&
+            content.description.toLowerCase().includes(query)) ||
           k.ustadz?.name.toLowerCase().includes(query)
-      );
+        );
+      });
     }
 
     // Sort by date
@@ -103,7 +141,7 @@ export default function KajianPage() {
     });
 
     return list;
-  }, [kajianData, sortBy, debouncedSearchQuery]);
+  }, [kajianData, sortBy, debouncedSearchQuery, locale]); // Add locale dependency
 
   // Helper formatting
   const formatDuration = (seconds: number) => {
@@ -119,9 +157,7 @@ export default function KajianPage() {
   };
 
   const hasActiveFilters =
-    selectedUstadzId !== undefined ||
-    sortBy !== "newest" ||
-    searchQuery !== "";
+    selectedUstadzId !== undefined || sortBy !== "newest" || searchQuery !== "";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
@@ -207,7 +243,7 @@ export default function KajianPage() {
                   value={selectedUstadzId || ""}
                   onChange={(e) =>
                     setSelectedUstadzId(
-                      e.target.value ? Number(e.target.value) : undefined
+                      e.target.value ? Number(e.target.value) : undefined,
                     )
                   }
                   className="w-full h-10 px-3 rounded-md border border-awqaf-border-light bg-background text-sm font-comfortaa focus:outline-none focus:ring-2 focus:ring-awqaf-primary disabled:opacity-50 disabled:cursor-not-allowed"
@@ -255,49 +291,61 @@ export default function KajianPage() {
               <KajianSkeleton />
             ) : filteredKajian.length > 0 ? (
               <div className="space-y-3">
-                {filteredKajian.map((k) => (
-                  <Link key={k.id} href={`/kajian/${k.id}`}>
-                    <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-accent-50 transition-all duration-200 cursor-pointer border border-transparent hover:border-awqaf-border-light">
-                      <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-accent-200 transition-colors duration-200">
-                        <Play className="w-5 h-5 text-awqaf-primary ml-1" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-card-foreground font-comfortaa text-sm line-clamp-2 mb-1">
-                          {k.title}
-                        </h4>
-                        <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-2">
-                          {k.ustadz?.name || "Ustadz"}
-                        </p>
-                        <div className="flex items-center gap-4 text-[10px] text-awqaf-foreground-secondary font-comfortaa">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatDuration(k.duration)}
-                          </div>
-                          <div>
-                            {new Date(k.created_at).toLocaleDateString(
-                              locale === "id" ? "id-ID" :
-                              locale === "en" ? "en-US" :
-                              locale === "ar" ? "ar-SA" :
-                              locale === "fr" ? "fr-FR" :
-                              locale === "kr" ? "ko-KR" :
-                              locale === "jp" ? "ja-JP" : "id-ID",
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              }
-                            )}
-                          </div>
-                          {/* Views simulation since API doesn't provide it yet */}
-                          <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />{" "}
-                            {((k.id * 123) % 1000).toLocaleString("id-ID")}
+                {filteredKajian.map((k) => {
+                  // Ambil konten localized untuk item ini
+                  const content = getKajianContent(k);
+
+                  return (
+                    <Link key={k.id} href={`/kajian/${k.id}`}>
+                      <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-accent-50 transition-all duration-200 cursor-pointer border border-transparent hover:border-awqaf-border-light">
+                        <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-accent-200 transition-colors duration-200">
+                          <Play className="w-5 h-5 text-awqaf-primary ml-1" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-card-foreground font-comfortaa text-sm line-clamp-2 mb-1">
+                            {content.title}
+                          </h4>
+                          <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-2">
+                            {k.ustadz?.name || "Ustadz"}
+                          </p>
+                          <div className="flex items-center gap-4 text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDuration(k.duration)}
+                            </div>
+                            <div>
+                              {new Date(k.created_at).toLocaleDateString(
+                                locale === "id"
+                                  ? "id-ID"
+                                  : locale === "en"
+                                    ? "en-US"
+                                    : locale === "ar"
+                                      ? "ar-SA"
+                                      : locale === "fr"
+                                        ? "fr-FR"
+                                        : locale === "kr"
+                                          ? "ko-KR"
+                                          : locale === "jp"
+                                            ? "ja-JP"
+                                            : "id-ID",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )}
+                            </div>
+                            {/* Views simulation since API doesn't provide it yet */}
+                            <div className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />{" "}
+                              {((k.id * 123) % 1000).toLocaleString("id-ID")}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-10">
