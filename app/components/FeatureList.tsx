@@ -30,6 +30,7 @@ import {
   Plane,
   Repeat,
   LifeBuoy,
+  Moon,
 } from "lucide-react";
 import { useI18n } from "@/app/hooks/useI18n";
 
@@ -47,6 +48,18 @@ interface FeatureConfig {
 
 // Data Fitur Statis (Default Bahasa Indonesia)
 const FEATURES_CONFIG: FeatureConfig[] = [
+  // --- Ramadhan (Special Category) ---
+  {
+    id: "ramadhan",
+    defaultName: "Ramadhan",
+    defaultDescription: "Dashboard khusus Ramadhan dengan khatam Qur'an, tracking ibadah, dan fitur spesial lainnya",
+    icon: Moon,
+    href: "/ramadhan",
+    defaultCategory: "Ramadhan",
+    isNew: true,
+    isPopular: true,
+  },
+
   // --- Ibadah ---
   {
     id: "prayer-time",
