@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
-import { ArrowLeft, Share2, CheckCircle2, LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  Share2,
+  CheckCircle2,
+  LucideIcon,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ImanItem, LocaleCode } from "./page";
+import { ProcessedImanItem } from "./page";
+// Sesuaikan import ini dengan file config i18n Anda
+import { LocaleCode } from "@/lib/i18n";
 
 interface ImanDetailProps {
-  item: ImanItem;
+  item: ProcessedImanItem;
   locale: LocaleCode;
   onBack: () => void;
   icon: LucideIcon;
@@ -21,10 +29,35 @@ export default function ImanDetail({
   icon: Icon,
 }: ImanDetailProps) {
   const isRtl = locale === "ar";
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // --- SHARE FUNCTIONALITY ---
+  const handleShare = async () => {
+    const shareData = {
+      title: item.title,
+      text: item.shortDesc,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback Clipboard
+        await navigator.clipboard.writeText(
+          `${item.title}\n\n${item.shortDesc}\n\nBaca selengkapnya: ${window.location.href}`,
+        );
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50" dir={isRtl ? "rtl" : "ltr"}>
@@ -45,12 +78,19 @@ export default function ImanDetail({
             >
               <ArrowLeft className={`w-5 h-5 ${isRtl ? "rotate-180" : ""}`} />
             </Button>
+
+            {/* Functional Share Button */}
             <Button
+              onClick={handleShare}
               variant="ghost"
               size="icon"
               className="bg-white/20 hover:bg-white/30 text-white rounded-full backdrop-blur-sm"
             >
-              <Share2 className="w-5 h-5" />
+              {copied ? (
+                <Check className="w-5 h-5 text-green-300" />
+              ) : (
+                <Share2 className="w-5 h-5" />
+              )}
             </Button>
           </div>
 

@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
-import {
-  ArrowLeft,
-  Share2,
-  Quote, // Icon untuk quote
-  LucideIcon,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Share2, Quote, LucideIcon, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IslamItem, LocaleCode } from "./page";
+import { LocaleCode } from "@/lib/i18n";
+export interface ProcessedIslamItem {
+  id: number;
+  order: number;
+  title: string;
+  content: string; // HTML Content
+  shortDesc: string;
+}
 
 interface IslamDetailProps {
-  item: IslamItem;
+  item: ProcessedIslamItem;
   locale: LocaleCode;
   onBack: () => void;
   icon: LucideIcon;
@@ -26,10 +28,35 @@ export default function IslamDetail({
   icon: Icon,
 }: IslamDetailProps) {
   const isRtl = locale === "ar";
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: item.title,
+      text: item.shortDesc,
+      url: window.location.href, // Menggunakan URL halaman saat ini
+    };
+
+    try {
+      // Coba gunakan Web Share API (Mobile Native Share)
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback ke Clipboard untuk Desktop / Browser yang tidak mendukung
+        await navigator.clipboard.writeText(
+          `${item.title}\n\n${item.shortDesc}\n\nBaca selengkapnya: ${window.location.href}`,
+        );
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Reset icon setelah 2 detik
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50" dir={isRtl ? "rtl" : "ltr"}>
@@ -56,12 +83,19 @@ export default function IslamDetail({
             >
               <ArrowLeft className={`w-5 h-5 ${isRtl ? "rotate-180" : ""}`} />
             </Button>
+
+            {/* Tombol Share Berfungsi */}
             <Button
+              onClick={handleShare}
               variant="ghost"
               size="icon"
               className="bg-black/20 hover:bg-black/30 text-white rounded-full backdrop-blur-sm transition-all"
             >
-              <Share2 className="w-5 h-5" />
+              {copied ? (
+                <Check className="w-5 h-5 text-emerald-300" />
+              ) : (
+                <Share2 className="w-5 h-5" />
+              )}
             </Button>
           </div>
 

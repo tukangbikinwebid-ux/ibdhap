@@ -40,6 +40,8 @@ export const apiSlice = createApi({
     "TemplateLetters",
     "Places",
     "Campaigns",
+    "PublicRukunIslam",
+    "PublicRukunIman",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,
