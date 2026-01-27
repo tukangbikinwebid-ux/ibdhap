@@ -6,10 +6,10 @@ import {
   ArrowLeft,
   Search,
   MessageCircleQuestion, // Icon Tanya
-  MessageSquareQuote, // Icon Jawab/Fatwa
   User, // Icon Penanya/Syaikh
   ChevronRight,
-  BookOpen,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,19 +17,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/app/hooks/useI18n";
 
+// Import Service & Types
+import {
+  useGetFatwaSyaikhQuery,
+  FatwaItem,
+} from "@/services/public/fatwa.service";
+
 // Import komponen detail
 import FatwaDetail from "./fatwa-detail";
 
-// --- 1. DEFINISI TIPE DATA (Strict Types) ---
-export type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
+// --- Types & Helper ---
+type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
 
-export interface FatwaItem {
-  id: string;
+export interface ProcessedFatwaItem {
+  id: number;
+  sheikh: string;
+  category: string;
   question: string;
   answer: string; // HTML string
-  sheikh: string; // Nama Syaikh/Ulama
-  category: "ibadah" | "muamalah" | "aqidah" | "adab";
-  topic: string; // Label topik singkat
 }
 
 interface UIText {
@@ -39,8 +44,12 @@ interface UIText {
   all: string;
   read: string;
   noData: string;
+  loading: string;
+  error: string;
+  retry: string;
 }
 
+// Interface Category Names (Mapping jika diperlukan, atau pakai raw category)
 interface CategoryNames {
   ibadah: string;
   muamalah: string;
@@ -48,115 +57,6 @@ interface CategoryNames {
   adab: string;
 }
 
-// --- 2. DATA DUMMY (6 BAHASA) ---
-const FATWA_DATA: Record<LocaleCode, FatwaItem[]> = {
-  id: [
-    {
-      id: "1",
-      question: "Apa hukum menggunakan inhaler bagi orang yang berpuasa?",
-      answer:
-        "<p>Menggunakan inhaler (obat semprot asma) tidak membatalkan puasa menurut pendapat yang lebih kuat, karena zat yang masuk ke paru-paru bukan berupa makanan atau minuman, melainkan gas/udara untuk membuka saluran pernafasan.</p>",
-      sheikh: "Syaikh Ibnu Utsaimin",
-      category: "ibadah",
-      topic: "Puasa",
-    },
-    {
-      id: "2",
-      question: "Bolehkah membeli barang dengan sistem kredit (cicilan)?",
-      answer:
-        "<p>Membeli barang dengan cara kredit diperbolehkan (halal) selama harga kesepakatan jelas di awal, tempo pembayaran jelas, dan barang sudah dimiliki oleh penjual sebelum akad dilakukan.</p>",
-      sheikh: "Syaikh Bin Baz",
-      category: "muamalah",
-      topic: "Jual Beli",
-    },
-    {
-      id: "3",
-      question: "Bagaimana hukum jimat dalam Islam?",
-      answer:
-        "<p>Menggunakan jimat dengan keyakinan bahwa benda tersebut dapat menolak bala atau mendatangkan manfaat adalah perbuatan syirik. Seorang muslim harus bertawakal hanya kepada Allah.</p>",
-      sheikh: "Lajnah Daimah",
-      category: "aqidah",
-      topic: "Tauhid",
-    },
-  ],
-  en: [
-    {
-      id: "1",
-      question: "Ruling on using an inhaler while fasting?",
-      answer:
-        "<p>Using an inhaler does not invalidate the fast according to the stronger opinion...</p>",
-      sheikh: "Shaykh Ibn Uthaymeen",
-      category: "ibadah",
-      topic: "Fasting",
-    },
-    {
-      id: "2",
-      question: "Is buying on installment permissible?",
-      answer:
-        "<p>Buying goods on credit/installment is permissible provided the price is fixed...</p>",
-      sheikh: "Shaykh Bin Baz",
-      category: "muamalah",
-      topic: "Trade",
-    },
-  ],
-  ar: [
-    {
-      id: "1",
-      question: "ما حكم استعمال بخاخ الربو للصائم؟",
-      answer:
-        "<p>استعمال بخاخ الربو لا يفطر الصائم لأنه غاز يذهب للرئة وليس طعاماً...</p>",
-      sheikh: "الشيخ ابن عثيمين",
-      category: "ibadah",
-      topic: "الصيام",
-    },
-    {
-      id: "2",
-      question: "هل يجوز البيع بالتقسيط؟",
-      answer:
-        "<p>البيع بالتقسيط جائز بشرط أن يكون الثمن معلوماً والأجل معلوماً...</p>",
-      sheikh: "الشيخ ابن باز",
-      category: "muamalah",
-      topic: "البيوع",
-    },
-  ],
-  fr: [
-    {
-      id: "1",
-      question: "Jugement sur l'utilisation d'un inhalateur pendant le jeûne ?",
-      answer: "<p>L'utilisation d'un inhalateur n'invalide pas le jeûne...</p>",
-      sheikh: "Cheikh Ibn Uthaymin",
-      category: "ibadah",
-      topic: "Jeûne",
-    },
-  ],
-  kr: [
-    {
-      id: "1",
-      question: "단식 중 흡입기 사용에 대한 판결은?",
-      answer: "<p>흡입기 사용은 단식을 무효화하지 않습니다...</p>",
-      sheikh: "셰이크 이븐 우타이민",
-      category: "ibadah",
-      topic: "단식",
-    },
-  ],
-  jp: [
-    {
-      id: "1",
-      question: "断食中の吸入器使用についての規定は？",
-      answer: "<p>吸入器の使用は断食を無効にしません...</p>",
-      sheikh: "シェイク・イブン・ウサイミーン",
-      category: "ibadah",
-      topic: "断食",
-    },
-  ],
-};
-
-// Fallback untuk data kosong di dummy
-const getSafeData = (locale: string): FatwaItem[] => {
-  return FATWA_DATA[locale as LocaleCode] || FATWA_DATA.id;
-};
-
-// --- 3. UI TEXT DICTIONARY ---
 const UI_TEXT: Record<LocaleCode, UIText> = {
   id: {
     title: "Fatwa Ulama",
@@ -165,6 +65,9 @@ const UI_TEXT: Record<LocaleCode, UIText> = {
     all: "Semua",
     read: "Lihat Jawaban",
     noData: "Fatwa tidak ditemukan",
+    loading: "Memuat data...",
+    error: "Gagal memuat data",
+    retry: "Coba Lagi",
   },
   en: {
     title: "Scholars' Fatwa",
@@ -173,6 +76,9 @@ const UI_TEXT: Record<LocaleCode, UIText> = {
     all: "All",
     read: "See Answer",
     noData: "No fatwa found",
+    loading: "Loading data...",
+    error: "Failed to load data",
+    retry: "Retry",
   },
   ar: {
     title: "فتاوى العلماء",
@@ -181,6 +87,9 @@ const UI_TEXT: Record<LocaleCode, UIText> = {
     all: "الكل",
     read: "انظر الإجابة",
     noData: "لا توجد فتاوى",
+    loading: "جار التحميل...",
+    error: "فشل تحميل البيانات",
+    retry: "أعد المحاولة",
   },
   fr: {
     title: "Fatwas des Savants",
@@ -189,6 +98,9 @@ const UI_TEXT: Record<LocaleCode, UIText> = {
     all: "Tout",
     read: "Voir la réponse",
     noData: "Aucune fatwa trouvée",
+    loading: "Chargement...",
+    error: "Échec du chargement",
+    retry: "Réessayer",
   },
   kr: {
     title: "학자들의 파트와",
@@ -197,6 +109,9 @@ const UI_TEXT: Record<LocaleCode, UIText> = {
     all: "전체",
     read: "답변 보기",
     noData: "결과 없음",
+    loading: "로딩 중...",
+    error: "데이터 로드 실패",
+    retry: "재시도",
   },
   jp: {
     title: "学者のファトワ",
@@ -205,6 +120,9 @@ const UI_TEXT: Record<LocaleCode, UIText> = {
     all: "すべて",
     read: "回答を見る",
     noData: "見つかりません",
+    loading: "読み込み中...",
+    error: "読み込み失敗",
+    retry: "再試行",
   },
 };
 
@@ -239,45 +157,92 @@ const CATEGORIES: Record<LocaleCode, CategoryNames> = {
 
 export default function FatwaPage() {
   const { locale } = useI18n();
-  // Safe Locale Access
   const safeLocale = (
     UI_TEXT[locale as LocaleCode] ? locale : "id"
   ) as LocaleCode;
-
   const t = UI_TEXT[safeLocale];
   const cats = CATEGORIES[safeLocale];
 
+  // --- API HOOK ---
+  const {
+    data: apiResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetFatwaSyaikhQuery({ page: 1 });
+  const fatwaData = apiResponse?.data?.data || [];
+
   // STATE
-  const [selectedFatwa, setSelectedFatwa] = useState<FatwaItem | null>(null);
+  const [selectedFatwa, setSelectedFatwa] = useState<ProcessedFatwaItem | null>(
+    null,
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
-  // FILTER LOGIC
-  const displayedData = useMemo(() => {
-    const raw = getSafeData(safeLocale);
-    return raw.filter((item) => {
-      const matchCat =
-        activeCategory === "all" || item.category === activeCategory;
-      const matchSearch =
-        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.topic.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCat && matchSearch;
-    });
-  }, [safeLocale, activeCategory, searchQuery]);
+  // --- HELPER: Get Translation ---
+  const getTranslation = (item: FatwaItem, field: "question" | "answer") => {
+    // 1. Coba cari di translations array sesuai locale aktif
+    const trans = item.translations?.find((tr) => tr.locale === safeLocale);
+    if (trans && trans[field]) return trans[field];
 
-  // --- RENDER DETAIL ---
+    // 2. Fallback ke Inggris jika ada
+    const enTrans = item.translations?.find((tr) => tr.locale === "en");
+    if (enTrans && enTrans[field]) return enTrans[field];
+
+    // 3. Fallback ke data utama (biasanya ID atau default)
+    if (field === "question") return item.question;
+    return item.answer;
+  };
+
+  const stripHtml = (html: string) => {
+    if (typeof window === "undefined") {
+      return html.replace(/<[^>]*>?/gm, "");
+    }
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  // FILTER DATA
+  const displayedData = useMemo(() => {
+    return fatwaData
+      .filter((item) => {
+        const itemQuestion = getTranslation(item, "question").toLowerCase();
+        const matchSearch = itemQuestion.includes(searchQuery.toLowerCase());
+
+        // Simple category matching
+        const matchCat =
+          activeCategory === "all" ||
+          item.category.toLowerCase().includes(activeCategory);
+
+        return matchCat && matchSearch;
+      })
+      .map((item) => ({
+        id: item.id,
+        sheikh: item.name,
+        category: item.category,
+        question: stripHtml(getTranslation(item, "question")), // Clean HTML for list view if needed, or raw
+        answer: getTranslation(item, "answer"),
+      }));
+  }, [fatwaData, safeLocale, activeCategory, searchQuery]);
+
+  // JIKA DETAIL DIPILIH
   if (selectedFatwa) {
     return (
       <FatwaDetail
         item={selectedFatwa}
         locale={safeLocale}
         onBack={() => setSelectedFatwa(null)}
-        catLabel={cats[selectedFatwa.category]}
+        // Mapping category label jika ada di dictionary, kalau tidak pakai raw category
+        catLabel={
+          cats[selectedFatwa.category.toLowerCase() as keyof CategoryNames] ||
+          selectedFatwa.category
+        }
       />
     );
   }
 
-  // --- RENDER LIST ---
+  // TAMPILAN LIST UTAMA
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100"
@@ -355,66 +320,91 @@ export default function FatwaPage() {
 
         {/* List Content */}
         <main className="px-4 py-4 space-y-3">
-          {displayedData.length > 0 ? (
-            displayedData.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedFatwa(item)}
-                className="cursor-pointer"
-              >
-                <Card className="border-awqaf-border-light hover:shadow-md hover:bg-white/80 transition-all active:scale-[0.99] bg-white group rounded-xl">
-                  <CardContent className="p-4">
-                    {/* Tags & Topic */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] h-5 px-1.5 border-awqaf-primary/30 text-awqaf-primary bg-accent-50 font-normal"
-                      >
-                        {cats[item.category] || item.category}
-                      </Badge>
-                      <span className="text-[10px] text-gray-400">•</span>
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        {item.topic}
-                      </span>
-                    </div>
-
-                    {/* Question */}
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        <MessageCircleQuestion className="w-5 h-5 text-awqaf-secondary" />
-                      </div>
-                      <h3 className="font-bold text-awqaf-primary font-comfortaa text-sm leading-relaxed line-clamp-2">
-                        {item.question}
-                      </h3>
-                    </div>
-
-                    {/* Footer Card */}
-                    <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <User className="w-3 h-3" />
-                        <span className="truncate max-w-[120px]">
-                          {item.sheikh}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-[10px] font-bold text-awqaf-primary group-hover:underline">
-                        {t.read}
-                        <ChevronRight
-                          className={`w-3 h-3 ${safeLocale === "ar" ? "mr-1 rotate-180" : "ml-1"}`}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-white border border-dashed border-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-6 h-6 text-gray-300" />
-              </div>
-              <p className="text-sm text-gray-500 font-comfortaa">{t.noData}</p>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm">
+              <Loader2 className="w-8 h-8 text-awqaf-primary animate-spin mb-2" />
+              <p className="text-sm text-slate-500">{t.loading}</p>
             </div>
           )}
+
+          {/* Error State */}
+          {isError && (
+            <div className="flex flex-col items-center justify-center py-10 bg-white rounded-2xl shadow-sm border border-red-100 p-6 text-center">
+              <AlertCircle className="w-10 h-10 text-red-500 mb-3" />
+              <p className="text-sm text-slate-600 mb-4">{t.error}</p>
+              <Button
+                onClick={() => refetch()}
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50"
+              >
+                {t.retry}
+              </Button>
+            </div>
+          )}
+
+          {/* Data List */}
+          {!isLoading && !isError && displayedData.length > 0
+            ? displayedData.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedFatwa(item)}
+                  className="cursor-pointer"
+                >
+                  <Card className="border-awqaf-border-light hover:shadow-md hover:bg-white/80 transition-all active:scale-[0.99] bg-white group rounded-xl">
+                    <CardContent className="p-4">
+                      {/* Tags */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-5 px-1.5 border-awqaf-primary/30 text-awqaf-primary bg-accent-50 font-normal capitalize"
+                        >
+                          {cats[
+                            item.category.toLowerCase() as keyof CategoryNames
+                          ] || item.category}
+                        </Badge>
+                      </div>
+
+                      {/* Question */}
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <MessageCircleQuestion className="w-5 h-5 text-awqaf-secondary" />
+                        </div>
+                        <h3 className="font-bold text-awqaf-primary font-comfortaa text-sm leading-relaxed line-clamp-2">
+                          {item.question}
+                        </h3>
+                      </div>
+
+                      {/* Footer Card */}
+                      <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <User className="w-3 h-3" />
+                          <span className="truncate max-w-[120px]">
+                            {item.sheikh}
+                          </span>
+                        </div>
+                        <div className="flex items-center text-[10px] font-bold text-awqaf-primary group-hover:underline">
+                          {t.read}
+                          <ChevronRight
+                            className={`w-3 h-3 ${safeLocale === "ar" ? "mr-1 rotate-180" : "ml-1"}`}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))
+            : !isLoading &&
+              !isError && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-white border border-dashed border-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-6 h-6 text-gray-300" />
+                  </div>
+                  <p className="text-sm text-gray-500 font-comfortaa">
+                    {t.noData}
+                  </p>
+                </div>
+              )}
         </main>
       </div>
     </div>

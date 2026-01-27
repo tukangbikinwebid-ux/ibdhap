@@ -5,13 +5,13 @@ import { ArrowLeft, Share2, BookOpen, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SirahStory } from "./page";
+import { ProcessedSirahItem } from "./page";
 
 interface SirahDetailProps {
-  story: SirahStory;
+  story: ProcessedSirahItem;
   onBack: () => void;
   locale: string;
-  categoryLabel: string; // Menerima label yang sudah ditranslate
+  categoryLabel: string;
 }
 
 export default function SirahDetail({
@@ -23,18 +23,33 @@ export default function SirahDetail({
   const [copied, setCopied] = useState(false);
   const isRtl = locale === "ar";
 
-  const handleShare = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(
-      `${story.title}\n\n${story.excerpt}\n\nLink: ${url}`,
-    );
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // --- SHARE FUNCTIONALITY ---
+  const handleShare = async () => {
+    const shareData = {
+      title: story.title,
+      text: story.excerpt,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback Clipboard
+        await navigator.clipboard.writeText(
+          `${story.title}\n\n${story.excerpt}\n\nLink: ${window.location.href}`,
+        );
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white" dir={isRtl ? "rtl" : "ltr"}>
@@ -54,6 +69,8 @@ export default function SirahDetail({
             >
               <ArrowLeft className={`w-5 h-5 ${isRtl ? "rotate-180" : ""}`} />
             </Button>
+
+            {/* Functional Share Button */}
             <Button
               onClick={handleShare}
               variant="ghost"
@@ -61,7 +78,7 @@ export default function SirahDetail({
               className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 backdrop-blur-sm h-10 w-10"
             >
               {copied ? (
-                <CheckCheck className="w-5 h-5" />
+                <CheckCheck className="w-5 h-5 text-emerald-300" />
               ) : (
                 <Share2 className="w-5 h-5" />
               )}

@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Share2,
   MessageCircleQuestion,
   MessageSquareQuote,
   UserCheck,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FatwaItem, LocaleCode } from "./page";
+import { ProcessedFatwaItem } from "./page";
+import { LocaleCode } from "@/lib/i18n";
 
 interface FatwaDetailProps {
-  item: FatwaItem;
+  item: ProcessedFatwaItem;
   locale: LocaleCode;
   onBack: () => void;
   catLabel: string;
@@ -27,6 +28,7 @@ export default function FatwaDetail({
   catLabel,
 }: FatwaDetailProps) {
   const isRtl = locale === "ar";
+  const [copied, setCopied] = useState(false);
 
   // Label statis sederhana untuk UI Detail
   const LABELS = {
@@ -44,6 +46,31 @@ export default function FatwaDetail({
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // --- SHARE FUNCTIONALITY ---
+  const handleShare = async () => {
+    // Bersihkan HTML tag untuk text share yang rapi
+    const cleanAnswer = item.answer.replace(/<[^>]*>?/gm, "");
+    const shareText = `${item.question}\n\n${cleanAnswer.substring(0, 100)}...\n\nBaca selengkapnya: ${window.location.href}`;
+
+    const shareData = {
+      title: "Fatwa: " + item.question,
+      text: shareText,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white" dir={isRtl ? "rtl" : "ltr"}>
@@ -66,18 +93,24 @@ export default function FatwaDetail({
               </span>
               <Badge
                 variant="outline"
-                className="border-awqaf-primary/20 text-awqaf-primary text-[10px] h-5 mt-0.5"
+                className="border-awqaf-primary/20 text-awqaf-primary text-[10px] h-5 mt-0.5 capitalize"
               >
                 {catLabel}
               </Badge>
             </div>
 
+            {/* Functional Share Button */}
             <Button
+              onClick={handleShare}
               variant="ghost"
               size="sm"
               className="hover:bg-accent-50 text-awqaf-primary rounded-full p-2 h-10 w-10"
             >
-              <Share2 className="w-5 h-5" />
+              {copied ? (
+                <Check className="w-5 h-5 text-emerald-500" />
+              ) : (
+                <Share2 className="w-5 h-5" />
+              )}
             </Button>
           </div>
         </div>
@@ -116,10 +149,10 @@ export default function FatwaDetail({
 
               <article
                 className={`
-                 prose prose-sm max-w-none text-gray-700
-                 prose-p:leading-loose prose-p:font-comfortaa
-                 ${isRtl ? "text-right font-tajawal text-lg" : "text-justify"}
-               `}
+                  prose prose-sm max-w-none text-gray-700
+                  prose-p:leading-loose prose-p:font-comfortaa
+                  ${isRtl ? "text-right font-tajawal text-lg" : "text-justify"}
+                `}
               >
                 <div dangerouslySetInnerHTML={{ __html: item.answer }} />
               </article>

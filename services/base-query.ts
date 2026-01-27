@@ -42,6 +42,8 @@ export const apiSlice = createApi({
     "Campaigns",
     "PublicRukunIslam",
     "PublicRukunIman",
+    "PublicSirah",
+    "PublicFatwaSyaikh",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,
