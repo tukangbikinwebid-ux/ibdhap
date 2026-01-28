@@ -47,6 +47,8 @@ export const apiSlice = createApi({
     "PublicGuides",
     "PublicJourneys",
     "PublicBadals",
+    "PublicDailyTargets",
+    "UserDailyTargets",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,
