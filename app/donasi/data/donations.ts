@@ -273,6 +273,6 @@ export const getDaysRemaining = (endDate: string): number => {
 
 export const getDonationsByCategory = (category: string): Donation[] => {
   return [...popularDonations, ...recommendedDonations].filter(
-    (donation) => donation.category === category
+    (donation) => donation.category === category,
   );
 };

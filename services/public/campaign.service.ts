@@ -7,10 +7,19 @@ import {
   CreateDonationBody,
 } from "@/types/public/donation";
 
+// --- TYPES & INTERFACES ---
+
+// Interface umum untuk response standar { code, message, data }
+interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
 export const campaignApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // 🎯 Get Campaigns List
-    // Endpoint: /public/campaigns?paginate=10&page=1
+    // 1. 🎯 Get Campaigns List (Get All)
+    // URL: /public/campaigns
     getCampaigns: builder.query<
       PaginatedResponse<Campaign>["data"],
       GetCampaignsParams
@@ -27,15 +36,29 @@ export const campaignApi = apiSlice.injectEndpoints({
         if (response.code === 200) {
           return response.data;
         }
-        throw new Error(
-          response.message || "Gagal mengambil daftar campaign."
-        );
+        throw new Error(response.message || "Gagal mengambil daftar campaign.");
       },
       providesTags: ["Campaigns"],
     }),
 
-    // 📋 Get Campaign Donations
-    // Endpoint: /public/campaigns/:campaign/donations?page=1&paginate=10
+    // 2. 🔍 Get Campaign Detail (By ID) - [BARU DITAMBAHKAN]
+    // URL: /public/campaigns/:campaign
+    getCampaignDetail: builder.query<Campaign, number>({
+      query: (campaignId) => ({
+        url: `/public/campaigns/${campaignId}`,
+        method: "GET",
+      }),
+      transformResponse: (response: ApiResponse<Campaign>) => {
+        if (response.code === 200) {
+          return response.data;
+        }
+        throw new Error(response.message || "Gagal mengambil detail campaign.");
+      },
+      providesTags: (result, error, id) => [{ type: "Campaigns", id }],
+    }),
+
+    // 3. 📋 Get Campaign Donations List
+    // URL: /public/campaigns/:campaign/donations
     getCampaignDonations: builder.query<
       PaginatedResponse<CampaignDonation>["data"],
       GetCampaignDonationsParams
@@ -52,26 +75,54 @@ export const campaignApi = apiSlice.injectEndpoints({
         if (response.code === 200) {
           return response.data;
         }
-        throw new Error(
-          response.message || "Gagal mengambil riwayat donasi."
-        );
+        throw new Error(response.message || "Gagal mengambil riwayat donasi.");
       },
     }),
 
-    // 💰 Create Donation
-    // Endpoint: /public/campaigns/:campaign/donate
-    createDonation: builder.mutation<any, { campaign: number; body: CreateDonationBody }>({
+    // 4. 📄 Get Single Donation Detail - [BARU DITAMBAHKAN]
+    // URL: /public/campaign/donations/:donation
+    // Note: URL ini sedikit berbeda strukturnya (/campaign/ singlar vs /campaigns/ plural di endpoint lain)
+    getDonationDetail: builder.query<
+      CampaignDonation & { campaign: Campaign }, // Response includes campaign relation
+      number
+    >({
+      query: (donationId) => ({
+        url: `/public/campaign/donations/${donationId}`,
+        method: "GET",
+      }),
+      transformResponse: (
+        response: ApiResponse<CampaignDonation & { campaign: Campaign }>,
+      ) => {
+        if (response.code === 200) {
+          return response.data;
+        }
+        throw new Error(response.message || "Gagal mengambil detail donasi.");
+      },
+    }),
+
+    // 5. 💰 Create Donation
+    // URL: /public/campaigns/:campaign/donate
+    createDonation: builder.mutation<
+      CampaignDonation, // Response data is the donation object inside `data`
+      { campaign: number; body: CreateDonationBody }
+    >({
       query: ({ campaign, body }) => ({
         url: `/public/campaigns/${campaign}/donate`,
         method: "POST",
         body,
       }),
+      transformResponse: (response: ApiResponse<CampaignDonation>) => {
+        if (response.code === 201 || response.code === 200) {
+          return response.data;
+        }
+        throw new Error(response.message || "Gagal membuat donasi.");
+      },
     }),
 
-    // ❤️ Toggle Favorite Campaign
-    // Endpoint: /user/toggle-favorite-campaign
+    // 6. ❤️ Toggle Favorite Campaign
+    // URL: /user/toggle-favorite-campaign
     toggleFavoriteCampaign: builder.mutation<
-      { code: number; message: string; data: any },
+      { code: number; message: string; data: unknown },
       { campaign_id: number }
     >({
       query: (body) => ({
@@ -86,7 +137,9 @@ export const campaignApi = apiSlice.injectEndpoints({
 
 export const {
   useGetCampaignsQuery,
+  useGetCampaignDetailQuery,
   useGetCampaignDonationsQuery,
+  useGetDonationDetailQuery,
   useCreateDonationMutation,
   useToggleFavoriteCampaignMutation,
 } = campaignApi;

@@ -1,5 +1,3 @@
-// app/asmaul-husna/data-static.ts
-
 export type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
 
 export interface StaticContent {
@@ -7,8 +5,7 @@ export interface StaticContent {
   dalil: string;
 }
 
-// Data mentah untuk 99 Asmaul Husna (Bahasa Indonesia sebagai base)
-// Dalil diambil dari ayat-ayat Al-Quran yang relevan.
+// Data mentah (Hanya Bahasa Indonesia)
 const RAW_DATA = [
   {
     id: 1,
@@ -406,7 +403,7 @@ const RAW_DATA = [
   {
     id: 71,
     dalil:
-      '"Maka Allah menyesatkan siapa yang Dia kehendaki." (Secara makna kekuasaan mendahulukan) (QS. Ibrahim: 4)',
+      '"Maka Allah menyesatkan siapa yang Dia kehendaki." (QS. Ibrahim: 4)',
     benefit: "Didahulukan dalam segala kebaikan dan kesuksesan.",
   },
   {
@@ -559,7 +556,7 @@ const RAW_DATA = [
   {
     id: 98,
     dalil:
-      '"Dan sesungguhnya mereka telah mengikuti jalan yang lurus." (Makna Rasyid sebagai pembimbing) (QS. Hud: 97)',
+      '"Dan sesungguhnya mereka telah mengikuti jalan yang lurus." (QS. Hud: 97)',
     benefit: "Diberi kecerdasan dan ketepatan dalam bertindak.",
   },
   {
@@ -570,39 +567,153 @@ const RAW_DATA = [
   },
 ];
 
-// Helper untuk menghasilkan objek lengkap untuk semua ID
+// Kategori & Template Terjemahan Cerdas
+const TOPIC_TEMPLATES: Record<
+  string,
+  Record<Exclude<LocaleCode, "id">, string>
+> = {
+  // Rezeki / Kekayaan / Cukup
+  wealth: {
+    en: "Reciting this brings sustenance, wealth, and sufficiency in life.",
+    ar: "الإكثار من ذكره يجلب الرزق والغنى والكفاية.",
+    fr: "Réciter ceci apporte subsistance, richesse et suffisance.",
+    kr: "이 이름을 암송하면 생계, 부, 풍요로움을 얻습니다.",
+    jp: "これを唱えることで、糧、富、充足がもたらされます。",
+  },
+  // Perlindungan / Keamanan / Selamat
+  protection: {
+    en: "Provides protection from harm, enemies, and brings safety.",
+    ar: "يمنح الحماية من الأذى والأعداء ويجلب الأمان.",
+    fr: "Offre une protection contre le mal, les ennemis et apporte la sécurité.",
+    kr: "해로움과 적으로부터 보호하고 안전을 가져옵니다.",
+    jp: "害悪や敵からの保護と安全をもたらします。",
+  },
+  // Pengampunan / Dosa / Taubat
+  forgiveness: {
+    en: "Facilitates forgiveness of sins and acceptance of repentance.",
+    ar: "ييسر مغفرة الذنوب وقبول التوبة.",
+    fr: "Facilite le pardon des péchés et l'acceptation du repentir.",
+    kr: "죄의 용서와 회개의 수용을 돕습니다.",
+    jp: "罪の赦しと悔い改めの受容を助けます。",
+  },
+  // Ilmu / Hikmah / Pintar
+  knowledge: {
+    en: "Increases knowledge, wisdom, and understanding.",
+    ar: "يزيد العلم والحكمة والفهم.",
+    fr: "Augmente la connaissance, la sagesse et la compréhension.",
+    kr: "지식, 지혜, 이해력을 증진시킵니다.",
+    jp: "知識、知恵、理解力を高めます。",
+  },
+  // Kasih Sayang / Cinta / Lembut
+  love: {
+    en: "Fills the heart with compassion, love, and gentleness.",
+    ar: "يملأ القلب بالرحمة والمودة واللين.",
+    fr: "Remplit le cœur de compassion, d'amour et de douceur.",
+    kr: "마음에 연민, 사랑, 온유함을 채웁니다.",
+    jp: "心に慈悲、愛、優しさを満たします。",
+  },
+  // Keagungan / Wibawa / Derajat
+  dignity: {
+    en: "Grants dignity, honor, and elevates status.",
+    ar: "يمنح الهيبة والشرف ويرفع المكانة.",
+    fr: "Accorde dignité, honneur et élève le statut.",
+    kr: "존엄성, 명예를 부여하고 지위를 높입니다.",
+    jp: "尊厳、名誉を与え、地位を高めます。",
+  },
+  // Default General
+  general: {
+    en: "Reciting this name brings blessings related to its meaning.",
+    ar: "ذكر هذا الاسم يجلب البركة المتعلقة بمعناه.",
+    fr: "Réciter ce nom apporte des bénédictions liées à sa signification.",
+    kr: "이 이름을 암송하면 그 의미와 관련된 축복을 받습니다.",
+    jp: "この御名を唱えることで、その意味に関連する祝福がもたらされます。",
+  },
+};
+
+// Fungsi Deteksi Topik Sederhana
+const detectTopic = (text: string): string => {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("rezeki") ||
+    lower.includes("kaya") ||
+    lower.includes("cukup") ||
+    lower.includes("karunia")
+  )
+    return "wealth";
+  if (
+    lower.includes("lindung") ||
+    lower.includes("selamat") ||
+    lower.includes("jaga") ||
+    lower.includes("aman") ||
+    lower.includes("bahaya")
+  )
+    return "protection";
+  if (
+    lower.includes("ampun") ||
+    lower.includes("dosa") ||
+    lower.includes("taubat") ||
+    lower.includes("maaf")
+  )
+    return "forgiveness";
+  if (
+    lower.includes("ilmu") ||
+    lower.includes("paham") ||
+    lower.includes("bijaksana") ||
+    lower.includes("cerdas")
+  )
+    return "knowledge";
+  if (
+    lower.includes("kasih") ||
+    lower.includes("sayang") ||
+    lower.includes("cinta") ||
+    lower.includes("lembut")
+  )
+    return "love";
+  if (
+    lower.includes("wibawa") ||
+    lower.includes("derajat") ||
+    lower.includes("mulia") ||
+    lower.includes("agung") ||
+    lower.includes("hormat")
+  )
+    return "dignity";
+  return "general";
+};
+
+// Generator Data Lengkap
 const generateData = () => {
   const result: Record<number, Record<LocaleCode, StaticContent>> = {};
 
   RAW_DATA.forEach((item) => {
+    // Ekstrak referensi surat (misal: QS. Al-Isra: 110)
+    const verseRef = item.dalil.match(/\(QS\..+?\)/)?.[0] || "(Quran)";
+    const topic = detectTopic(item.benefit);
+    const templates = TOPIC_TEMPLATES[topic] || TOPIC_TEMPLATES["general"];
+
     result[item.id] = {
       id: {
         benefits: item.benefit,
         dalil: item.dalil,
       },
       en: {
-        benefits:
-          "Reciting this name frequently brings blessings related to its meaning.",
-        dalil: `See Quran translation for: ${item.dalil.match(/\(QS\..+?\)/)?.[0] || "relevant verse"}`,
+        benefits: templates.en,
+        dalil: `See Quran translation for context. ${verseRef}`,
       },
       ar: {
-        benefits: "من داوم على ذكر هذا الاسم نال بركته وفضله بإذن الله.",
-        dalil: "انظر إلى الآية القرآنية المقابلة.",
+        benefits: templates.ar,
+        dalil: `انظر إلى الآية القرآنية المقابلة. ${verseRef.replace("QS.", "سورة")}`,
       },
       fr: {
-        benefits:
-          "Réciter ce nom fréquemment apporte des bénédictions liées à sa signification.",
-        dalil: "Voir la traduction du Coran pour le verset correspondant.",
+        benefits: templates.fr,
+        dalil: `Voir la traduction du Coran pour le contexte. ${verseRef}`,
       },
       kr: {
-        benefits:
-          "이 이름을 자주 암송하면 그 의미와 관련된 축복을 받게 됩니다.",
-        dalil: "해당 구절에 대한 꾸란 번역을 참조하십시오.",
+        benefits: templates.kr,
+        dalil: `문맥을 위해 꾸란 번역을 참조하십시오. ${verseRef}`,
       },
       jp: {
-        benefits:
-          "この御名を頻繁に唱えることで、その意味に関連する祝福がもたらされます。",
-        dalil: "対応する節のコーラン翻訳を参照してください。",
+        benefits: templates.jp,
+        dalil: `文脈についてはコーランの翻訳を参照してください。 ${verseRef}`,
       },
     };
   });
@@ -616,6 +727,7 @@ export const getStaticContent = (id: number, locale: string): StaticContent => {
   const data = ASMAUL_STATIC_DATA[id];
   if (!data) return { benefits: "-", dalil: "-" };
 
+  // Type casting untuk aman
   const loc = (locale in data ? locale : "id") as LocaleCode;
   return data[loc] || data.id;
 };
