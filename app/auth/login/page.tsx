@@ -47,7 +47,7 @@ export default function LoginPage() {
           timer: 1500,
           showConfirmButton: false,
         });
-        router.push("/store"); // Redirect ke /store atau dashboard
+        router.push("/");
       }
     } catch (err: unknown) {
       console.error(err);

@@ -11,24 +11,14 @@ function redirectToLogin(req: NextRequest) {
   url.pathname = "/auth/login";
   url.searchParams.set(
     "callbackUrl",
-    req.nextUrl.pathname + req.nextUrl.search
+    req.nextUrl.pathname + req.nextUrl.search,
   );
   return NextResponse.redirect(url);
 }
 
-function redirectCustomer(req: NextRequest) {
-  const url = req.nextUrl.clone();
-  // Mengarahkan ke login front-end
-  url.pathname = "/login";
-  url.searchParams.set(
-    "callbackUrl",
-    req.nextUrl.pathname + req.nextUrl.search
-  );
-  return NextResponse.redirect(url);
-}
-
+// Helper roles (tetap sama)
 const roleName = (r: RoleShape): string =>
-  typeof r === "string" ? r : r.name ?? r.slug ?? r.role ?? "";
+  typeof r === "string" ? r : (r.name ?? r.slug ?? r.role ?? "");
 
 const isSuperadmin = (roles?: RoleShape[]): boolean =>
   Array.isArray(roles) &&
@@ -37,7 +27,7 @@ const isSuperadmin = (roles?: RoleShape[]): boolean =>
 const isAdmin = (roles?: RoleShape[]): boolean =>
   Array.isArray(roles) &&
   roles.some((r) =>
-    ["superadmin", "admin"].includes(roleName(r).toLowerCase())
+    ["superadmin", "admin"].includes(roleName(r).toLowerCase()),
   );
 
 const isAdminOrSuperadmin = (roles?: RoleShape[]): boolean =>
@@ -51,29 +41,23 @@ export async function middleware(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname;
 
-  if (pathname.startsWith("/store")) {
-    if (!token) {
-      return redirectToLogin(req);
-    }
+  const publicPaths = ["/auth/login", "/register", "/login"];
+
+  // Jika user mengakses halaman public, biarkan lewat
+  if (publicPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
-  if (pathname === "/me" || pathname === "/cart") {
-    if (!token) {
-      return redirectCustomer(req);
-    }
-    return NextResponse.next();
+  if (!token) {
+    return redirectToLogin(req);
   }
+
 
   if (pathname.startsWith("/admin")) {
-    if (!token) {
-      return redirectToLogin(req);
-    }
-
     if (!isAdminOrSuperadmin(token.roles)) {
-      return redirectToLogin(req);
+      // User sudah login tapi bukan admin -> Redirect ke home atau halaman unauthorized
+      return NextResponse.redirect(new URL("/", req.url));
     }
-
     return NextResponse.next();
   }
 
@@ -81,5 +65,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/me", "/cart", "/store/:path*"],
+  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)"],
 };

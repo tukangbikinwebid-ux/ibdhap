@@ -1,11 +1,21 @@
 "use client";
 
-import { Search, Clock, BookOpen, ShoppingBag, Loader2 } from "lucide-react";
+import {
+  Search,
+  ShoppingBag,
+  Loader2,
+  LogOut,
+  ChevronDown,
+  User,
+  Clock,
+  BookOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 // Components
 import WidgetCard from "./components/WidgetCard";
@@ -19,14 +29,15 @@ import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useGetArticlesQuery } from "@/services/public/article.service";
 import { usePrayerTracker } from "@/app/prayer-tracker/hooks/usePrayerTracker";
 import { useGetSurahsQuery } from "@/services/public/quran.service";
+import { useLogoutMutation } from "@/services/auth.service";
 
 // I18n & Types
 import { useI18n } from "./hooks/useI18n";
 import { Article } from "@/types/public/article";
+import { signOut } from "next-auth/react";
 
 // --- TIPE & DICTIONARY ---
 type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
-// Definisi tipe khusus untuk key sholat agar tidak any
 type PrayerKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
 
 interface HomeTranslations {
@@ -39,6 +50,9 @@ interface HomeTranslations {
     surah: string;
     notRead: string;
   };
+  menu: {
+    logout: string;
+  };
 }
 
 const HOME_TEXT: Record<LocaleCode, HomeTranslations> = {
@@ -48,6 +62,7 @@ const HOME_TEXT: Record<LocaleCode, HomeTranslations> = {
     noArticles: "Belum ada artikel terbaru.",
     loading: "Memuat...",
     quran: { verse: "Ayat", surah: "Surah", notRead: "Belum ada aktivitas" },
+    menu: { logout: "Keluar" },
   },
   en: {
     latestArticles: "Latest Articles",
@@ -55,6 +70,7 @@ const HOME_TEXT: Record<LocaleCode, HomeTranslations> = {
     noArticles: "No latest articles yet.",
     loading: "Loading...",
     quran: { verse: "Verse", surah: "Surah", notRead: "No activity yet" },
+    menu: { logout: "Log Out" },
   },
   ar: {
     latestArticles: "أحدث المقالات",
@@ -62,6 +78,7 @@ const HOME_TEXT: Record<LocaleCode, HomeTranslations> = {
     noArticles: "لا توجد مقالات جديدة.",
     loading: "جار التحميل...",
     quran: { verse: "آية", surah: "سورة", notRead: "لا يوجد نشاط" },
+    menu: { logout: "تسجيل خروج" },
   },
   fr: {
     latestArticles: "Derniers articles",
@@ -69,6 +86,7 @@ const HOME_TEXT: Record<LocaleCode, HomeTranslations> = {
     noArticles: "Aucun article récent.",
     loading: "Chargement...",
     quran: { verse: "Verset", surah: "Sourate", notRead: "Aucune activité" },
+    menu: { logout: "Se déconnecter" },
   },
   kr: {
     latestArticles: "최신 기사",
@@ -76,6 +94,7 @@ const HOME_TEXT: Record<LocaleCode, HomeTranslations> = {
     noArticles: "최신 기사가 없습니다.",
     loading: "로딩 중...",
     quran: { verse: "절", surah: "수라", notRead: "활동 없음" },
+    menu: { logout: "로그아웃" },
   },
   jp: {
     latestArticles: "最新記事",
@@ -83,12 +102,20 @@ const HOME_TEXT: Record<LocaleCode, HomeTranslations> = {
     noArticles: "最新の記事はありません。",
     loading: "読み込み中...",
     quran: { verse: "節", surah: "スーラ", notRead: "活動なし" },
+    menu: { logout: "ログアウト" },
   },
 };
 
 export default function Home() {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // --- STATE DROPDOWN & LOGOUT ---
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
+
   const currentHour = new Date().getHours();
 
   // Safe Locale Access
@@ -97,6 +124,39 @@ export default function Home() {
   ) as LocaleCode;
   const uiText = HOME_TEXT[safeLocale];
   const isRtl = safeLocale === "ar";
+
+  // --- Logic Click Outside Dropdown ---
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // --- Logic Logout ---
+const handleLogout = async () => {
+  try {
+    await logout().unwrap();
+  } catch (error) {
+    console.error(
+      "Logout backend gagal, melanjutkan logout frontend...",
+      error,
+    );
+  } finally {
+    await signOut({
+      callbackUrl: "/auth/login", 
+      redirect: true,
+    });
+  }
+};
 
   // --- 1. Sapaan Berdasarkan Waktu ---
   const getGreeting = () => {
@@ -155,10 +215,8 @@ export default function Home() {
   const { data: surahList } = useGetSurahsQuery({ lang: "id" });
   const { currentPrayerKey, prayerTimes } = usePrayerTracker();
 
-  // Local State for Quran Widget
   const [lastQuranActivity, setLastQuranActivity] = useState(uiText.loading);
 
-  // --- Logic Widget Quran ---
   useEffect(() => {
     const lastRead = localStorage.getItem("quran-last-read");
     if (lastRead) {
@@ -187,7 +245,6 @@ export default function Home() {
     }
   }, [surahList, locale, uiText]);
 
-  // --- Helper Format Tanggal ---
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const localeMap: Record<string, string> = {
@@ -205,11 +262,8 @@ export default function Home() {
     });
   };
 
-  // --- Logic Mapping Artikel (Translation Aware) ---
   const latestArticles = useMemo(() => {
     if (!articlesData?.data) return [];
-
-    // Sorting Descending by Date
     const sorted = [...articlesData.data].sort(
       (a, b) =>
         new Date(b.published_at).getTime() - new Date(a.published_at).getTime(),
@@ -218,10 +272,8 @@ export default function Home() {
     return sorted.map((article: Article) => {
       let title = article.title;
       let content = article.content;
-      let categoryName = article.category?.name || "Umum"; // Safe access category
+      let categoryName = article.category?.name || "Umum";
 
-      // --- PERBAIKAN: Safe Access Array Translation ---
-      // Pastikan translations adalah array sebelum di-find
       const articleTranslations = article.translations || [];
       const localized = articleTranslations.find((t) => t.locale === locale);
 
@@ -236,14 +288,12 @@ export default function Home() {
         }
       }
 
-      // Safe access category translations
       const catTranslations = article.category?.translations || [];
       const catTrans =
         catTranslations.find((t) => t.locale === locale) ||
         catTranslations.find((t) => t.locale === "id");
       if (catTrans && catTrans.name) categoryName = catTrans.name;
 
-      // Clean HTML
       const cleanContent = content ? content.replace(/<[^>]*>?/gm, "") : "";
 
       return {
@@ -260,11 +310,8 @@ export default function Home() {
     });
   }, [articlesData, locale]);
 
-  // --- Logic Widget Prayer ---
   const prayerWidgetData = useMemo(() => {
     if (!prayerTimes) return { title: uiText.loading, time: "--:--" };
-
-    // Gunakan Tipe PrayerKey yang sudah didefinisikan
     const prayerNames: Record<string, Record<PrayerKey, string>> = {
       id: {
         fajr: "Subuh",
@@ -312,8 +359,6 @@ export default function Home() {
 
     const activeNames = prayerNames[locale] || prayerNames.id;
     const key = (currentPrayerKey || "fajr") as PrayerKey;
-
-    // Type casting aman karena kita tahu struktur prayerTimes dari hook
     const times = prayerTimes as unknown as Record<string, string>;
 
     return {
@@ -332,24 +377,61 @@ export default function Home() {
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-full shadow-sm border-2 border-accent-100 flex items-center justify-center">
-                  <Image
-                    src="/ibadahapp-logo.png"
-                    alt="Logo"
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 object-contain"
+              {/* Profile / Menu Dropdown Area */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-3 hover:bg-accent-50/50 p-1.5 rounded-xl transition-all duration-200 group outline-none"
+                >
+                  <div className="w-10 h-10 bg-white rounded-full shadow-sm border-2 border-accent-100 flex items-center justify-center overflow-hidden relative group-hover:border-awqaf-primary transition-colors">
+                    <Image
+                      src="/ibadahapp-logo.png"
+                      alt="Logo"
+                      width={32}
+                      height={32}
+                      className="w-8 h-8 object-contain"
+                    />
+                  </div>
+                  <div
+                    className={`hidden sm:block text-left transition-transform duration-200 ${isDropdownOpen ? "translate-y-0.5" : ""}`}
+                  >
+                    <h1 className="text-sm font-bold text-awqaf-primary font-comfortaa leading-none mb-0.5">
+                      {t("home.title")}
+                    </h1>
+                    <p className="text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                      {t("home.subtitle")}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-awqaf-foreground-secondary/50 transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
                   />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                    {t("home.title")}
-                  </h1>
-                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    {t("home.subtitle")}
-                  </p>
-                </div>
+                </button>
+
+                {/* Dropdown Menu (Hanya Logout) */}
+                {isDropdownOpen && (
+                  <div
+                    className={`absolute top-full mt-2 w-48 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-awqaf-border-light overflow-hidden animate-in fade-in slide-in-from-top-2 z-50 ${isRtl ? "right-0" : "left-0"}`}
+                  >
+                    <div className="p-2">
+                      <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-red-500 hover:text-red-600 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center group-hover:bg-white transition-colors border border-red-100">
+                          {isLoggingOut ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <LogOut className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="text-sm font-bold font-comfortaa">
+                          {uiText.menu.logout}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
