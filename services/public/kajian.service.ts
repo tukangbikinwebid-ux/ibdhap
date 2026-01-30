@@ -1,18 +1,25 @@
-import { apiSlice } from "@/services/base-query"; // Sesuaikan path import base-query
+import { apiSlice } from "@/services/base-query";
 import { PaginatedResponse } from "@/types/pagination";
 import {
   Ustadz,
   Kajian,
-  QnAUstadz, // Import tipe baru
+  QnAUstadz,
   GetUstadzParams,
   GetKajianParams,
-  GetQnAParams, // Import tipe params baru
+  GetQnAParams,
 } from "@/types/public/kajian";
+
+// --- TYPES FOR CREATE QNA ---
+export interface CreateQnABody {
+  ustadz_id: number;
+  name: string;
+  question: string;
+  is_public: boolean;
+}
 
 export const kajianApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // 👳 Get Ustadz List
-    // Endpoint: /public/ustadz?paginate=10&page=1
     getUstadzList: builder.query<
       PaginatedResponse<Ustadz>["data"],
       GetUstadzParams
@@ -34,23 +41,19 @@ export const kajianApi = apiSlice.injectEndpoints({
       providesTags: ["UstadzList"],
     }),
 
-    // 🎙️ Get Kajian List (by Ustadz)
-    // Endpoint: /public/ustadz/kajian?paginate=10&page=1&ustadz_id=1
+    // 🎙️ Get Kajian List
     getKajianList: builder.query<
       PaginatedResponse<Kajian>["data"],
       GetKajianParams
     >({
       query: (params) => {
-        // Build params object
         const queryParams: Record<string, string | number> = {
           page: params.page ?? 1,
           paginate: params.paginate ?? 10,
         };
-
         if (params.ustadz_id) {
           queryParams.ustadz_id = params.ustadz_id;
         }
-
         return {
           url: "/public/ustadz/kajian",
           method: "GET",
@@ -66,8 +69,7 @@ export const kajianApi = apiSlice.injectEndpoints({
       providesTags: ["KajianList"],
     }),
 
-    // ❓ Get Ustadz QnA (Tanya Jawab)
-    // Endpoint: /public/ustadz/qna?paginate=10&page=1&ustadz_id=1&is_public=1
+    // ❓ Get Ustadz QnA
     getUstadzQnA: builder.query<
       PaginatedResponse<QnAUstadz>["data"],
       GetQnAParams
@@ -76,13 +78,11 @@ export const kajianApi = apiSlice.injectEndpoints({
         const queryParams: Record<string, string | number> = {
           page: params.page ?? 1,
           paginate: params.paginate ?? 10,
-          is_public: params.is_public ?? 1, // Default public
+          is_public: params.is_public ?? 1,
         };
-
         if (params.ustadz_id) {
           queryParams.ustadz_id = params.ustadz_id;
         }
-
         return {
           url: "/public/ustadz/qna",
           method: "GET",
@@ -94,10 +94,20 @@ export const kajianApi = apiSlice.injectEndpoints({
           return response.data;
         }
         throw new Error(
-          response.message || "Gagal mengambil daftar tanya jawab."
+          response.message || "Gagal mengambil daftar tanya jawab.",
         );
       },
       providesTags: ["UstadzQnA"],
+    }),
+
+    // 🆕 POST Create QnA
+    createQnA: builder.mutation<void, CreateQnABody>({
+      query: (body) => ({
+        url: "/public/ustadz/qna",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["UstadzQnA"],
     }),
   }),
 });
@@ -106,4 +116,5 @@ export const {
   useGetUstadzListQuery,
   useGetKajianListQuery,
   useGetUstadzQnAQuery,
+  useCreateQnAMutation,
 } = kajianApi;

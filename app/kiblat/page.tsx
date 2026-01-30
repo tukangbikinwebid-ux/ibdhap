@@ -291,6 +291,8 @@ export default function QiblaPage() {
   );
   const [isAligned, setIsAligned] = useState(false);
   const compassRef = useRef<HTMLDivElement>(null);
+  const [useCompass, setUseCompass] = useState(true);
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
   // Check support & Auto-detect location
   useEffect(() => {
@@ -447,7 +449,7 @@ export default function QiblaPage() {
         return value;
       }
       const diff = ((value - lastHeading + 540) % 360) - 180;
-      lastHeading = (lastHeading + diff * 0.2 + 360) % 360;
+      lastHeading = (lastHeading + diff * 0.35 + 360) % 360;
       return lastHeading;
     };
 
@@ -486,9 +488,26 @@ export default function QiblaPage() {
   }, [isCompassSupported, isCompassEnabled]);
 
   useEffect(() => {
+    if (!isLoading) return;
+    const interval = setInterval(() => {
+      setCurrentTipIndex((prev) => (prev + 1) % 4);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  // Helper untuk mengambil array tips dari translation
+  const loadingTips = [
+    t.tips.enableGps,
+    t.tips.avoidMetal,
+    t.tips.calibrateCompass,
+    t.tips.holdHorizontal,
+  ];
+
+  useEffect(() => {
     if (!compassRef.current || !qiblaData) return;
 
-    const hasLiveHeading = isCompassEnabled && compassHeading !== null;
+    const hasLiveHeading =
+      useCompass && isCompassEnabled && compassHeading !== null;
     const rotation = hasLiveHeading
       ? qiblaData.direction - (compassHeading as number)
       : qiblaData.direction;
@@ -496,7 +515,7 @@ export default function QiblaPage() {
     const normalizedRotation = ((rotation % 360) + 360) % 360;
 
     if (hasLiveHeading) {
-      const alignmentThreshold = 5;
+      const alignmentThreshold = 10;
       const isNowAligned =
         normalizedRotation < alignmentThreshold ||
         normalizedRotation > 360 - alignmentThreshold;
@@ -581,17 +600,58 @@ export default function QiblaPage() {
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
         {isLoading && !qiblaData && (
-          <Card className="border-awqaf-border-light">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                <Navigation className="w-8 h-8 text-awqaf-primary" />
+          <Card className="border-awqaf-border-light min-h-[450px] flex flex-col justify-center relative overflow-hidden bg-gradient-to-b from-white to-accent-50/30">
+            <CardContent className="p-8 text-center flex flex-col items-center justify-center flex-1">
+              {/* Animasi Radar */}
+              <div className="relative mb-10">
+                {/* Lingkaran Luar (Ping) */}
+                <div className="absolute inset-0 -m-8 bg-awqaf-primary/5 rounded-full animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                <div className="absolute inset-0 -m-4 bg-awqaf-primary/10 rounded-full animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+
+                {/* Icon Tengah */}
+                <div className="relative z-10 bg-white p-6 rounded-full shadow-xl border border-awqaf-border-light">
+                  <Navigation className="w-10 h-10 text-awqaf-primary animate-pulse" />
+                </div>
               </div>
-              <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
+
+              {/* Teks Status */}
+              <h3 className="text-xl font-bold text-gray-800 font-comfortaa mb-2">
                 {t.detectingLocation}
               </h3>
-              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
+              <p className="text-sm text-gray-500 font-comfortaa mb-8">
                 {t.ensureGpsActive}
               </p>
+
+              {/* Carousel Tips */}
+              <div className="w-full max-w-xs bg-white/80 backdrop-blur-sm border border-awqaf-primary/10 rounded-2xl p-5 shadow-sm transition-all duration-300">
+                <div className="flex items-center justify-center gap-2 mb-3 text-awqaf-primary">
+                  <Info className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider font-comfortaa">
+                    {t.accuracyTips}
+                  </span>
+                </div>
+                <div className="h-10 flex items-center justify-center">
+                  <p
+                    key={currentTipIndex} // Key berubah trigger animasi fade-in
+                    className="text-sm text-gray-600 font-medium font-comfortaa leading-tight animate-in fade-in slide-in-from-bottom-1 duration-300"
+                  >
+                    {loadingTips[currentTipIndex]}
+                  </p>
+                </div>
+                {/* Indikator Dots */}
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {loadingTips.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        idx === currentTipIndex
+                          ? "w-4 bg-awqaf-primary"
+                          : "w-1.5 bg-gray-200"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
