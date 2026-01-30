@@ -11,6 +11,7 @@ import {
   Navigation,
   BookOpen,
   X,
+  ArrowLeft, // Tambahkan ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -159,12 +160,10 @@ export default function EBookPage() {
   const [selectedBook, setSelectedBook] = useState<Ebook | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- HELPER TRANSLATION (PERBAIKAN) ---
+  // --- HELPER TRANSLATION ---
   const getCategoryContent = (cat: EbookCategory) => {
-    // 1. Cari translation sesuai locale aktif
     const localized = cat.translations?.find((t) => t.locale === locale);
 
-    // Perbaikan: Ambil name DAN description dari localized, fallback ke root jika kosong/null
     if (localized) {
       return {
         name: localized.name || cat.name,
@@ -172,7 +171,6 @@ export default function EBookPage() {
       };
     }
 
-    // 2. Fallback ke 'id' jika locale aktif tidak ketemu
     const idFallback = cat.translations?.find((t) => t.locale === "id");
     if (idFallback) {
       return {
@@ -181,12 +179,10 @@ export default function EBookPage() {
       };
     }
 
-    // 3. Fallback terakhir ke root object
     return { name: cat.name, description: cat.description };
   };
 
   const getEbookContent = (book: Ebook) => {
-    // 1. Cari translation sesuai locale aktif
     const localized = book.translations?.find((t) => t.locale === locale);
     if (localized) {
       return {
@@ -195,7 +191,6 @@ export default function EBookPage() {
       };
     }
 
-    // 2. Fallback ke 'id'
     const idFallback = book.translations?.find((t) => t.locale === "id");
     if (idFallback) {
       return {
@@ -204,13 +199,11 @@ export default function EBookPage() {
       };
     }
 
-    // 3. Root object
     return {
       title: book.title,
       description: book.description || "",
     };
   };
-  // --------------------------
 
   // 1. Fetch Categories
   const { data: categoriesData, isLoading: isLoadingCategories } =
@@ -278,25 +271,31 @@ export default function EBookPage() {
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Header */}
-      <header className="bg-background/80 backdrop-blur-md shadow-sm border-b border-awqaf-border-light sticky top-0 z-30">
+      <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`w-10 h-10 p-0 rounded-full hover:bg-accent-100 text-awqaf-primary ${isRtl ? "rotate-180" : ""}`}
-              >
-                <Navigation className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa">
-                {t_ebook.title}
-              </h1>
-              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                {t_ebook.subtitle}
-              </p>
+          <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
+            <div className="flex items-center justify-between">
+              {/* TOMBOL BACK */}
+              <Link href="/">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`w-10 h-10 p-0 rounded-full hover:bg-accent-100 text-awqaf-primary ${
+                    isRtl ? "rotate-180" : ""
+                  }`}
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+              </Link>
+              <div className="text-center">
+                <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
+                  {t_ebook.title}
+                </h1>
+                <p className="text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                  {t_ebook.subtitle}
+                </p>
+              </div>
+              <div className="w-10 h-10" /> {/* Spacer untuk centering */}
             </div>
           </div>
         </div>
@@ -316,7 +315,6 @@ export default function EBookPage() {
         ) : (
           <div className="grid grid-cols-2 gap-4 mb-6">
             {categoriesData?.data.map((category) => {
-              // Gunakan fungsi helper yang sudah diperbaiki
               const content = getCategoryContent(category);
 
               return (
@@ -337,7 +335,6 @@ export default function EBookPage() {
                   <h3 className="font-semibold text-card-foreground text-sm font-comfortaa line-clamp-1">
                     {content.name}
                   </h3>
-                  {/* PERBAIKAN: Gunakan content.description bukan category.description */}
                   <div
                     className="text-xs text-awqaf-foreground-secondary mt-1 font-comfortaa line-clamp-1"
                     dangerouslySetInnerHTML={{

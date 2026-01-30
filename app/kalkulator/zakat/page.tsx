@@ -16,32 +16,201 @@ import {
   Wallet,
   AlertCircle,
   CheckCircle2,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/app/hooks/useI18n";
-import { getCurrentLocale } from "@/lib/i18n";
 
 // --- TIPE DATA ---
 type ZakatType = "profesi" | "maal";
+type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
 
 interface ZakatData {
   user_id: string;
   zakat_type: ZakatType;
-  input_values: Record<string, number>; // JSON storage untuk input dinamis
+  input_values: Record<string, number>;
   total_result: number;
-  last_calculated: string; // ISO String
+  last_calculated: string;
 }
 
-// --- KONSTANTA & CONFIG ---
+interface ZakatTranslations {
+  title: string;
+  back: string; // Tambahan untuk tombol back
+  monthlyIncome: string;
+  bonus: string;
+  debt: string;
+  savings: string;
+  goldSilver: string;
+  assets: string;
+  zakatProfesi: string;
+  zakatMaal: string;
+  goldPricePerGram: string;
+  enterFinancialData: string;
+  currency: string;
+  reset: string;
+  calculateZakat: string;
+  zakatObligatory: string;
+  assetsReachedNisab: string;
+  zakatNotObligatory: string;
+  assetsNotReachedNisab: string;
+  totalZakatToPay: string;
+  lastCalculated: string;
+}
+
+// --- KONSTANTA & TRANSLATION ---
 const STORAGE_KEY = "zakat-calculator-data";
-const DEFAULT_GOLD_PRICE = 1300000; // Harga emas per gram (bisa diupdate user)
+const DEFAULT_GOLD_PRICE = 1300000;
+
+const ZAKAT_TEXT: Record<LocaleCode, ZakatTranslations> = {
+  id: {
+    title: "Kalkulator Zakat",
+    back: "Kembali",
+    monthlyIncome: "Penghasilan Bulanan",
+    bonus: "Bonus / THR",
+    debt: "Hutang / Cicilan",
+    savings: "Tabungan / Deposito",
+    goldSilver: "Emas / Perak (Gram)",
+    assets: "Aset Investasi (Saham, dll)",
+    zakatProfesi: "Zakat Profesi",
+    zakatMaal: "Zakat Maal",
+    goldPricePerGram: "Harga Emas / Gram (Rp)",
+    enterFinancialData: "Masukkan Data Keuangan",
+    currency: "IDR",
+    reset: "Reset",
+    calculateZakat: "Hitung Zakat",
+    zakatObligatory: "Wajib Zakat",
+    assetsReachedNisab: "Harta mencapai Nisab",
+    zakatNotObligatory: "Tidak Wajib Zakat",
+    assetsNotReachedNisab: "Harta belum mencapai Nisab",
+    totalZakatToPay: "Total Zakat yang Harus Dikeluarkan",
+    lastCalculated: "Terakhir Dihitung",
+  },
+  en: {
+    title: "Zakat Calculator",
+    back: "Back",
+    monthlyIncome: "Monthly Income",
+    bonus: "Bonus / Allowance",
+    debt: "Debt / Installments",
+    savings: "Savings / Deposits",
+    goldSilver: "Gold / Silver (Gram)",
+    assets: "Investment Assets (Stocks, etc)",
+    zakatProfesi: "Profession Zakat",
+    zakatMaal: "Wealth Zakat",
+    goldPricePerGram: "Gold Price / Gram (IDR)",
+    enterFinancialData: "Enter Financial Data",
+    currency: "IDR",
+    reset: "Reset",
+    calculateZakat: "Calculate Zakat",
+    zakatObligatory: "Zakat Obligatory",
+    assetsReachedNisab: "Assets reached Nisab",
+    zakatNotObligatory: "Zakat Not Obligatory",
+    assetsNotReachedNisab: "Assets not reached Nisab",
+    totalZakatToPay: "Total Zakat to Pay",
+    lastCalculated: "Last Calculated",
+  },
+  ar: {
+    title: "حاسبة الزكاة",
+    back: "عودة",
+    monthlyIncome: "الدخل الشهري",
+    bonus: "مكافأة",
+    debt: "ديون / أقساط",
+    savings: "مدخرات / ودائع",
+    goldSilver: "ذهب / فضة (جرام)",
+    assets: "أصول استثمارية",
+    zakatProfesi: "زكاة المهنة",
+    zakatMaal: "زكاة المال",
+    goldPricePerGram: "سعر الذهب / جرام",
+    enterFinancialData: "أدخل البيانات المالية",
+    currency: "روبية",
+    reset: "إعادة ضبط",
+    calculateZakat: "حساب الزكاة",
+    zakatObligatory: "تجب الزكاة",
+    assetsReachedNisab: "المال بلغ النصاب",
+    zakatNotObligatory: "لا تجب الزكاة",
+    assetsNotReachedNisab: "المال لم يبلغ النصاب",
+    totalZakatToPay: "إجمالي الزكاة المستحقة",
+    lastCalculated: "آخر حساب",
+  },
+  fr: {
+    title: "Calculateur de Zakat",
+    back: "Retour",
+    monthlyIncome: "Revenu Mensuel",
+    bonus: "Bonus",
+    debt: "Dettes / Mensualités",
+    savings: "Épargne / Dépôts",
+    goldSilver: "Or / Argent (Grammes)",
+    assets: "Actifs d'Investissement",
+    zakatProfesi: "Zakat Professionnelle",
+    zakatMaal: "Zakat sur la Richesse",
+    goldPricePerGram: "Prix de l'Or / Gramme",
+    enterFinancialData: "Entrer les Données Financières",
+    currency: "IDR",
+    reset: "Réinitialiser",
+    calculateZakat: "Calculer la Zakat",
+    zakatObligatory: "Zakat Obligatoire",
+    assetsReachedNisab: "Les actifs ont atteint le Nisab",
+    zakatNotObligatory: "Zakat Non Obligatoire",
+    assetsNotReachedNisab: "Les actifs n'ont pas atteint le Nisab",
+    totalZakatToPay: "Total Zakat à Payer",
+    lastCalculated: "Dernier Calcul",
+  },
+  kr: {
+    title: "자카트 계산기",
+    back: "뒤로",
+    monthlyIncome: "월 소득",
+    bonus: "보너스",
+    debt: "부채 / 할부",
+    savings: "저축 / 예금",
+    goldSilver: "금 / 은 (그램)",
+    assets: "투자 자산",
+    zakatProfesi: "직업 자카트",
+    zakatMaal: "재산 자카트",
+    goldPricePerGram: "금 가격 / 그램",
+    enterFinancialData: "재무 데이터 입력",
+    currency: "IDR",
+    reset: "초기화",
+    calculateZakat: "자카트 계산",
+    zakatObligatory: "자카트 의무",
+    assetsReachedNisab: "자산이 니사브에 도달함",
+    zakatNotObligatory: "자카트 의무 없음",
+    assetsNotReachedNisab: "자산이 니사브에 도달하지 않음",
+    totalZakatToPay: "지불할 총 자카트",
+    lastCalculated: "마지막 계산",
+  },
+  jp: {
+    title: "ザカート計算機",
+    back: "戻る",
+    monthlyIncome: "月収",
+    bonus: "ボーナス",
+    debt: "借金 / 分割払い",
+    savings: "貯蓄 / 預金",
+    goldSilver: "金 / 銀 (グラム)",
+    assets: "投資資産",
+    zakatProfesi: "職業ザカート",
+    zakatMaal: "財産ザカート",
+    goldPricePerGram: "金価格 / グラム",
+    enterFinancialData: "財務データを入力",
+    currency: "IDR",
+    reset: "リセット",
+    calculateZakat: "ザカートを計算",
+    zakatObligatory: "ザカート義務あり",
+    assetsReachedNisab: "資産がニサーブに達しました",
+    zakatNotObligatory: "ザカート義務なし",
+    assetsNotReachedNisab: "資産がニサーブに達していません",
+    totalZakatToPay: "支払うべきザカート総額",
+    lastCalculated: "最終計算",
+  },
+};
 
 // Helper function untuk generate unique ID
 const generateUUID = (): string => {
-  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
+  if (
+    typeof window !== "undefined" &&
+    window.crypto &&
+    window.crypto.randomUUID
+  ) {
     return window.crypto.randomUUID();
   }
-  // Fallback untuk browser yang tidak support crypto.randomUUID
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === "x" ? r : (r & 0x3) | 0x8;
@@ -50,8 +219,13 @@ const generateUUID = (): string => {
 };
 
 export default function ZakatCalculatorPage() {
-  const { t } = useI18n();
-  const locale = getCurrentLocale();
+  const { locale } = useI18n();
+  // Safe Locale Access
+  const safeLocale = (
+    ZAKAT_TEXT[locale as LocaleCode] ? locale : "id"
+  ) as LocaleCode;
+  const t = ZAKAT_TEXT[safeLocale];
+  const isRtl = safeLocale === "ar";
 
   // State Utama
   const [data, setData] = useState<ZakatData | null>(null);
@@ -60,29 +234,29 @@ export default function ZakatCalculatorPage() {
   const [goldPrice, setGoldPrice] = useState(DEFAULT_GOLD_PRICE);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // State Hasil Perhitungan Sementara (sebelum disimpan)
+  // State Hasil Perhitungan Sementara
   const [calculatedAmount, setCalculatedAmount] = useState<number | null>(null);
   const [nisabStatus, setNisabStatus] = useState<{
     reached: boolean;
     threshold: number;
   } | null>(null);
 
-  // Definisi Input Field berdasarkan tipe zakat dengan i18n
+  // Definisi Input Field berdasarkan tipe zakat
   const INPUT_FIELDS = useMemo(
     () => ({
       profesi: [
-        { key: "income_monthly", label: t("zakatCalculator.monthlyIncome"), icon: Wallet },
-        { key: "bonus", label: t("zakatCalculator.bonus"), icon: TrendingUp },
-        { key: "debt", label: t("zakatCalculator.debt"), icon: Coins },
+        { key: "income_monthly", label: t.monthlyIncome, icon: Wallet },
+        { key: "bonus", label: t.bonus, icon: TrendingUp },
+        { key: "debt", label: t.debt, icon: Coins },
       ],
       maal: [
-        { key: "savings", label: t("zakatCalculator.savings"), icon: Wallet },
-        { key: "gold_silver", label: t("zakatCalculator.goldSilver"), icon: Coins },
-        { key: "assets", label: t("zakatCalculator.assets"), icon: TrendingUp },
-        { key: "debt", label: t("zakatCalculator.debt"), icon: AlertCircle },
+        { key: "savings", label: t.savings, icon: Wallet },
+        { key: "gold_silver", label: t.goldSilver, icon: Coins },
+        { key: "assets", label: t.assets, icon: TrendingUp },
+        { key: "debt", label: t.debt, icon: AlertCircle },
       ],
     }),
-    [t]
+    [t],
   );
 
   // 1. Load Data dari LocalStorage
@@ -92,11 +266,9 @@ export default function ZakatCalculatorPage() {
       if (stored) {
         const parsed = JSON.parse(stored);
         setData(parsed);
-        // Load state terakhir ke input form jika ada
         if (parsed.zakat_type) setActiveType(parsed.zakat_type);
         if (parsed.input_values) setInputs(parsed.input_values);
       } else {
-        // Inisialisasi User ID baru jika kosong
         setData({
           user_id: generateUUID(),
           zakat_type: "profesi",
@@ -110,20 +282,8 @@ export default function ZakatCalculatorPage() {
   }, []);
 
   // 2. Format Currency Helper
-  const getLocaleString = () => {
-    const localeMap: Record<string, string> = {
-      id: "id-ID",
-      en: "en-US",
-      ar: "ar-SA",
-      fr: "fr-FR",
-      kr: "ko-KR",
-      jp: "ja-JP",
-    };
-    return localeMap[locale] || "id-ID";
-  };
-
   const formatRupiah = (num: number) => {
-    return new Intl.NumberFormat(getLocaleString(), {
+    return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
@@ -133,7 +293,6 @@ export default function ZakatCalculatorPage() {
 
   // 3. Handle Input Change
   const handleInputChange = (key: string, value: string) => {
-    // Hapus karakter non-digit untuk parsing
     const numericValue = parseInt(value.replace(/\D/g, "")) || 0;
     setInputs((prev) => ({
       ...prev,
@@ -150,11 +309,6 @@ export default function ZakatCalculatorPage() {
     let isNisabReached = false;
 
     if (activeType === "profesi") {
-      // Zakat Profesi: Nisab setara 85gr emas per tahun atau 653kg gabah (~524kg beras)
-      // Pendapat umum: 2.5% dari bruto jika mencapai nisab bulanan.
-      // Nisab bulanan (asumsi setara 85gr emas / 12 bulan untuk simplifikasi cash basis,
-      // atau menggunakan standar beras. Kita gunakan standar Emas 85gr / 12 bulan).
-
       const totalIncome = (inputs.income_monthly || 0) + (inputs.bonus || 0);
       pengurang = inputs.debt || 0;
       const bersih = totalIncome - pengurang;
@@ -167,7 +321,6 @@ export default function ZakatCalculatorPage() {
         isNisabReached = true;
       }
     } else if (activeType === "maal") {
-      // Zakat Maal: Nisab 85gr Emas, Haul 1 tahun.
       totalHarta =
         (inputs.savings || 0) +
         (inputs.gold_silver || 0) +
@@ -186,7 +339,6 @@ export default function ZakatCalculatorPage() {
     setCalculatedAmount(zakat);
     setNisabStatus({ reached: isNisabReached, threshold: nisab });
 
-    // Update State Data Utama & Save to LocalStorage
     if (data) {
       const newData: ZakatData = {
         ...data,
@@ -210,23 +362,30 @@ export default function ZakatCalculatorPage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       {/* Header */}
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
             <div className="flex items-center justify-between">
+              {/* TOMBOL BACK */}
               <Link href="/">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 text-awqaf-primary"
+                  className={`w-10 h-10 p-0 rounded-full hover:bg-accent-100 text-awqaf-primary ${
+                    isRtl ? "rotate-180" : ""
+                  }`}
                 >
-                  <Navigation className="w-5 h-5" />
+                  <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
+
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                {t("zakatCalculator.title")}
+                {t.title}
               </h1>
               <div className="w-10 h-10" />
             </div>
@@ -248,7 +407,7 @@ export default function ZakatCalculatorPage() {
                 : "text-awqaf-foreground-secondary hover:bg-accent-50"
             }`}
           >
-            {t("zakatCalculator.zakatProfesi")}
+            {t.zakatProfesi}
           </button>
           <button
             onClick={() => {
@@ -261,7 +420,7 @@ export default function ZakatCalculatorPage() {
                 : "text-awqaf-foreground-secondary hover:bg-accent-50"
             }`}
           >
-            {t("zakatCalculator.zakatMaal")}
+            {t.zakatMaal}
           </button>
         </div>
 
@@ -271,7 +430,7 @@ export default function ZakatCalculatorPage() {
             <div className="flex items-center gap-2 text-yellow-700">
               <Coins className="w-4 h-4" />
               <span className="text-xs font-bold font-comfortaa">
-                {t("zakatCalculator.goldPricePerGram")}
+                {t.goldPricePerGram}
               </span>
             </div>
             <div className="w-32">
@@ -290,7 +449,7 @@ export default function ZakatCalculatorPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-comfortaa text-awqaf-foreground-secondary flex items-center gap-2">
               <Calculator className="w-4 h-4" />
-              {t("zakatCalculator.enterFinancialData")}
+              {t.enterFinancialData}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -300,23 +459,33 @@ export default function ZakatCalculatorPage() {
                   {field.label}
                 </Label>
                 <div className="relative">
-                  <field.icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <field.icon
+                    className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 ${
+                      isRtl ? "right-3" : "left-3"
+                    }`}
+                  />
                   <Input
-                    type="text" // Use text to allow formatting display if needed, but here simple parsing
+                    type="text"
                     inputMode="numeric"
                     placeholder="0"
-                    className="pl-9 font-mono text-right focus-visible:ring-awqaf-primary"
+                    className={`font-mono text-right focus-visible:ring-awqaf-primary ${
+                      isRtl ? "pr-9 pl-9" : "pl-9 pr-9"
+                    }`}
                     value={
                       inputs[field.key]
-                        ? inputs[field.key].toLocaleString(getLocaleString())
+                        ? inputs[field.key].toLocaleString("id-ID")
                         : ""
                     }
                     onChange={(e) =>
                       handleInputChange(field.key, e.target.value)
                     }
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
-                    {t("zakatCalculator.currency")}
+                  <span
+                    className={`absolute top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none ${
+                      isRtl ? "left-3" : "right-3"
+                    }`}
+                  >
+                    {t.currency}
                   </span>
                 </div>
               </div>
@@ -328,13 +497,14 @@ export default function ZakatCalculatorPage() {
                 className="flex-1 border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 font-comfortaa"
                 onClick={handleReset}
               >
-                <RotateCcw className="w-4 h-4 mr-2" /> {t("zakatCalculator.reset")}
+                <RotateCcw className={`w-4 h-4 ${isRtl ? "ml-2" : "mr-2"}`} />{" "}
+                {t.reset}
               </Button>
               <Button
                 className="flex-[2] bg-awqaf-primary hover:bg-awqaf-primary/90 font-comfortaa"
                 onClick={calculateZakat}
               >
-                {t("zakatCalculator.calculateZakat")}
+                {t.calculateZakat}
               </Button>
             </div>
           </CardContent>
@@ -359,10 +529,10 @@ export default function ZakatCalculatorPage() {
                         <CheckCircle2 className="w-6 h-6 text-green-600" />
                       </div>
                       <h3 className="font-bold text-green-700 font-comfortaa">
-                        {t("zakatCalculator.zakatObligatory")}
+                        {t.zakatObligatory}
                       </h3>
                       <p className="text-xs text-green-600 font-comfortaa">
-                        {t("zakatCalculator.assetsReachedNisab")} (
+                        {t.assetsReachedNisab} (
                         {formatRupiah(nisabStatus.threshold)})
                       </p>
                     </>
@@ -372,10 +542,10 @@ export default function ZakatCalculatorPage() {
                         <AlertCircle className="w-6 h-6 text-gray-500" />
                       </div>
                       <h3 className="font-bold text-gray-700 font-comfortaa">
-                        {t("zakatCalculator.zakatNotObligatory")}
+                        {t.zakatNotObligatory}
                       </h3>
                       <p className="text-xs text-gray-500 font-comfortaa">
-                        {t("zakatCalculator.assetsNotReachedNisab")} (
+                        {t.assetsNotReachedNisab} (
                         {formatRupiah(nisabStatus.threshold)})
                       </p>
                     </>
@@ -385,7 +555,7 @@ export default function ZakatCalculatorPage() {
                 {/* Amount */}
                 <div className="bg-white rounded-xl p-4 border border-dashed border-gray-300">
                   <p className="text-xs text-gray-500 font-comfortaa uppercase tracking-wider mb-1">
-                    {t("zakatCalculator.totalZakatToPay")}
+                    {t.totalZakatToPay}
                   </p>
                   <p
                     className={`text-2xl font-bold font-comfortaa ${
@@ -412,12 +582,12 @@ export default function ZakatCalculatorPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 font-comfortaa">
-                    {t("zakatCalculator.lastCalculated")}
+                    {t.lastCalculated}
                   </p>
                   <p className="text-sm font-bold text-gray-700 font-comfortaa">
                     {new Date(data.last_calculated).toLocaleDateString(
-                      getLocaleString(),
-                      { day: "numeric", month: "short", year: "numeric" }
+                      "id-ID",
+                      { day: "numeric", month: "short", year: "numeric" },
                     )}
                   </p>
                 </div>

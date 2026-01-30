@@ -14,27 +14,177 @@ import {
   FileType,
   ArrowRight,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 // Import Services & Types
 import { useGetTemplateLettersQuery } from "@/services/public/template-surat.service";
-import { TemplateLetter } from "@/types/public/template-surat"; // Pastikan type diimport
+import { TemplateLetter } from "@/types/public/template-surat";
 import Swal from "sweetalert2";
 import { useI18n } from "@/app/hooks/useI18n";
 
-// Categories untuk filter UI
-const CATEGORIES = [
-  { id: "all", label: "Semua" },
-  { id: "Nikah", label: "Pernikahan" },
-  { id: "Wakaf", label: "Wakaf" },
-  { id: "Masjid", label: "Masjid" },
-  { id: "Umum", label: "Umum" },
-];
+// --- TIPE TRANSLASI ---
+type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
+
+interface TemplateTranslations {
+  title: string;
+  searchPlaceholder: string;
+  all: string;
+  nikah: string;
+  wakaf: string;
+  masjid: string;
+  umum: string;
+  loading: string;
+  failedToLoad: string;
+  tryAgain: string;
+  download: string;
+  notFound: string;
+  tryDifferentKeyword: string;
+  needOtherFormat: string;
+  contactAdmin: string;
+  downloadFailed: string;
+  downloadFailedDesc: string;
+}
+
+// --- DICTIONARY TRANSLASI ---
+const TEMPLATE_TEXT: Record<LocaleCode, TemplateTranslations> = {
+  id: {
+    title: "Template Surat",
+    searchPlaceholder: "Cari template surat...",
+    all: "Semua",
+    nikah: "Pernikahan",
+    wakaf: "Wakaf",
+    masjid: "Masjid",
+    umum: "Umum",
+    loading: "Memuat template...",
+    failedToLoad: "Gagal memuat data template",
+    tryAgain: "Coba Lagi",
+    download: "Unduh",
+    notFound: "Template tidak ditemukan",
+    tryDifferentKeyword: "Coba kata kunci atau kategori lain",
+    needOtherFormat: "Butuh format surat lain?",
+    contactAdmin: "Hubungi admin untuk request template khusus",
+    downloadFailed: "Gagal",
+    downloadFailedDesc: "Link download tidak tersedia",
+  },
+  en: {
+    title: "Letter Templates",
+    searchPlaceholder: "Search letter templates...",
+    all: "All",
+    nikah: "Marriage",
+    wakaf: "Waqf",
+    masjid: "Mosque",
+    umum: "General",
+    loading: "Loading templates...",
+    failedToLoad: "Failed to load templates",
+    tryAgain: "Try Again",
+    download: "Download",
+    notFound: "Template not found",
+    tryDifferentKeyword: "Try another keyword or category",
+    needOtherFormat: "Need another format?",
+    contactAdmin: "Contact admin to request a custom template",
+    downloadFailed: "Failed",
+    downloadFailedDesc: "Download link is not available",
+  },
+  ar: {
+    title: "نماذج الرسائل",
+    searchPlaceholder: "ابحث عن نماذج الرسائل...",
+    all: "الكل",
+    nikah: "زواج",
+    wakaf: "وقف",
+    masjid: "مسجد",
+    umum: "عام",
+    loading: "جار تحميل النماذج...",
+    failedToLoad: "فشل تحميل النماذج",
+    tryAgain: "حاول مرة أخرى",
+    download: "تحميل",
+    notFound: "لم يتم العثور على النموذج",
+    tryDifferentKeyword: "جرب كلمة مفتاحية أو فئة أخرى",
+    needOtherFormat: "هل تحتاج إلى تنسيق آخر؟",
+    contactAdmin: "اتصل بالمسؤول لطلب نموذج مخصص",
+    downloadFailed: "فشل",
+    downloadFailedDesc: "رابط التحميل غير متاح",
+  },
+  fr: {
+    title: "Modèles de Lettres",
+    searchPlaceholder: "Rechercher des modèles...",
+    all: "Tout",
+    nikah: "Mariage",
+    wakaf: "Waqf",
+    masjid: "Mosquée",
+    umum: "Général",
+    loading: "Chargement des modèles...",
+    failedToLoad: "Échec du chargement",
+    tryAgain: "Réessayer",
+    download: "Télécharger",
+    notFound: "Modèle introuvable",
+    tryDifferentKeyword: "Essayez un autre mot-clé ou catégorie",
+    needOtherFormat: "Besoin d'un autre format ?",
+    contactAdmin: "Contactez l'admin pour demander un modèle",
+    downloadFailed: "Échec",
+    downloadFailedDesc: "Le lien de téléchargement n'est pas disponible",
+  },
+  kr: {
+    title: "편지 서식",
+    searchPlaceholder: "서식 검색...",
+    all: "전체",
+    nikah: "결혼",
+    wakaf: "와크프",
+    masjid: "모스크",
+    umum: "일반",
+    loading: "서식 로딩 중...",
+    failedToLoad: "서식 로드 실패",
+    tryAgain: "다시 시도",
+    download: "다운로드",
+    notFound: "서식을 찾을 수 없음",
+    tryDifferentKeyword: "다른 키워드나 카테고리를 시도해보세요",
+    needOtherFormat: "다른 형식이 필요하세요?",
+    contactAdmin: "맞춤 서식을 요청하려면 관리자에게 문의하세요",
+    downloadFailed: "실패",
+    downloadFailedDesc: "다운로드 링크를 사용할 수 없습니다",
+  },
+  jp: {
+    title: "手紙のテンプレート",
+    searchPlaceholder: "テンプレートを検索...",
+    all: "すべて",
+    nikah: "結婚",
+    wakaf: "ワクフ",
+    masjid: "モスク",
+    umum: "一般",
+    loading: "テンプレートを読み込み中...",
+    failedToLoad: "読み込みに失敗しました",
+    tryAgain: "再試行",
+    download: "ダウンロード",
+    notFound: "テンプレートが見つかりません",
+    tryDifferentKeyword: "別のキーワードやカテゴリを試してください",
+    needOtherFormat: "他の形式が必要ですか？",
+    contactAdmin:
+      "カスタムテンプレートをリクエストするには管理者に連絡してください",
+    downloadFailed: "失敗",
+    downloadFailedDesc: "ダウンロードリンクが利用できません",
+  },
+};
 
 export default function TemplateSuratPage() {
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
+  // Safe Locale Access
+  const safeLocale = (
+    TEMPLATE_TEXT[locale as LocaleCode] ? locale : "id"
+  ) as LocaleCode;
+  const t = TEMPLATE_TEXT[safeLocale];
+  const isRtl = safeLocale === "ar";
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Categories untuk filter UI
+  const categories = [
+    { id: "all", label: t.all },
+    { id: "Nikah", label: t.nikah },
+    { id: "Wakaf", label: t.wakaf },
+    { id: "Masjid", label: t.masjid },
+    { id: "Umum", label: t.umum },
+  ];
 
   // Fetch Data from API
   const {
@@ -48,7 +198,6 @@ export default function TemplateSuratPage() {
 
   // --- HELPER TRANSLATION ---
   const getTemplateContent = (item: TemplateLetter) => {
-    // 1. Cari translation sesuai locale aktif
     if (item.translations && item.translations.length > 0) {
       const localized = item.translations.find((t) => t.locale === locale);
       if (localized && localized.title) {
@@ -57,8 +206,6 @@ export default function TemplateSuratPage() {
           description: localized.description ?? "",
         };
       }
-
-      // 2. Fallback ke 'id' jika locale aktif kosong
       const idFallback = item.translations.find((t) => t.locale === "id");
       if (idFallback && idFallback.title) {
         return {
@@ -67,85 +214,50 @@ export default function TemplateSuratPage() {
         };
       }
     }
-
-    // 3. Fallback terakhir ke root object
     return {
       title: item.title,
       description: item.description ?? "",
     };
   };
-  // --------------------------
 
   // Logic Filtering
   const filteredTemplates = useMemo(() => {
     if (!templateData?.data) return [];
 
     return templateData.data.filter((item) => {
-      // Ambil konten sesuai bahasa untuk keperluan search
       const content = getTemplateContent(item);
-
       const matchCategory =
         selectedCategory === "all" ||
         item.category.toLowerCase() === selectedCategory.toLowerCase();
-
       const q = searchQuery.toLowerCase();
-
-      // Search pada konten yang sudah diterjemahkan
-      // Kita strip HTML tags dari deskripsi untuk pencarian yang lebih akurat
       const cleanDescription = content.description
         .replace(/<[^>]*>?/gm, "")
         .toLowerCase();
-
       const matchSearch =
         content.title.toLowerCase().includes(q) || cleanDescription.includes(q);
 
       return matchCategory && matchSearch;
     });
-  }, [templateData, selectedCategory, searchQuery, locale]); // Tambahkan locale ke dependency
+  }, [templateData, selectedCategory, searchQuery, locale]);
 
-  // Helper untuk warna badge kategori
-  const getCategoryColor = (cat: string) => {
-    const categoryLower = cat.toLowerCase();
-    switch (categoryLower) {
-      case "nikah":
-        return "bg-pink-100 text-pink-700 hover:bg-pink-200 border-pink-200";
-      case "wakaf":
-        return "bg-green-100 text-green-700 hover:bg-green-200 border-green-200";
-      case "masjid":
-        return "bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200";
-      default:
-        return "bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200";
-    }
-  };
-
-  // Helper untuk icon file berdasarkan ekstensi file attachment
+  // Helper untuk icon file - SERAGAMKAN WARNA KE AWQAF
   const getFileIcon = (fileUrl: string) => {
     if (fileUrl && fileUrl.endsWith(".pdf")) {
-      return <FileType className="w-8 h-8 text-red-500" />;
+      return <FileType className="w-8 h-8 text-awqaf-primary" />;
     }
-    // Default docx/doc icon style
-    return <FileText className="w-8 h-8 text-blue-600" />;
+    return <FileText className="w-8 h-8 text-awqaf-primary" />;
   };
 
   const handleDownload = (url: string) => {
     if (!url) {
-      const errorMessages: Record<string, { title: string; text: string }> = {
-        id: { title: "Gagal", text: "Link download tidak tersedia" },
-        en: { title: "Failed", text: "Download link is not available" },
-        ar: { title: "فشل", text: "رابط التحميل غير متاح" },
-        fr: {
-          title: "Échec",
-          text: "Le lien de téléchargement n'est pas disponible",
-        },
-        kr: { title: "실패", text: "다운로드 링크를 사용할 수 없습니다" },
-        jp: { title: "失敗", text: "ダウンロードリンクが利用できません" },
-      };
-      const error = errorMessages[locale] || errorMessages.id;
       Swal.fire({
         icon: "error",
-        title: error.title,
-        text: error.text,
-        confirmButtonColor: "#d33",
+        title: t.downloadFailed,
+        text: t.downloadFailedDesc,
+        confirmButtonColor: "#0d9488", // awqaf/teal
+        customClass: {
+          popup: "font-comfortaa",
+        },
       });
       return;
     }
@@ -153,7 +265,10 @@ export default function TemplateSuratPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       {/* Header */}
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
@@ -163,15 +278,18 @@ export default function TemplateSuratPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200"
+                  className={`w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200 ${
+                    isRtl ? "rotate-180" : ""
+                  }`}
                 >
-                  <Navigation className="w-5 h-5" />
+                  <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
+
               <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                {t("templateLetter.title")}
+                {t.title}
               </h1>
-              <div className="w-10 h-10" /> {/* Spacer untuk centering */}
+              <div className="w-10 h-10" />
             </div>
           </div>
         </div>
@@ -180,28 +298,32 @@ export default function TemplateSuratPage() {
       <main className="max-w-md mx-auto px-4 py-4 space-y-6">
         {/* Search & Filter Section */}
         <div className="space-y-4">
-          {/* Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search
+              className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 ${
+                isRtl ? "right-3" : "left-3"
+              }`}
+            />
             <Input
-              placeholder={t("templateLetter.searchPlaceholder")}
-              className="pl-9 bg-white border-awqaf-border-light font-comfortaa focus-visible:ring-awqaf-primary"
+              placeholder={t.searchPlaceholder}
+              className={`bg-white border-awqaf-border-light font-comfortaa focus-visible:ring-awqaf-primary ${
+                isRtl ? "pr-9 pl-4" : "pl-9 pr-4"
+              }`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Category Tabs (Horizontal Scroll) */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {CATEGORIES.map((cat) => (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mobile-scroll">
+            {categories.map((cat) => (
               <Button
                 key={cat.id}
                 size="sm"
                 variant={selectedCategory === cat.id ? "default" : "outline"}
                 className={`rounded-full px-4 font-comfortaa text-xs whitespace-nowrap ${
                   selectedCategory === cat.id
-                    ? "bg-awqaf-primary hover:bg-awqaf-primary/90"
-                    : "bg-white/50 border-awqaf-border-light text-awqaf-foreground-secondary"
+                    ? "bg-awqaf-primary hover:bg-awqaf-primary/90 text-white"
+                    : "bg-white/50 border-awqaf-border-light text-awqaf-foreground-secondary hover:bg-accent-50"
                 }`}
                 onClick={() => setSelectedCategory(cat.id)}
               >
@@ -217,20 +339,20 @@ export default function TemplateSuratPage() {
             <div className="flex flex-col items-center justify-center py-10">
               <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary mb-2" />
               <p className="text-sm text-gray-500 font-comfortaa">
-                {t("templateLetter.loading")}
+                {t.loading}
               </p>
             </div>
           ) : isError ? (
             <div className="text-center py-10">
               <p className="text-red-500 font-comfortaa mb-2">
-                {t("templateLetter.failedToLoad")}
+                {t.failedToLoad}
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.location.reload()}
               >
-                {t("templateLetter.tryAgain")}
+                {t.tryAgain}
               </Button>
             </div>
           ) : filteredTemplates.length > 0 ? (
@@ -252,11 +374,10 @@ export default function TemplateSuratPage() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-gray-800 font-comfortaa line-clamp-2 text-sm leading-tight">
+                          <h3 className="font-bold text-gray-800 font-comfortaa line-clamp-2 text-sm leading-tight group-hover:text-awqaf-primary transition-colors">
                             {content.title}
                           </h3>
                         </div>
-                        {/* Render Description HTML */}
                         <div
                           className="text-xs text-gray-500 font-comfortaa mt-1 line-clamp-2"
                           dangerouslySetInnerHTML={{
@@ -264,24 +385,29 @@ export default function TemplateSuratPage() {
                           }}
                         />
 
-                        {/* Footer: Category & Action */}
+                        {/* Footer */}
                         <div className="flex items-center justify-between mt-3">
+                          {/* SERAGAMKAN WARNA BADGE KATEGORI */}
                           <Badge
                             variant="outline"
-                            className={`text-[10px] py-0 h-5 border ${getCategoryColor(
-                              template.category,
-                            )}`}
+                            className="text-[10px] py-0 h-5 border bg-accent-50 text-awqaf-primary border-awqaf-primary/20"
                           >
-                            {template.category}
+                            {categories.find(
+                              (c) =>
+                                c.id.toLowerCase() ===
+                                template.category.toLowerCase(),
+                            )?.label || template.category}
                           </Badge>
 
                           <Button
                             size="sm"
-                            className="h-7 px-3 text-xs bg-accent-50 text-awqaf-primary hover:bg-accent-100 hover:text-awqaf-primary border border-accent-100 font-comfortaa"
+                            className="h-7 px-3 text-xs bg-accent-50 text-awqaf-primary hover:bg-awqaf-primary hover:text-white border border-accent-100 font-comfortaa transition-colors"
                             onClick={() => handleDownload(template.attachment)}
                           >
-                            <Download className="w-3 h-3 mr-1.5" />
-                            {t("templateLetter.download")}
+                            <Download
+                              className={`w-3 h-3 ${isRtl ? "ml-1.5" : "mr-1.5"}`}
+                            />
+                            {t.download}
                           </Button>
                         </div>
                       </div>
@@ -297,34 +423,37 @@ export default function TemplateSuratPage() {
                 <FileJson className="w-8 h-8 text-gray-400" />
               </div>
               <p className="text-gray-900 font-medium font-comfortaa">
-                {t("templateLetter.notFound")}
+                {t.notFound}
               </p>
               <p className="text-xs text-gray-500 font-comfortaa">
-                {t("templateLetter.tryDifferentKeyword")}
+                {t.tryDifferentKeyword}
               </p>
             </div>
           )}
         </div>
 
         {/* Promo / Info Banner */}
-        <Card className="bg-gradient-to-r from-awqaf-primary to-teal-600 border-none text-white overflow-hidden relative">
+        {/* Menggunakan gradien yang senada dengan awqaf-primary saja */}
+        <Card className="bg-gradient-to-r from-awqaf-primary to-awqaf-primary/80 border-none text-white overflow-hidden relative shadow-lg">
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-10 -mt-10" />
           <CardContent className="p-4 relative z-10">
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-bold text-sm font-comfortaa">
-                  {t("templateLetter.needOtherFormat")}
+                  {t.needOtherFormat}
                 </p>
                 <p className="text-xs text-white/80 font-comfortaa">
-                  {t("templateLetter.contactAdmin")}
+                  {t.contactAdmin}
                 </p>
               </div>
               <Button
                 size="icon"
                 variant="secondary"
-                className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 text-white border-0"
+                className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight
+                  className={`w-4 h-4 ${isRtl ? "rotate-180" : ""}`}
+                />
               </Button>
             </div>
           </CardContent>
