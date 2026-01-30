@@ -86,7 +86,7 @@ export default function PrayerTrackerPage() {
             className={`flex-1 font-comfortaa ${
               activeTab === "today"
                 ? "bg-awqaf-primary text-white"
-                : "text-awqaf-foreground-secondary hover:text-awqaf-primary"
+                : "text-awqaf-foreground-secondary hover:text-awqaf-secondary"
             }`}
             onClick={() => setActiveTab("today")}
           >
@@ -98,7 +98,7 @@ export default function PrayerTrackerPage() {
             className={`flex-1 font-comfortaa ${
               activeTab === "monthly"
                 ? "bg-awqaf-primary text-white"
-                : "text-awqaf-foreground-secondary hover:text-awqaf-primary"
+                : "text-awqaf-foreground-secondary hover:text-awqaf-secondary"
             }`}
             onClick={() => setActiveTab("monthly")}
           >

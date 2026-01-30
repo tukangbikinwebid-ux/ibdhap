@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Star, MapPin, Share2, Navigation } from "lucide-react";
 import ImageWithFallback from "./ImageWithFallback";
 import { Place } from "@/types/public/places";
+import { useI18n } from "@/app/hooks/useI18n";
 
 interface RestaurantCardProps {
   place: Place;
@@ -15,10 +16,52 @@ interface RestaurantCardProps {
   };
 }
 
+// --- TYPES & TRANSLATIONS ---
+type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
+
+const CARD_TEXT: Record<
+  LocaleCode,
+  {
+    restaurant: string;
+    distance: string;
+    directions: string;
+  }
+> = {
+  id: {
+    restaurant: "Restoran",
+    distance: "Jarak sekitar",
+    directions: "Petunjuk Arah",
+  },
+  en: {
+    restaurant: "Restaurant",
+    distance: "Distance approx.",
+    directions: "Directions",
+  },
+  ar: {
+    restaurant: "مطعم",
+    distance: "المسافة تقريبًا",
+    directions: "الاتجاهات",
+  },
+  fr: {
+    restaurant: "Restaurant",
+    distance: "Distance env.",
+    directions: "Itinéraire",
+  },
+  kr: { restaurant: "식당", distance: "거리 약", directions: "길찾기" },
+  jp: { restaurant: "レストラン", distance: "距離 約", directions: "道順" },
+};
+
 export default function RestaurantCard({
   place,
   localizedContent,
 }: RestaurantCardProps) {
+  const { locale } = useI18n();
+  const safeLocale = (
+    CARD_TEXT[locale as LocaleCode] ? locale : "id"
+  ) as LocaleCode;
+  const t = CARD_TEXT[safeLocale];
+  const isRtl = safeLocale === "ar";
+
   const renderStars = (rating: string) => {
     const numRating = parseFloat(rating);
     return Array.from({ length: 5 }, (_, index) => (
@@ -49,7 +92,10 @@ export default function RestaurantCard({
   };
 
   return (
-    <Card className="border-awqaf-border-light hover:shadow-lg transition-all duration-300 overflow-hidden group">
+    <Card
+      className="border-awqaf-border-light hover:shadow-lg transition-all duration-300 overflow-hidden group"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       <div className="relative h-48 overflow-hidden">
         <ImageWithFallback
           src={place.image}
@@ -60,7 +106,7 @@ export default function RestaurantCard({
 
         <div className="absolute top-3 left-3 flex flex-col gap-2">
           <Badge className="bg-success text-white text-xs px-2 py-1">
-            Restoran
+            {t.restaurant}
           </Badge>
         </div>
 
@@ -99,7 +145,7 @@ export default function RestaurantCard({
 
           <div className="flex items-center gap-2 text-sm text-awqaf-foreground-secondary">
             <MapPin className="w-4 h-4 flex-shrink-0" />
-            <span className="font-comfortaa line-clamp-1">Jarak sekitar</span>
+            <span className="font-comfortaa line-clamp-1">{t.distance}</span>
             <span className="text-xs bg-accent-100 px-2 py-1 rounded-full font-comfortaa font-bold">
               {place.distance.toFixed(2)} km
             </span>
@@ -134,8 +180,8 @@ export default function RestaurantCard({
               onClick={handleNavigate}
               className="w-full bg-awqaf-primary text-white hover:bg-awqaf-primary/90 font-comfortaa"
             >
-              <Navigation className="w-4 h-4 mr-2" />
-              Petunjuk Arah
+              <Navigation className={`w-4 h-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+              {t.directions}
             </Button>
           </div>
         </div>

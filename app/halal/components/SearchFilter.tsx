@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter, X, Star, MapPin } from "lucide-react";
+import { useI18n } from "@/app/hooks/useI18n";
 
 export interface FilterOptions {
   searchQuery: string;
@@ -18,16 +19,109 @@ interface SearchFilterProps {
   onSearch: (query: string) => void;
 }
 
-const sortOptions = [
-  { label: "Rating Tertinggi", value: "rating" },
-  { label: "Jarak Terdekat", value: "distance" },
-  { label: "Nama A-Z", value: "name" },
-];
+// --- TYPES & TRANSLATIONS ---
+type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
+
+const FILTER_TEXT: Record<
+  LocaleCode,
+  {
+    searchPlaceholder: string;
+    filter: string;
+    title: string;
+    reset: string;
+    sortBy: string;
+    sortRating: string;
+    sortDistance: string;
+    sortName: string;
+    minRating: string;
+    searchRadius: string;
+  }
+> = {
+  id: {
+    searchPlaceholder: "Cari restoran halal...",
+    filter: "Filter",
+    title: "Filter & Urutkan",
+    reset: "Reset",
+    sortBy: "Urutkan berdasarkan:",
+    sortRating: "Rating Tertinggi",
+    sortDistance: "Jarak Terdekat",
+    sortName: "Nama A-Z",
+    minRating: "Rating minimum:",
+    searchRadius: "Radius Pencarian:",
+  },
+  en: {
+    searchPlaceholder: "Search halal restaurants...",
+    filter: "Filter",
+    title: "Filter & Sort",
+    reset: "Reset",
+    sortBy: "Sort by:",
+    sortRating: "Highest Rating",
+    sortDistance: "Nearest Distance",
+    sortName: "Name A-Z",
+    minRating: "Minimum rating:",
+    searchRadius: "Search Radius:",
+  },
+  ar: {
+    searchPlaceholder: "بحث عن مطاعم حلال...",
+    filter: "تصفية",
+    title: "تصفية وترتيب",
+    reset: "إعادة تعيين",
+    sortBy: "ترتيب حسب:",
+    sortRating: "أعلى تقييم",
+    sortDistance: "أقرب مسافة",
+    sortName: "الاسم أ-ي",
+    minRating: "الحد الأدنى للتقييم:",
+    searchRadius: "نطاق البحث:",
+  },
+  fr: {
+    searchPlaceholder: "Rechercher restaurants halal...",
+    filter: "Filtrer",
+    title: "Filtrer et Trier",
+    reset: "Réinitialiser",
+    sortBy: "Trier par :",
+    sortRating: "Meilleure Note",
+    sortDistance: "Distance la plus proche",
+    sortName: "Nom A-Z",
+    minRating: "Note minimum :",
+    searchRadius: "Rayon de recherche :",
+  },
+  kr: {
+    searchPlaceholder: "할랄 식당 검색...",
+    filter: "필터",
+    title: "필터 및 정렬",
+    reset: "초기화",
+    sortBy: "정렬 기준:",
+    sortRating: "최고 평점",
+    sortDistance: "최단 거리",
+    sortName: "이름순",
+    minRating: "최소 평점:",
+    searchRadius: "검색 반경:",
+  },
+  jp: {
+    searchPlaceholder: "ハラールレストランを検索...",
+    filter: "フィルター",
+    title: "フィルターと並べ替え",
+    reset: "リセット",
+    sortBy: "並べ替え:",
+    sortRating: "最高評価",
+    sortDistance: "最短距離",
+    sortName: "名前順",
+    minRating: "最低評価:",
+    searchRadius: "検索範囲:",
+  },
+};
 
 export default function SearchFilter({
   onFilterChange,
   onSearch,
 }: SearchFilterProps) {
+  const { locale } = useI18n();
+  const safeLocale = (
+    FILTER_TEXT[locale as LocaleCode] ? locale : "id"
+  ) as LocaleCode;
+  const t = FILTER_TEXT[safeLocale];
+  const isRtl = safeLocale === "ar";
+
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     searchQuery: "",
@@ -35,6 +129,12 @@ export default function SearchFilter({
     maxDistance: 10,
     sortBy: "distance",
   });
+
+  const sortOptions = [
+    { label: t.sortRating, value: "rating" },
+    { label: t.sortDistance, value: "distance" },
+    { label: t.sortName, value: "name" },
+  ];
 
   const handleSearchChange = (query: string) => {
     setFilters((prev) => ({ ...prev, searchQuery: query }));
@@ -66,18 +166,24 @@ export default function SearchFilter({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir={isRtl ? "rtl" : "ltr"}>
       <Card className="border-awqaf-border-light">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-awqaf-foreground-secondary" />
+              <Search
+                className={`absolute top-1/2 transform -translate-y-1/2 w-4 h-4 text-awqaf-foreground-secondary ${
+                  isRtl ? "right-3" : "left-3"
+                }`}
+              />
               <input
                 type="text"
-                placeholder="Cari restoran halal..."
+                placeholder={t.searchPlaceholder}
                 value={filters.searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-awqaf-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-awqaf-primary focus:border-transparent font-comfortaa text-sm"
+                className={`w-full py-2 border border-awqaf-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-awqaf-primary focus:border-transparent font-comfortaa text-sm ${
+                  isRtl ? "pr-10 pl-4" : "pl-10 pr-4"
+                }`}
               />
             </div>
             <Button
@@ -86,8 +192,8 @@ export default function SearchFilter({
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className="relative border-awqaf-primary text-awqaf-primary hover:bg-awqaf-primary hover:text-white"
             >
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
+              <Filter className={`w-4 h-4 ${isRtl ? "ml-2" : "mr-2"}`} />
+              {t.filter}
               {getActiveFiltersCount() > 0 && (
                 <Badge className="absolute -top-2 -right-2 bg-error text-white text-xs w-5 h-5 p-0 flex items-center justify-center">
                   {getActiveFiltersCount()}
@@ -104,7 +210,7 @@ export default function SearchFilter({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-card-foreground text-sm font-comfortaa">
-                  Filter & Urutkan
+                  {t.title}
                 </h3>
                 <Button
                   variant="ghost"
@@ -112,14 +218,14 @@ export default function SearchFilter({
                   onClick={clearAllFilters}
                   className="text-awqaf-foreground-secondary hover:text-awqaf-primary text-xs"
                 >
-                  <X className="w-3 h-3 mr-1" />
-                  Reset
+                  <X className={`w-3 h-3 ${isRtl ? "ml-1" : "mr-1"}`} />
+                  {t.reset}
                 </Button>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-card-foreground font-comfortaa">
-                  Urutkan berdasarkan:
+                  {t.sortBy}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {sortOptions.map((option) => (
@@ -148,7 +254,7 @@ export default function SearchFilter({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-card-foreground font-comfortaa">
-                  Rating minimum:
+                  {t.minRating}
                 </label>
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4 text-warning" />
@@ -173,7 +279,7 @@ export default function SearchFilter({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-card-foreground font-comfortaa">
-                  Radius Pencarian (API):
+                  {t.searchRadius}
                 </label>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-awqaf-primary" />

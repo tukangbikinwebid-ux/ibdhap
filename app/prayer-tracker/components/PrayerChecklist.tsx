@@ -15,6 +15,7 @@ interface ChecklistTranslations {
   status: {
     completed: string;
     current: string;
+    passed: string; // Tambahan status 'Lewat' jika mau, atau pakai 'Pending'
     pending: string;
   };
   instructionTitle: string;
@@ -37,11 +38,12 @@ const CHECKLIST_TEXT: Record<LocaleCode, ChecklistTranslations> = {
     status: {
       completed: "Selesai",
       current: "Waktunya",
+      passed: "Terlewat",
       pending: "Belum Waktunya",
     },
     instructionTitle: "Petunjuk:",
     instruction1:
-      "Anda hanya bisa menandai sholat yang sudah waktunya atau yang sudah selesai dikerjakan.",
+      "Anda bisa menandai sholat yang sudah waktunya atau yang sudah lewat.",
     instruction2: "Klik pada sholat yang sudah dikerjakan untuk menandainya.",
     prayerNames: {
       fajr: "Subuh",
@@ -57,10 +59,11 @@ const CHECKLIST_TEXT: Record<LocaleCode, ChecklistTranslations> = {
     status: {
       completed: "Completed",
       current: "Time to Pray",
+      passed: "Passed",
       pending: "Upcoming",
     },
     instructionTitle: "Hint:",
-    instruction1: "You can only mark prayers that are current or have passed.",
+    instruction1: "You can mark prayers that are current or have passed.",
     instruction2: "Click on a completed prayer to mark it.",
     prayerNames: {
       fajr: "Fajr",
@@ -76,10 +79,11 @@ const CHECKLIST_TEXT: Record<LocaleCode, ChecklistTranslations> = {
     status: {
       completed: "مكتملة",
       current: "حان الوقت",
+      passed: "فائتة",
       pending: "قادم",
     },
     instructionTitle: "تلميح:",
-    instruction1: "يمكنك فقط تحديد الصلوات التي حان وقتها أو التي انقضت.",
+    instruction1: "يمكنك تحديد الصلوات التي حان وقتها أو التي انقضت.",
     instruction2: "اضغط على الصلاة المكتملة لتحديدها.",
     prayerNames: {
       fajr: "الفجر",
@@ -95,11 +99,11 @@ const CHECKLIST_TEXT: Record<LocaleCode, ChecklistTranslations> = {
     status: {
       completed: "Terminé",
       current: "C'est l'heure",
+      passed: "Passé",
       pending: "À venir",
     },
     instructionTitle: "Indice :",
-    instruction1:
-      "Vous ne pouvez marquer que les prières actuelles ou passées.",
+    instruction1: "Vous pouvez marquer les prières actuelles ou passées.",
     instruction2: "Cliquez sur une prière terminée pour la marquer.",
     prayerNames: {
       fajr: "Fajr",
@@ -115,10 +119,11 @@ const CHECKLIST_TEXT: Record<LocaleCode, ChecklistTranslations> = {
     status: {
       completed: "완료됨",
       current: "기도 시간",
+      passed: "지남",
       pending: "대기 중",
     },
     instructionTitle: "힌트:",
-    instruction1: "현재 시간 또는 지난 기도만 표시할 수 있습니다.",
+    instruction1: "현재 시간 또는 지난 기도를 표시할 수 있습니다.",
     instruction2: "완료된 기도를 클릭하여 표시하세요.",
     prayerNames: {
       fajr: "파즈르",
@@ -134,10 +139,11 @@ const CHECKLIST_TEXT: Record<LocaleCode, ChecklistTranslations> = {
     status: {
       completed: "完了",
       current: "礼拝の時間",
+      passed: "過ぎた",
       pending: "予定",
     },
     instructionTitle: "ヒント:",
-    instruction1: "現在または過去の礼拝のみマークできます。",
+    instruction1: "現在または過去の礼拝をマークできます。",
     instruction2: "完了した礼拝をクリックしてマークしてください。",
     prayerNames: {
       fajr: "ファジュル",
@@ -149,7 +155,6 @@ const CHECKLIST_TEXT: Record<LocaleCode, ChecklistTranslations> = {
   },
 };
 
-// 3. Definisikan tipe PrayerKey agar sesuai dengan keyof PrayerStatus
 export type PrayerKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
 
 interface PrayerTimes {
@@ -181,7 +186,6 @@ export default function PrayerChecklist({
 }: PrayerChecklistProps) {
   const { locale } = useI18n();
 
-  // Safe Locale Access
   const safeLocale = (
     CHECKLIST_TEXT[locale as LocaleCode] ? locale : "id"
   ) as LocaleCode;
@@ -226,20 +230,34 @@ export default function PrayerChecklist({
     },
   ];
 
-  const getPrayerStatus = (prayerKey: string) => {
+  // Helper untuk cek apakah waktu sholat sudah lewat
+  const isTimePassed = (prayerTimeStr: string) => {
+    const now = new Date();
+    const [hours, minutes] = prayerTimeStr.split(":").map(Number);
+    const prayerDate = new Date();
+    prayerDate.setHours(hours, minutes, 0, 0);
+
+    return now > prayerDate;
+  };
+
+  const getPrayerStatus = (prayerKey: string, timeStr: string) => {
     const isCompleted = prayerStatus[prayerKey as PrayerKey];
     const isCurrent = currentPrayer === prayerKey;
+    const hasPassed = isTimePassed(timeStr);
 
     if (isCompleted) return "completed";
     if (isCurrent) return "current";
+    if (hasPassed) return "passed"; // Status baru untuk yang sudah lewat tapi belum dikerjakan
     return "pending";
   };
 
-  const canCheckPrayer = (prayerKey: string) => {
+  const canCheckPrayer = (prayerKey: string, timeStr: string) => {
     const isCompleted = prayerStatus[prayerKey as PrayerKey];
     const isCurrent = currentPrayer === prayerKey;
+    const hasPassed = isTimePassed(timeStr);
 
-    return isCurrent || isCompleted;
+    // IZINKAN JIKA: Sudah lewat waktu (termasuk current) ATAU sudah selesai (buat uncheck)
+    return hasPassed || isCurrent || isCompleted;
   };
 
   const getStatusIcon = (status: string) => {
@@ -248,10 +266,10 @@ export default function PrayerChecklist({
         return <CheckCircle className="w-5 h-5 text-success" />;
       case "current":
         return <Clock className="w-5 h-5 text-warning" />;
+      case "passed": // Icon untuk yang terlewat tapi belum dikerjakan
+        return <AlertCircle className="w-5 h-5 text-red-400" />;
       default:
-        return (
-          <AlertCircle className="w-5 h-5 text-awqaf-foreground-secondary" />
-        );
+        return <Clock className="w-5 h-5 text-gray-300" />;
     }
   };
 
@@ -261,6 +279,8 @@ export default function PrayerChecklist({
         return "bg-success text-white";
       case "current":
         return "bg-warning text-white";
+      case "passed":
+        return "bg-red-100 text-red-600";
       default:
         return "bg-accent-100 text-awqaf-foreground-secondary";
     }
@@ -272,6 +292,8 @@ export default function PrayerChecklist({
         return t.status.completed;
       case "current":
         return t.status.current;
+      case "passed":
+        return t.status.passed || "Lewat"; // Fallback text
       default:
         return t.status.pending;
     }
@@ -298,8 +320,8 @@ export default function PrayerChecklist({
         {/* Prayer List */}
         <div className="space-y-3">
           {prayers.map((prayer) => {
-            const status = getPrayerStatus(prayer.key);
-            const canCheck = canCheckPrayer(prayer.key);
+            const status = getPrayerStatus(prayer.key, prayer.time);
+            const canCheck = canCheckPrayer(prayer.key, prayer.time);
             const isCompleted = prayerStatus[prayer.key];
 
             return (
@@ -308,7 +330,7 @@ export default function PrayerChecklist({
                 className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-200 ${
                   canCheck
                     ? "border-awqaf-border-light hover:bg-accent-50 cursor-pointer"
-                    : "border-awqaf-border-light bg-accent-50/50 cursor-not-allowed"
+                    : "border-awqaf-border-light bg-accent-50/50 cursor-not-allowed opacity-60"
                 } ${
                   status === "current"
                     ? "ring-2 ring-warning/20 bg-warning/5"
@@ -339,23 +361,27 @@ export default function PrayerChecklist({
                     {getStatusText(status)}
                   </Badge>
 
-                  {canCheck && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`w-8 h-8 p-0 rounded-full ${
-                        isCompleted
-                          ? "bg-success text-white hover:bg-success/80"
-                          : "bg-accent-100 text-awqaf-primary hover:bg-accent-200"
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-current" />
-                      )}
-                    </Button>
-                  )}
+                  {/* Render Checkbox visual jika bisa dicek */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`w-8 h-8 p-0 rounded-full ${
+                      isCompleted
+                        ? "bg-success text-white hover:bg-success/80"
+                        : canCheck
+                          ? "bg-accent-100 text-awqaf-primary hover:bg-accent-200"
+                          : "bg-gray-100 text-gray-300"
+                    }`}
+                    disabled={!canCheck}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 ${canCheck ? "border-current" : "border-gray-300"}`}
+                      />
+                    )}
+                  </Button>
                 </div>
               </div>
             );

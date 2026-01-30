@@ -32,79 +32,152 @@ import { useI18n } from "@/app/hooks/useI18n";
 import { Event } from "@/types/public/event";
 
 type FilterType = "all" | "online" | "offline";
+type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
 
 // Translation Maps
-const viewDetailText: Record<string, string> = {
-  id: "Lihat Detail",
-  en: "View Details",
-  ar: "عرض التفاصيل",
-  fr: "Voir les détails",
-  kr: "세부 정보 보기",
-  jp: "詳細を見る",
-};
-
-const labels: Record<
-  string,
+const EVENT_TEXT: Record<
+  LocaleCode,
   {
+    title: string;
+    subtitle: string;
+    all: string;
+    online: string;
+    offline: string;
+    loading: string;
+    failedToLoad: string;
+    viewDetail: string;
+    registerNow: string;
+    notAvailable: string;
     date: string;
     time: string;
     location: string;
     description: string;
-    notAvailable: string;
+    noEvents: string;
+    noEventsInCategory: string;
   }
 > = {
   id: {
+    title: "Event Islami",
+    subtitle: "Ikuti kajian dan acara bermanfaat",
+    all: "Semua",
+    online: "Online",
+    offline: "Offline",
+    loading: "Memuat event...",
+    failedToLoad: "Gagal memuat data event",
+    viewDetail: "Lihat Detail",
+    registerNow: "Daftar Sekarang",
+    notAvailable: "Registrasi Tidak Tersedia",
     date: "Tanggal",
     time: "Waktu",
     location: "Lokasi",
     description: "Deskripsi",
-    notAvailable: "Registrasi Tidak Tersedia",
+    noEvents: "Tidak Ada Event",
+    noEventsInCategory: "Belum ada event untuk kategori ini.",
   },
   en: {
+    title: "Islamic Events",
+    subtitle: "Join beneficial studies and events",
+    all: "All",
+    online: "Online",
+    offline: "Offline",
+    loading: "Loading events...",
+    failedToLoad: "Failed to load events",
+    viewDetail: "View Details",
+    registerNow: "Register Now",
+    notAvailable: "Registration Not Available",
     date: "Date",
     time: "Time",
     location: "Location",
     description: "Description",
-    notAvailable: "Registration Not Available",
+    noEvents: "No Events",
+    noEventsInCategory: "No events in this category yet.",
   },
   ar: {
+    title: "فعاليات إسلامية",
+    subtitle: "انضم إلى الدراسات والفعاليات المفيدة",
+    all: "الكل",
+    online: "عبر الإنترنت",
+    offline: "حضوري",
+    loading: "جار تحميل الفعاليات...",
+    failedToLoad: "فشل تحميل الفعاليات",
+    viewDetail: "عرض التفاصيل",
+    registerNow: "سجل الآن",
+    notAvailable: "التسجيل غير متاح",
     date: "تاريخ",
     time: "وقت",
     location: "موقع",
     description: "وصف",
-    notAvailable: "التسجيل غير متاح",
+    noEvents: "لا توجد فعاليات",
+    noEventsInCategory: "لا توجد فعاليات في هذه الفئة بعد.",
   },
   fr: {
+    title: "Événements Islamiques",
+    subtitle: "Rejoignez des études et événements bénéfiques",
+    all: "Tout",
+    online: "En ligne",
+    offline: "Hors ligne",
+    loading: "Chargement...",
+    failedToLoad: "Échec du chargement",
+    viewDetail: "Voir les détails",
+    registerNow: "S'inscrire",
+    notAvailable: "Inscription non disponible",
     date: "Date",
-    time: "Temps",
+    time: "Heure",
     location: "Lieu",
     description: "Description",
-    notAvailable: "Inscription non disponible",
+    noEvents: "Aucun événement",
+    noEventsInCategory: "Pas encore d'événements dans cette catégorie.",
   },
   kr: {
+    title: "이슬람 행사",
+    subtitle: "유익한 공부와 행사에 참여하세요",
+    all: "전체",
+    online: "온라인",
+    offline: "오프라인",
+    loading: "로딩 중...",
+    failedToLoad: "로드 실패",
+    viewDetail: "세부 정보 보기",
+    registerNow: "지금 등록",
+    notAvailable: "등록 불가",
     date: "날짜",
     time: "시간",
     location: "위치",
     description: "설명",
-    notAvailable: "등록 불가",
+    noEvents: "행사 없음",
+    noEventsInCategory: "이 카테고리에는 아직 행사가 없습니다.",
   },
   jp: {
+    title: "イスラムイベント",
+    subtitle: "有益な勉強会やイベントに参加しましょう",
+    all: "すべて",
+    online: "オンライン",
+    offline: "オフライン",
+    loading: "読み込み中...",
+    failedToLoad: "読み込みに失敗しました",
+    viewDetail: "詳細を見る",
+    registerNow: "今すぐ登録",
+    notAvailable: "登録できません",
     date: "日付",
     time: "時間",
-    location: "位置",
+    location: "場所",
     description: "説明",
-    notAvailable: "登録できません",
+    noEvents: "イベントなし",
+    noEventsInCategory: "このカテゴリにはまだイベントがありません。",
   },
 };
 
 export default function EventPage() {
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Helper untuk mendapatkan label statis
-  const currentLabels = labels[locale] || labels.id;
+  // Safe Locale Access
+  const safeLocale = (
+    EVENT_TEXT[locale as LocaleCode] ? locale : "id"
+  ) as LocaleCode;
+  const t = EVENT_TEXT[safeLocale];
+  const isRtl = safeLocale === "ar";
 
   // Fetch Events from API
   const {
@@ -118,31 +191,14 @@ export default function EventPage() {
 
   // --- HELPER TRANSLATION ---
   const getEventContent = (event: Event) => {
-    // 1. Cari translation sesuai locale aktif
     const localized = event.translations.find((t) => t.locale === locale);
-
-    // 2. Jika ada dan title tidak kosong
-    if (localized && localized.title) {
-      return {
-        title: localized.title,
-        description: localized.description ?? "", // Handle null
-      };
-    }
-
-    // 3. Fallback ke 'id' jika locale aktif kosong
     const idFallback = event.translations.find((t) => t.locale === "id");
-    if (idFallback && idFallback.title) {
-      return {
-        title: idFallback.title,
-        description: idFallback.description ?? "", // Handle null
-      };
-    }
 
-    // 4. Fallback terakhir ke root object
-    return {
-      title: event.title,
-      description: event.description ?? "", // Handle null
-    };
+    const title = localized?.title || idFallback?.title || event.title;
+    const description =
+      localized?.description || idFallback?.description || event.description;
+
+    return { title, description };
   };
   // --------------------------
 
@@ -157,17 +213,17 @@ export default function EventPage() {
       kr: "ko-KR",
       jp: "ja-JP",
     };
-    const currentLocale = localeMap[locale] || "id-ID";
+    const currentLocaleStr = localeMap[safeLocale] || "id-ID";
     return {
-      day: date.toLocaleDateString(currentLocale, { day: "numeric" }),
-      month: date.toLocaleDateString(currentLocale, { month: "short" }),
-      fullDate: date.toLocaleDateString(currentLocale, {
+      day: date.toLocaleDateString(currentLocaleStr, { day: "numeric" }),
+      month: date.toLocaleDateString(currentLocaleStr, { month: "short" }),
+      fullDate: date.toLocaleDateString(currentLocaleStr, {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       }),
-      time: date.toLocaleTimeString(currentLocale, {
+      time: date.toLocaleTimeString(currentLocaleStr, {
         hour: "2-digit",
         minute: "2-digit",
       }),
@@ -193,27 +249,35 @@ export default function EventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       {/* Header Sticky */}
-      <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-awqaf-border-light shadow-sm">
+      <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full -ml-2 hover:bg-accent-100 text-awqaf-primary"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                {t("event.title")}
-              </h1>
-              <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                {t("event.subtitle")}
-              </p>
+          <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
+            <div className="flex items-center justify-between">
+              <Link href="/">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200 ${
+                    isRtl ? "rotate-180" : ""
+                  }`}
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+              </Link>
+              <div className="text-center">
+                <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
+                  {t.title}
+                </h1>
+                <p className="text-[10px] text-awqaf-foreground-secondary font-comfortaa">
+                  {t.subtitle}
+                </p>
+              </div>
+              <div className="w-10 h-10"></div>
             </div>
           </div>
         </div>
@@ -221,11 +285,11 @@ export default function EventPage() {
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
         {/* Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2 mobile-scroll items-center">
           {[
-            { id: "all", label: t("event.all"), icon: Calendar },
-            { id: "online", label: t("event.online"), icon: Video },
-            { id: "offline", label: t("event.offline"), icon: MapPin },
+            { id: "all", label: t.all, icon: Calendar },
+            { id: "online", label: t.online, icon: Video },
+            { id: "offline", label: t.offline, icon: MapPin },
           ].map((item) => (
             <Button
               key={item.id}
@@ -233,7 +297,7 @@ export default function EventPage() {
               variant={filter === item.id ? "default" : "outline"}
               className={`rounded-full px-4 font-comfortaa text-xs h-9 gap-2 transition-all ${
                 filter === item.id
-                  ? "bg-awqaf-primary hover:bg-awqaf-primary/90"
+                  ? "bg-awqaf-primary hover:bg-awqaf-primary/90 text-white"
                   : "bg-white border-awqaf-border-light text-gray-500 hover:bg-gray-50"
               }`}
               onClick={() => setFilter(item.id as FilterType)}
@@ -250,12 +314,12 @@ export default function EventPage() {
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary mb-2" />
               <p className="text-sm text-gray-500 font-comfortaa">
-                {t("event.loading")}
+                {t.loading}
               </p>
             </div>
           ) : isError ? (
             <div className="text-center py-12 text-red-500 font-comfortaa text-sm">
-              {t("event.failedToLoad")}
+              {t.failedToLoad}
             </div>
           ) : filteredEvents.length > 0 ? (
             filteredEvents.map((evt) => {
@@ -348,7 +412,7 @@ export default function EventPage() {
                         className="mt-3 w-full group-hover:text-white group-hover:bg-awqaf-primary/90 transition-colors"
                       >
                         <span className="text-[10px] text-awqaf-primary group-hover:text-white font-comfortaa flex items-center justify-center gap-1 w-full">
-                          {viewDetailText[locale] || "Lihat Detail"}
+                          {t.viewDetail}
                           <Info className="w-3 h-3" />
                         </span>
                       </Button>
@@ -364,10 +428,10 @@ export default function EventPage() {
                 <Ticket className="w-10 h-10 text-gray-300" />
               </div>
               <h3 className="font-bold text-gray-800 font-comfortaa">
-                {t("event.noEvents")}
+                {t.noEvents}
               </h3>
               <p className="text-sm text-gray-500 font-comfortaa">
-                {t("event.noEventsInCategory")}
+                {t.noEventsInCategory}
               </p>
             </div>
           )}
@@ -409,7 +473,7 @@ export default function EventPage() {
                   )}
 
                   <div className="p-6 space-y-4">
-                    <DialogHeader className="p-0">
+                    <DialogHeader className="p-0 text-left">
                       <DialogTitle className="text-xl font-bold text-awqaf-primary font-comfortaa leading-tight">
                         {content.title}
                       </DialogTitle>
@@ -430,8 +494,7 @@ export default function EventPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-gray-500 text-xs uppercase font-bold">
-                          <Calendar className="w-3.5 h-3.5" />{" "}
-                          {currentLabels.date}
+                          <Calendar className="w-3.5 h-3.5" /> {t.date}
                         </div>
                         <p className="text-sm font-semibold text-gray-800">
                           {dateInfo.fullDate}
@@ -439,7 +502,7 @@ export default function EventPage() {
                       </div>
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-gray-500 text-xs uppercase font-bold">
-                          <Clock className="w-3.5 h-3.5" /> {currentLabels.time}
+                          <Clock className="w-3.5 h-3.5" /> {t.time}
                         </div>
                         <p className="text-sm font-semibold text-gray-800">
                           {dateInfo.time} WIB
@@ -450,8 +513,7 @@ export default function EventPage() {
                     {/* Location */}
                     <div className="flex flex-col gap-1 border-t border-b border-gray-100 py-3">
                       <div className="flex items-center gap-2 text-gray-500 text-xs uppercase font-bold">
-                        <MapPin className="w-3.5 h-3.5" />{" "}
-                        {currentLabels.location}
+                        <MapPin className="w-3.5 h-3.5" /> {t.location}
                       </div>
                       <p className="text-sm text-gray-800 leading-relaxed">
                         {selectedEvent.location}
@@ -461,7 +523,7 @@ export default function EventPage() {
                     {/* Description (HTML) */}
                     <div className="space-y-2">
                       <h4 className="font-bold text-sm text-gray-800 font-comfortaa">
-                        {currentLabels.description}
+                        {t.description}
                       </h4>
                       {/* FIXED: Added fallback string for null description */}
                       <div
@@ -482,12 +544,12 @@ export default function EventPage() {
                           window.open(selectedEvent.registration_link, "_blank")
                         }
                       >
-                        {t("event.registerNow")}{" "}
+                        {t.registerNow}{" "}
                         <ExternalLink className="w-4 h-4 ml-2" />
                       </Button>
                     ) : (
                       <Button variant="outline" className="w-full" disabled>
-                        {currentLabels.notAvailable}
+                        {t.notAvailable}
                       </Button>
                     )}
                   </DialogFooter>

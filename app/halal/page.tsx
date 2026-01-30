@@ -13,8 +13,86 @@ import { useGetPlacesQuery } from "@/services/public/places.service";
 import { Place } from "@/types/public/places";
 import { useI18n } from "@/app/hooks/useI18n";
 
+// --- TYPES ---
+type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
+
+interface HalalPageTranslations {
+  title: string;
+  subtitle: string;
+  loading: string;
+  placesFound: string;
+  near: string;
+  noPlacesFound: string;
+  tryDifferent: string;
+}
+
+const HALAL_TEXT: Record<LocaleCode, HalalPageTranslations> = {
+  id: {
+    title: "Kuliner Halal",
+    subtitle: "Temukan makanan halal terdekat",
+    loading: "Memuat...",
+    placesFound: "Tempat Ditemukan",
+    near: "Sekitar",
+    noPlacesFound: "Tidak ada restoran ditemukan",
+    tryDifferent: "Coba ubah filter jarak atau cari lokasi lain.",
+  },
+  en: {
+    title: "Halal Culinary",
+    subtitle: "Find nearest halal food",
+    loading: "Loading...",
+    placesFound: "Places Found",
+    near: "Near",
+    noPlacesFound: "No restaurants found",
+    tryDifferent: "Try changing distance filter or search another location.",
+  },
+  ar: {
+    title: "مأكولات حلال",
+    subtitle: "اعثر على أقرب طعام حلال",
+    loading: "جار التحميل...",
+    placesFound: "أماكن تم العثور عليها",
+    near: "بالقرب من",
+    noPlacesFound: "لم يتم العثور على مطاعم",
+    tryDifferent: "حاول تغيير مرشح المسافة أو البحث في موقع آخر.",
+  },
+  fr: {
+    title: "Cuisine Halal",
+    subtitle: "Trouver de la nourriture halal à proximité",
+    loading: "Chargement...",
+    placesFound: "Lieux Trouvés",
+    near: "Près de",
+    noPlacesFound: "Aucun restaurant trouvé",
+    tryDifferent:
+      "Essayez de changer le filtre de distance ou cherchez un autre lieu.",
+  },
+  kr: {
+    title: "할랄 음식",
+    subtitle: "가까운 할랄 음식 찾기",
+    loading: "로딩 중...",
+    placesFound: "발견된 장소",
+    near: "근처",
+    noPlacesFound: "식당을 찾을 수 없습니다",
+    tryDifferent: "거리 필터를 변경하거나 다른 위치를 검색해보세요.",
+  },
+  jp: {
+    title: "ハラール料理",
+    subtitle: "近くのハラール食品を探す",
+    loading: "読み込み中...",
+    placesFound: "見つかった場所",
+    near: "近く",
+    noPlacesFound: "レストランが見つかりません",
+    tryDifferent:
+      "距離フィルターを変更するか、別の場所を検索してみてください。",
+  },
+};
+
 export default function HalalPage() {
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
+  // Safe Locale Access
+  const safeLocale = (
+    HALAL_TEXT[locale as LocaleCode] ? locale : "id"
+  ) as LocaleCode;
+  const t = HALAL_TEXT[safeLocale];
+  const isRtl = safeLocale === "ar";
 
   const [currentLocation, setCurrentLocation] = useState<LocationData>({
     name: "Jakarta",
@@ -98,7 +176,10 @@ export default function HalalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
@@ -108,17 +189,19 @@ export default function HalalPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-10 h-10 p-0 rounded-full bg-accent-100 hover:bg-accent-200 hover:text-awqaf-primary transition-colors duration-200"
+                    className={`w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200 ${
+                      isRtl ? "rotate-180" : ""
+                    }`}
                   >
                     <ArrowLeft className="w-5 h-5 text-awqaf-primary" />
                   </Button>
                 </Link>
                 <div>
                   <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                    {t("halal.title") || "Kuliner Halal"}
+                    {t.title}
                   </h1>
                   <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    {t("halal.subtitle") || "Temukan makanan halal terdekat"}
+                    {t.subtitle}
                   </p>
                 </div>
               </div>
@@ -148,14 +231,14 @@ export default function HalalPage() {
                 <MapPin className="w-4 h-4 text-awqaf-primary" />
                 <span className="text-sm font-medium text-awqaf-primary font-comfortaa">
                   {isLoading || isFetching
-                    ? "Memuat..."
-                    : `${filteredPlaces.length} Tempat Ditemukan`}
+                    ? t.loading
+                    : `${filteredPlaces.length} ${t.placesFound}`}
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 text-warning" />
                 <span className="text-xs text-awqaf-foreground-secondary font-comfortaa max-w-[150px] truncate">
-                  Sekitar {currentLocation.name}
+                  {t.near} {currentLocation.name}
                 </span>
               </div>
             </div>
@@ -188,10 +271,10 @@ export default function HalalPage() {
                   <UtensilsCrossed className="w-8 h-8 text-awqaf-foreground-secondary" />
                 </div>
                 <h3 className="text-lg font-semibold text-awqaf-foreground-secondary font-comfortaa mb-2">
-                  Tidak ada restoran ditemukan
+                  {t.noPlacesFound}
                 </h3>
                 <p className="text-sm text-awqaf-foreground-tertiary font-comfortaa">
-                  Coba ubah filter jarak atau cari lokasi lain.
+                  {t.tryDifferent}
                 </p>
               </CardContent>
             </Card>
