@@ -12,6 +12,7 @@ export interface TypeTranslation {
   content: string;
   definition: string;
   event_id: number;
+  audio: string;
 }
 export interface DoaCategory {
   id: number;

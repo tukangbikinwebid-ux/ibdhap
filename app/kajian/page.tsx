@@ -1,28 +1,18 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import {
-  Play,
-  Clock,
-  Users,
-  RefreshCw,
-  GraduationCap,
-  Loader2,
-  Search,
-  X,
-} from "lucide-react";
+import { Play, Clock, GraduationCap, Search, X, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-// Import Services & Types
 import {
   useGetUstadzListQuery,
   useGetKajianListQuery,
 } from "@/services/public/kajian.service";
-// Import i18n
 import { useI18n } from "@/app/hooks/useI18n";
-// Import Type (Asumsi tipe Kajian sudah update ada translations)
 import { Kajian } from "@/types/public/kajian";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 // Loading Skeleton Component
 const KajianSkeleton = () => {
@@ -46,7 +36,13 @@ const KajianSkeleton = () => {
 };
 
 export default function KajianPage() {
+  const router = useRouter();
   const { t, locale } = useI18n();
+
+  // --- PERBAIKAN DI SINI ---
+  // Definisikan isRtl langsung dari locale
+  const isRtl = locale === "ar";
+
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [selectedUstadzId, setSelectedUstadzId] = useState<number | undefined>(
     undefined,
@@ -54,7 +50,6 @@ export default function KajianPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -63,67 +58,53 @@ export default function KajianPage() {
   }, [searchQuery]);
 
   // --- HELPER TRANSLATION ---
-  // Fungsi untuk mendapatkan konten kajian sesuai bahasa aktif
   const getKajianContent = (item: Kajian) => {
-    // 1. Cari translation sesuai locale aktif
     const localized = item.translations.find((t) => t.locale === locale);
-
-    // 2. Jika ada dan title tidak kosong
-    if (localized && localized.title) {
-      return {
-        title: localized.title,
-        description: localized.description,
-      };
-    }
-
-    // 3. Fallback ke 'id' jika locale aktif kosong
     const idFallback = item.translations.find((t) => t.locale === "id");
-    if (idFallback && idFallback.title) {
-      return {
-        title: idFallback.title,
-        description: idFallback.description,
-      };
-    }
 
-    // 4. Fallback terakhir ke root object
+    const isValid = (str?: string | null) => str && str.trim() !== "";
+
     return {
-      title: item.title,
-      description: item.description,
+      title:
+        (isValid(localized?.title) ? localized!.title : null) ||
+        (isValid(idFallback?.title) ? idFallback!.title : null) ||
+        item.title,
+
+      description:
+        (isValid(localized?.description) ? localized!.description : null) ||
+        (isValid(idFallback?.description) ? idFallback!.description : null) ||
+        item.description,
+
+      audio:
+        (isValid(localized?.audio) ? localized!.audio : null) ||
+        (isValid(idFallback?.audio) ? idFallback!.audio : null) ||
+        item.audio,
     };
   };
   // --------------------------
 
-  // 1. Fetch Ustadz List (untuk filter dropdown)
   const { data: ustadzData, isLoading: isLoadingUstadz } =
     useGetUstadzListQuery({
       page: 1,
-      paginate: 100, // Ambil semua ustadz
+      paginate: 100,
     });
 
-  // 2. Fetch Kajian List
-  const {
-    data: kajianData,
-    isLoading: isLoadingKajian,
-    refetch,
-  } = useGetKajianListQuery({
-    page: 1,
-    paginate: 50, // Increase pagination untuk lebih banyak data
-    ustadz_id: selectedUstadzId,
-  });
+  const { data: kajianData, isLoading: isLoadingKajian } =
+    useGetKajianListQuery({
+      page: 1,
+      paginate: 50,
+      ustadz_id: selectedUstadzId,
+    });
 
-  // Filter & Sort Logic (Client-side filtering dan sorting)
   const filteredKajian = useMemo(() => {
     if (!kajianData?.data) return [];
 
     let list = [...kajianData.data];
 
-    // Filter by search query
     if (debouncedSearchQuery) {
       const query = debouncedSearchQuery.toLowerCase();
       list = list.filter((k) => {
-        // Gunakan konten yang sudah dilokalisasi untuk pencarian
         const content = getKajianContent(k);
-
         return (
           content.title.toLowerCase().includes(query) ||
           (content.description &&
@@ -133,7 +114,6 @@ export default function KajianPage() {
       });
     }
 
-    // Sort by date
     list.sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
@@ -141,9 +121,8 @@ export default function KajianPage() {
     });
 
     return list;
-  }, [kajianData, sortBy, debouncedSearchQuery, locale]); // Add locale dependency
+  }, [kajianData, sortBy, debouncedSearchQuery, locale]);
 
-  // Helper formatting
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -160,14 +139,34 @@ export default function KajianPage() {
     selectedUstadzId !== undefined || sortBy !== "newest" || searchQuery !== "";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
-      {/* Header */}
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
-            <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
-              {t("kajian.title")}
-            </h1>
+            <div className="flex items-center justify-between">
+              {/* --- TOMBOL BACK DIPERBAIKI --- */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/")}
+                className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+              >
+                <ArrowLeft
+                  className={`w-5 h-5 text-awqaf-primary ${isRtl ? "rotate-180" : ""}`}
+                />
+              </Button>
+
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center flex-1">
+                {t("kajian.title")}
+              </h1>
+
+              {/* Spacer untuk menyeimbangkan layout header */}
+              <div className="w-10 h-10" />
+            </div>
+
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
               {t("kajian.subtitle")}
             </p>
@@ -175,6 +174,7 @@ export default function KajianPage() {
         </div>
       </header>
 
+      {/* ... Sisa konten main ... */}
       <main className="max-w-md mx-auto px-4 py-6">
         {/* Banner */}
         <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200 mb-6">
@@ -199,25 +199,26 @@ export default function KajianPage() {
         <Card className="border-awqaf-border-light mb-4">
           <CardContent className="p-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-awqaf-foreground-secondary" />
+              <Search
+                className={`absolute top-1/2 transform -translate-y-1/2 w-5 h-5 text-awqaf-foreground-secondary ${isRtl ? "right-3" : "left-3"}`}
+              />
               <Input
                 type="text"
                 placeholder={t("kajian.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10 border-awqaf-border-light bg-background text-awqaf-foreground placeholder-awqaf-foreground-secondary font-comfortaa focus-visible:ring-2 focus-visible:ring-awqaf-primary"
+                className={`border-awqaf-border-light bg-background text-awqaf-foreground placeholder-awqaf-foreground-secondary font-comfortaa focus-visible:ring-2 focus-visible:ring-awqaf-primary ${isRtl ? "pr-10 pl-10" : "pl-10 pr-10"}`}
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-awqaf-foreground-secondary hover:text-awqaf-primary transition-colors"
+                  className={`absolute top-1/2 transform -translate-y-1/2 text-awqaf-foreground-secondary hover:text-awqaf-primary transition-colors ${isRtl ? "left-3" : "right-3"}`}
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 mt-2">
-              {/* Sort select */}
               <div className="flex-1">
                 <label className="block text-xs mb-1 text-awqaf-foreground-secondary font-comfortaa">
                   {t("kajian.sortBy")}
@@ -234,7 +235,6 @@ export default function KajianPage() {
                 </select>
               </div>
 
-              {/* Ustadz select */}
               <div className="flex-1">
                 <label className="block text-xs mb-1 text-awqaf-foreground-secondary font-comfortaa">
                   {t("kajian.ustadz")}
@@ -265,7 +265,6 @@ export default function KajianPage() {
                   onClick={resetFilters}
                   className="px-3 py-2 rounded-md text-sm border bg-background border-awqaf-border-light hover:bg-accent-50 hover:text-awqaf-primary transition-colors duration-200 flex items-center gap-2 font-comfortaa"
                 >
-                  <RefreshCw className="w-4 h-4" />
                   {t("kajian.resetFilter")}
                 </button>
               </div>
@@ -292,14 +291,15 @@ export default function KajianPage() {
             ) : filteredKajian.length > 0 ? (
               <div className="space-y-3">
                 {filteredKajian.map((k) => {
-                  // Ambil konten localized untuk item ini
                   const content = getKajianContent(k);
 
                   return (
                     <Link key={k.id} href={`/kajian/${k.id}`}>
                       <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-accent-50 transition-all duration-200 cursor-pointer border border-transparent hover:border-awqaf-border-light">
                         <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-accent-200 transition-colors duration-200">
-                          <Play className="w-5 h-5 text-awqaf-primary ml-1" />
+                          <Play
+                            className={`w-5 h-5 text-awqaf-primary ${isRtl ? "mr-1" : "ml-1"}`}
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-semibold text-card-foreground font-comfortaa text-sm line-clamp-2 mb-1">
@@ -335,11 +335,6 @@ export default function KajianPage() {
                                 },
                               )}
                             </div>
-                            {/* Views simulation since API doesn't provide it yet */}
-                            <div className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />{" "}
-                              {((k.id * 123) % 1000).toLocaleString("id-ID")}
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -364,20 +359,6 @@ export default function KajianPage() {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Access */}
-        <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h4 className="font-semibold text-awqaf-primary font-comfortaa mb-2">
-                {t("kajian.quickAccess")}
-              </h4>
-              <p className="text-awqaf-foreground-secondary text-sm font-comfortaa">
-                {t("kajian.getNotifications")}
-              </p>
-            </div>
           </CardContent>
         </Card>
       </main>

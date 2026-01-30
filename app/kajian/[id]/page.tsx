@@ -15,9 +15,7 @@ import {
   Volume2,
 } from "lucide-react";
 import Image from "next/image";
-// Import Service
 import { useGetKajianListQuery } from "@/services/public/kajian.service";
-// Import i18n
 import { useI18n } from "@/app/hooks/useI18n";
 import { Kajian } from "@/types/public/kajian";
 import { LocaleCode } from "@/lib/i18n";
@@ -25,38 +23,51 @@ import { LocaleCode } from "@/lib/i18n";
 interface TranslationKeys {
   title: string;
   notFound: string;
+  description: string;
+  audioNotAvailable: string;
 }
 
-// --- 2. DICTIONARY TRANSLATION LOKAL ---
 const UI_TRANSLATIONS: Record<LocaleCode, TranslationKeys> = {
   id: {
     title: "Kajian Audio",
     notFound: "Kajian tidak ditemukan.",
+    description: "Deskripsi",
+    audioNotAvailable: "Audio tidak tersedia untuk bahasa ini.",
   },
   en: {
     title: "Audio Lecture",
     notFound: "Lecture not found.",
+    description: "Description",
+    audioNotAvailable: "Audio not available for this language.",
   },
   ar: {
     title: "محاضرة صوتية",
     notFound: "المحاضرة غير موجودة.",
+    description: "وصف",
+    audioNotAvailable: "الصوت غير متوفر لهذه اللغة.",
   },
   fr: {
     title: "Conférence Audio",
     notFound: "Conférence introuvable.",
+    description: "Description",
+    audioNotAvailable: "Audio non disponible pour cette langue.",
   },
   kr: {
     title: "오디오 강의",
     notFound: "강의를 찾을 수 없습니다.",
+    description: "설명",
+    audioNotAvailable: "이 언어로는 오디오를 사용할 수 없습니다.",
   },
   jp: {
     title: "音声講義",
     notFound: "講義が見つかりません。",
+    description: "説明",
+    audioNotAvailable: "この言語の音声は利用できません。",
   },
 };
 
 export default function KajianDetailPage() {
-  const { locale } = useI18n(); // Ambil locale dari hook
+  const { locale } = useI18n();
   const params = useParams();
   const router = useRouter();
   const kajianId = Number(params.id);
@@ -68,37 +79,31 @@ export default function KajianDetailPage() {
   const t = UI_TRANSLATIONS[currentLocale];
   const isRtl = currentLocale === "ar";
 
-  // --- HELPER TRANSLATION (Konten Dinamis) ---
+  // --- HELPER TRANSLATION (UPDATED) ---
   const getKajianContent = (item: Kajian) => {
-    // 1. Cari translation sesuai locale aktif
     const localized = item.translations.find((t) => t.locale === locale);
-
-    // 2. Jika ada dan title tidak kosong
-    if (localized && localized.title) {
-      return {
-        title: localized.title,
-        description: localized.description,
-      };
-    }
-
-    // 3. Fallback ke 'id' jika locale aktif kosong
     const idFallback = item.translations.find((t) => t.locale === "id");
-    if (idFallback && idFallback.title) {
-      return {
-        title: idFallback.title,
-        description: idFallback.description,
-      };
-    }
 
-    // 4. Fallback terakhir ke root object
+    const isValid = (str?: string | null) => str && str.trim() !== "";
+
     return {
-      title: item.title,
-      description: item.description,
+      title:
+        (isValid(localized?.title) ? localized!.title : null) ||
+        (isValid(idFallback?.title) ? idFallback!.title : null) ||
+        item.title,
+
+      description:
+        (isValid(localized?.description) ? localized!.description : null) ||
+        (isValid(idFallback?.description) ? idFallback!.description : null) ||
+        item.description,
+
+      audio:
+        (isValid(localized?.audio) ? localized!.audio : null) ||
+        (isValid(idFallback?.audio) ? idFallback!.audio : null) ||
+        item.audio,
     };
   };
-  // --------------------------
 
-  // Fetch Kajian List
   const { data: kajianData, isLoading } = useGetKajianListQuery({
     page: 1,
     paginate: 100,
@@ -109,9 +114,8 @@ export default function KajianDetailPage() {
     [kajianData, kajianId],
   );
 
-  // Localized Content State
   const content = useMemo(() => {
-    if (!kajian) return { title: "", description: "" };
+    if (!kajian) return { title: "", description: "", audio: "" };
     return getKajianContent(kajian);
   }, [kajian, locale]);
 
@@ -121,19 +125,25 @@ export default function KajianDetailPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  useEffect(() => {
-    if (!kajian?.audio) return;
+  // Calculate percentage for slider background
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
-    const el = new Audio(kajian.audio);
+  useEffect(() => {
+    if (!content.audio) return;
+
+    const el = new Audio(content.audio);
     audioRef.current = el;
 
     const onTime = () => setCurrentTime(el.currentTime);
-    const onLoaded = () => setDuration(el.duration || kajian.duration || 0);
+    const onLoaded = () => setDuration(el.duration || kajian?.duration || 0);
     const onEnded = () => setIsPlaying(false);
 
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onLoaded);
     el.addEventListener("ended", onEnded);
+
+    setIsPlaying(false);
+    setCurrentTime(0);
 
     return () => {
       el.pause();
@@ -141,7 +151,7 @@ export default function KajianDetailPage() {
       el.removeEventListener("loadedmetadata", onLoaded);
       el.removeEventListener("ended", onEnded);
     };
-  }, [kajian]);
+  }, [content.audio, kajian?.duration]);
 
   const togglePlay = () => {
     const el = audioRef.current;
@@ -178,7 +188,6 @@ export default function KajianDetailPage() {
     setCurrentTime(newTime);
   };
 
-  // Helper Format Tanggal Lokal
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const localeMap: Record<string, string> = {
@@ -242,7 +251,7 @@ export default function KajianDetailPage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        {/* Info */}
+        {/* Info Card */}
         <Card className="border-awqaf-border-light">
           <CardContent className="p-4 space-y-2">
             <h2 className="font-semibold text-card-foreground font-comfortaa text-lg leading-tight">
@@ -258,7 +267,7 @@ export default function KajianDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Audio Player */}
+        {/* Audio Player Card */}
         <Card className="border-awqaf-border-light">
           <CardContent className="pt-6">
             <div className="rounded-xl overflow-hidden border border-awqaf-border-light mb-4 relative bg-gray-100">
@@ -283,19 +292,15 @@ export default function KajianDetailPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setLike((v) => !v)}
-                className={`w-8 h-8 p-0 rounded-full ${
-                  like ? "bg-red-100" : "bg-accent-100"
-                }`}
+                className={`w-8 h-8 p-0 rounded-full ${like ? "bg-red-100" : "bg-accent-100"}`}
               >
                 <Heart
-                  className={`w-4 h-4 ${
-                    like ? "text-red-500 fill-red-500" : "text-awqaf-primary"
-                  }`}
+                  className={`w-4 h-4 ${like ? "text-red-500 fill-red-500" : "text-awqaf-primary"}`}
                 />
               </Button>
             </div>
 
-            {/* Progress bar */}
+            {/* CUSTOM SLIDER WITH DYNAMIC BACKGROUND */}
             <div className="mb-6 px-1">
               <input
                 type="range"
@@ -303,17 +308,49 @@ export default function KajianDetailPage() {
                 max={Math.max(0, Math.floor(duration || 0))}
                 value={Math.floor(currentTime)}
                 onChange={(e) => handleSeek(Number(e.target.value))}
-                className="w-full accent-awqaf-primary h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                dir="ltr" // Selalu LTR untuk slider agar tidak terbalik di mode RTL
+                disabled={!content.audio}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-0 disabled:opacity-50"
+                style={{
+                  background: `linear-gradient(to right, #C8A97E 0%, #C8A97E ${progressPercent}%, #E5E7EB ${progressPercent}%, #E5E7EB 100%)`,
+                }}
+                dir="ltr"
               />
+              <style jsx>{`
+                input[type="range"]::-webkit-slider-thumb {
+                  -webkit-appearance: none;
+                  appearance: none;
+                  width: 16px;
+                  height: 16px;
+                  background: #8b6e4e; /* Warna coklat tua untuk thumb */
+                  border-radius: 50%;
+                  cursor: pointer;
+                  border: 2px solid white;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                  transition: transform 0.1s;
+                }
+                input[type="range"]::-webkit-slider-thumb:hover {
+                  transform: scale(1.1);
+                }
+                input[type="range"]::-moz-range-thumb {
+                  width: 16px;
+                  height: 16px;
+                  background: #8b6e4e;
+                  border-radius: 50%;
+                  cursor: pointer;
+                  border: 2px solid white;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+              `}</style>
             </div>
 
+            {/* Controls */}
             <div className="flex items-center justify-center gap-6 pb-2">
               <Button
                 variant="outline"
                 size="icon"
                 className="rounded-full w-10 h-10 border-2"
                 onClick={() => seekBy(-15)}
+                disabled={!content.audio}
               >
                 <RotateCcw className="w-5 h-5 text-gray-600" />
               </Button>
@@ -321,8 +358,9 @@ export default function KajianDetailPage() {
               <Button
                 variant="default"
                 size="icon"
-                className="w-14 h-14 rounded-full shadow-lg bg-awqaf-primary hover:bg-awqaf-primary/90"
+                className="w-14 h-14 rounded-full shadow-lg bg-awqaf-primary hover:bg-awqaf-primary/90 disabled:opacity-50"
                 onClick={togglePlay}
+                disabled={!content.audio}
               >
                 {isPlaying ? (
                   <Pause className="w-6 h-6 text-white fill-current" />
@@ -338,10 +376,17 @@ export default function KajianDetailPage() {
                 size="icon"
                 className="rounded-full w-10 h-10 border-2"
                 onClick={() => seekBy(15)}
+                disabled={!content.audio}
               >
                 <RotateCw className="w-5 h-5 text-gray-600" />
               </Button>
             </div>
+
+            {!content.audio && (
+              <p className="text-center text-xs text-red-500 mt-4 font-comfortaa">
+                {t.audioNotAvailable}
+              </p>
+            )}
           </CardContent>
         </Card>
       </main>
