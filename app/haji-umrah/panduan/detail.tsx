@@ -16,6 +16,46 @@ interface GuideDetailProps {
   icon: LucideIcon;
 }
 
+// --- LOCAL UI TRANSLATIONS (6 BAHASA) ---
+const UI_TRANSLATIONS: Record<string, Record<string, string>> = {
+  id: {
+    headerTitle: "Detail Panduan",
+    step: "Langkah",
+    guideLabel: "Panduan",
+    finish: "Kembali ke Panduan",
+  },
+  en: {
+    headerTitle: "Guide Detail",
+    step: "Step",
+    guideLabel: "Guide",
+    finish: "Back to Guide",
+  },
+  ar: {
+    headerTitle: "تفاصيل الدليل",
+    step: "خطوة",
+    guideLabel: "دليل",
+    finish: "العودة للدليل",
+  },
+  fr: {
+    headerTitle: "Détail du Guide",
+    step: "Étape",
+    guideLabel: "Guide",
+    finish: "Retour au Guide",
+  },
+  kr: {
+    headerTitle: "가이드 상세",
+    step: "단계",
+    guideLabel: "가이드",
+    finish: "가이드로 돌아가기",
+  },
+  jp: {
+    headerTitle: "ガイドの詳細",
+    step: "ステップ",
+    guideLabel: "ガイド",
+    finish: "ガイドに戻る",
+  },
+};
+
 export default function GuideDetail({
   step,
   locale,
@@ -23,23 +63,14 @@ export default function GuideDetail({
   totalSteps,
   icon: Icon,
 }: GuideDetailProps) {
+  // RTL Detection
   const isRtl = locale === "ar";
   const [copied, setCopied] = useState(false);
 
-  const LABELS = {
-    title:
-      locale === "en"
-        ? "Guide Detail"
-        : locale === "ar"
-          ? "تفاصيل الدليل"
-          : "Detail Panduan",
-    step: locale === "en" ? "Step" : locale === "ar" ? "خطوة" : "Langkah",
-    finish:
-      locale === "en"
-        ? "Back to Guide"
-        : locale === "ar"
-          ? "العودة للدليل"
-          : "Kembali ke Panduan",
+  // Helper untuk mengambil teks UI berdasarkan locale
+  const lt = (key: string) => {
+    const lang = locale || "id";
+    return UI_TRANSLATIONS[lang]?.[key] || UI_TRANSLATIONS["id"][key] || key;
   };
 
   useEffect(() => {
@@ -89,7 +120,7 @@ export default function GuideDetail({
               </Button>
               <div className="text-center">
                 <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                  {LABELS.title}
+                  {lt("headerTitle")}
                 </h1>
               </div>
               <Button
@@ -124,7 +155,7 @@ export default function GuideDetail({
               {step.title}
             </h2>
             <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-              {LABELS.step} <span className="font-bold">{step.stepNumber}</span>{" "}
+              {lt("step")} <span className="font-bold">{step.stepNumber}</span>{" "}
               / {totalSteps}
             </p>
           </CardContent>
@@ -136,7 +167,7 @@ export default function GuideDetail({
             <div className="flex items-center gap-2 mb-4">
               <BookOpen className="w-5 h-5 text-awqaf-primary" />
               <span className="font-bold text-awqaf-primary font-comfortaa">
-                Panduan
+                {lt("guideLabel")}
               </span>
             </div>
 
@@ -163,7 +194,7 @@ export default function GuideDetail({
             onClick={onBack}
             className="w-full rounded-xl bg-awqaf-primary hover:bg-awqaf-primary/90 text-white shadow-lg h-12 font-bold font-comfortaa transition-transform active:scale-[0.98]"
           >
-            {LABELS.finish}
+            {lt("finish")}
           </Button>
         </div>
       </div>
