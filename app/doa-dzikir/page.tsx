@@ -20,7 +20,6 @@ import {
   Share2,
   Copy,
   CheckCircle,
-  Navigation,
   RefreshCw,
   Loader2,
   Filter,
@@ -28,19 +27,150 @@ import {
   Pause,
   Square,
   Volume2,
+  ArrowLeft,
 } from "lucide-react";
-import Link from "next/link";
-// Import Services & Types
+import { useRouter } from "next/navigation";
 import {
   useGetDoaCategoriesQuery,
   useGetDoaByCategoryQuery,
 } from "@/services/public/doa.service";
 import { Doa, DoaCategory } from "@/types/public/doa";
-// Import i18n Hook
 import { useI18n } from "@/app/hooks/useI18n";
 
+// --- 1. DEFINISI TRANSLATION LOKAL (6 BAHASA) ---
+const LOCAL_TRANSLATIONS: Record<string, Record<string, string>> = {
+  id: {
+    title: "Doa & Dzikir",
+    subtitle: "Kumpulan Doa & Dzikir Harian",
+    searchPlaceholder: "Cari doa...",
+    category: "Kategori",
+    favorite: "Favorit",
+    addFavorite: "Tambah Favorit",
+    reset: "Reset",
+    dailyDoa: "Doa Pilihan",
+    audioGuide: "Audio Panduan",
+    playing: "Sedang diputar...",
+    noDoa: "Tidak ada doa ditemukan",
+    noDoaDesc: "Coba pilih kategori lain atau ubah kata kunci",
+    prev: "Sebelumnya",
+    next: "Selanjutnya",
+    page: "Hal.",
+    selectCategory: "Pilih Kategori Doa",
+    searchResult: "Cari",
+  },
+  en: {
+    title: "Prayers & Dhikr",
+    subtitle: "Daily Prayers & Dhikr Collection",
+    searchPlaceholder: "Search prayers...",
+    category: "Category",
+    favorite: "Favorites",
+    addFavorite: "Add to Favorites",
+    reset: "Reset",
+    dailyDoa: "Selected Prayer",
+    audioGuide: "Audio Guide",
+    playing: "Playing...",
+    noDoa: "No prayers found",
+    noDoaDesc: "Try selecting another category or change keywords",
+    prev: "Previous",
+    next: "Next",
+    page: "Pg.",
+    selectCategory: "Select Prayer Category",
+    searchResult: "Search",
+  },
+  ar: {
+    title: "أدعية وأذكار",
+    subtitle: "مجموعة الأدعية والأذكار اليومية",
+    searchPlaceholder: "بحث عن دعاء...",
+    category: "فئة",
+    favorite: "المفضلة",
+    addFavorite: "إضافة للمفضلة",
+    reset: "إعادة تعيين",
+    dailyDoa: "دعاء مختار",
+    audioGuide: "الدليل الصوتي",
+    playing: "جاري التشغيل...",
+    noDoa: "لم يتم العثور على أدعية",
+    noDoaDesc: "حاول اختيار فئة أخرى أو تغيير الكلمات الرئيسية",
+    prev: "السابق",
+    next: "التالي",
+    page: "ص.",
+    selectCategory: "اختر فئة الدعاء",
+    searchResult: "بحث",
+  },
+  fr: {
+    title: "Prières et Invocations",
+    subtitle: "Collection quotidienne de prières et d'invocations",
+    searchPlaceholder: "Rechercher des prières...",
+    category: "Catégorie",
+    favorite: "Favoris",
+    addFavorite: "Ajouter aux favoris",
+    reset: "Réinitialiser",
+    dailyDoa: "Prière sélectionnée",
+    audioGuide: "Guide audio",
+    playing: "Lecture en cours...",
+    noDoa: "Aucune prière trouvée",
+    noDoaDesc: "Essayez une autre catégorie ou changez de mots-clés",
+    prev: "Précédent",
+    next: "Suivant",
+    page: "Pg.",
+    selectCategory: "Sélectionner une catégorie",
+    searchResult: "Recherche",
+  },
+  kr: {
+    title: "기도와 지크르",
+    subtitle: "매일 기도와 지크르 모음",
+    searchPlaceholder: "기도 검색...",
+    category: "카테고리",
+    favorite: "즐겨찾기",
+    addFavorite: "즐겨찾기 추가",
+    reset: "초기화",
+    dailyDoa: "오늘의 기도",
+    audioGuide: "오디오 가이드",
+    playing: "재생 중...",
+    noDoa: "기도를 찾을 수 없습니다",
+    noDoaDesc: "다른 카테고리를 선택하거나 키워드를 변경해 보세요",
+    prev: "이전",
+    next: "다음",
+    page: "쪽",
+    selectCategory: "기도 카테고리 선택",
+    searchResult: "검색",
+  },
+  jp: {
+    title: "祈りとズィクル",
+    subtitle: "毎日の祈りとズィクル集",
+    searchPlaceholder: "祈りを検索...",
+    category: "カテゴリー",
+    favorite: "お気に入り",
+    addFavorite: "お気に入りに追加",
+    reset: "リセット",
+    dailyDoa: "今日の祈り",
+    audioGuide: "音声ガイド",
+    playing: "再生中...",
+    noDoa: "祈りが見つかりません",
+    noDoaDesc: "別のカテゴリーを選択するか、キーワードを変更してください",
+    prev: "前へ",
+    next: "次へ",
+    page: "頁",
+    selectCategory: "祈りのカテゴリーを選択",
+    searchResult: "検索",
+  },
+};
+
 export default function DoaDzikirPage() {
-  const { t, locale } = useI18n(); // 1. Ambil locale aktif
+  const router = useRouter();
+  const { locale } = useI18n(); // Kita gunakan locale dari hook ini
+
+  // Helper untuk ambil teks berdasarkan locale aktif
+  const lt = (key: string) => {
+    const lang = locale || "id"; // Default ke ID jika null
+    // Fallback ke ID jika key tidak ada di bahasa target
+    return (
+      LOCAL_TRANSLATIONS[lang]?.[key] || LOCAL_TRANSLATIONS["id"][key] || key
+    );
+  };
+
+  // Deteksi RTL untuk Bahasa Arab (SA/AR)
+  const isRtl = locale === "ar";
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -60,57 +190,41 @@ export default function DoaDzikirPage() {
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // --- HELPER FUNCTIONS FOR TRANSLATION ---
+  // --- HELPER FUNCTIONS FOR CONTENT TRANSLATION ---
 
-  // Helper untuk mendapatkan Nama & Deskripsi Kategori sesuai bahasa
   const getCategoryContent = (category: DoaCategory | undefined) => {
-    if (!category) return { name: "Kategori", description: "" };
-
-    // Cari translation sesuai locale aktif
+    if (!category) return { name: lt("category"), description: "" };
     const localized = category.translations.find((t) => t.locale === locale);
-
-    // Cek apakah ada dan datanya tidak kosong (karena di JSON ada string kosong "")
     if (localized && localized.name) {
       return { name: localized.name, description: localized.description };
     }
-
-    // Fallback ke Bahasa Indonesia ('id') jika locale aktif kosong
     const idFallback = category.translations.find((t) => t.locale === "id");
     if (idFallback && idFallback.name) {
       return { name: idFallback.name, description: idFallback.description };
     }
-
-    // Fallback terakhir ke root object
     return { name: category.name, description: category.description };
   };
 
-  // Helper untuk mendapatkan Terjemahan Doa sesuai bahasa
   const getDoaContent = (doa: Doa) => {
-    // Cari translation sesuai locale aktif
     const localized = doa.translations.find((t) => t.locale === locale);
-
     let translationText = "";
+    let titleText = doa.title;
 
-    // Cek ketersediaan
-    if (localized && localized.translation) {
-      translationText = localized.translation;
+    if (localized) {
+      if (localized.translation) translationText = localized.translation;
+      if (localized.title) titleText = localized.title;
     } else {
-      // Fallback ke 'id'
       const idFallback = doa.translations.find((t) => t.locale === "id");
       translationText = idFallback?.translation || "";
     }
 
-    // Catatan: Title Doa di JSON Anda sepertinya statis di root object.
-    // Jika title juga ada di translation (misal future update), logicnya sama.
     return {
-      title: doa.title,
+      title: titleText,
       translation: translationText,
       arabic: doa.arabic_text,
       transliteration: doa.transliteration,
     };
   };
-
-  // ----------------------------------------
 
   // Fetch Categories
   const { data: categoriesData, isLoading: isLoadingCategories } =
@@ -119,7 +233,6 @@ export default function DoaDzikirPage() {
       paginate: 100,
     });
 
-  // Set default category
   useEffect(() => {
     if (
       categoriesData?.data &&
@@ -146,13 +259,11 @@ export default function DoaDzikirPage() {
     },
   );
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchQuery), 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Load & Save Favorites (LocalStorage logic sama)
   useEffect(() => {
     const savedFavorites = localStorage.getItem("doa-dzikir-favorites");
     if (savedFavorites) {
@@ -167,20 +278,18 @@ export default function DoaDzikirPage() {
     );
   }, [favorites]);
 
-  // Filter Logic (Updated to search within Localized Content)
   const filteredDoaDzikir = useMemo(() => {
     if (!doaListData?.data) return [];
-
     let filtered = doaListData.data;
 
     if (debouncedQuery) {
       const q = debouncedQuery.toLowerCase();
       filtered = filtered.filter((item) => {
-        const content = getDoaContent(item); // Gunakan helper untuk cari di teks yg tampil
+        const content = getDoaContent(item);
         return (
           item.title.toLowerCase().includes(q) ||
           item.transliteration.toLowerCase().includes(q) ||
-          content.translation.toLowerCase().includes(q) // Cari di terjemahan aktif
+          content.translation.toLowerCase().includes(q)
         );
       });
     }
@@ -188,9 +297,8 @@ export default function DoaDzikirPage() {
     if (favoritesOnly) {
       filtered = filtered.filter((item) => favorites.has(item.id));
     }
-
     return filtered;
-  }, [doaListData, debouncedQuery, favoritesOnly, favorites, locale]); // Add locale dependency
+  }, [doaListData, debouncedQuery, favoritesOnly, favorites, locale]);
 
   const clearAllFilters = () => {
     if (categoriesData?.data && categoriesData.data.length > 0) {
@@ -213,17 +321,14 @@ export default function DoaDzikirPage() {
     });
   };
 
-  // Copy & Share logic menggunakan konten yang sudah di-localize
   const handleCopyDoa = async (item: Doa) => {
     const content = getDoaContent(item);
-
     const cleanArabic = content.arabic.replace(/<[^>]*>?/gm, "");
     const cleanTransliteration = content.transliteration.replace(
       /<[^>]*>?/gm,
       "",
     );
     const cleanTranslation = content.translation.replace(/<[^>]*>?/gm, "");
-
     const text = `${content.title}\n\n${cleanArabic}\n\n${cleanTransliteration}\n\n${cleanTranslation}`;
 
     try {
@@ -255,13 +360,11 @@ export default function DoaDzikirPage() {
     }
   };
 
-  // Ambil Data Kategori Terpilih (Localized)
   const selectedCategoryData = useMemo(() => {
     const cat = categoriesData?.data.find((c) => c.id === selectedCategoryId);
     return getCategoryContent(cat);
   }, [categoriesData, selectedCategoryId, locale]);
 
-  // Doa Harian Random
   const doaOfTheDay = useMemo(() => {
     if (doaListData?.data && doaListData.data.length > 0) {
       const randomIndex = Math.floor(Math.random() * doaListData.data.length);
@@ -270,16 +373,12 @@ export default function DoaDzikirPage() {
     return null;
   }, [doaListData]);
 
-  // Audio Player Functions
   const handlePlayAudio = async (doaId: number, audioUrl: string | null) => {
-    // Guard against null audio URL
     if (!audioUrl) {
       alert("URL audio tidak tersedia.");
       return;
     }
-
     try {
-      // If same audio is playing, just toggle pause/play
       if (playingDoaId === doaId && audioRef.current) {
         if (isPlaying) {
           audioRef.current.pause();
@@ -290,36 +389,24 @@ export default function DoaDzikirPage() {
         }
         return;
       }
-
-      // Stop current audio if playing different one
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
-
-      // Create new audio element
       setIsLoading(true);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
-
-      // Set up event listeners
-      audio.addEventListener("canplay", () => {
-        setIsLoading(false);
-      });
-
+      audio.addEventListener("canplay", () => setIsLoading(false));
       audio.addEventListener("ended", () => {
         setIsPlaying(false);
         setPlayingDoaId(null);
       });
-
       audio.addEventListener("error", () => {
         setIsLoading(false);
         setIsPlaying(false);
         setPlayingDoaId(null);
         alert("Gagal memutar audio. Pastikan URL audio valid.");
       });
-
-      // Play audio
       await audio.play();
       setPlayingDoaId(doaId);
       setIsPlaying(true);
@@ -329,7 +416,6 @@ export default function DoaDzikirPage() {
       setIsLoading(false);
       setIsPlaying(false);
       setPlayingDoaId(null);
-      alert("Gagal memutar audio. Silakan coba lagi.");
     }
   };
 
@@ -349,7 +435,6 @@ export default function DoaDzikirPage() {
     }
   };
 
-  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -360,27 +445,38 @@ export default function DoaDzikirPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20">
-      {/* Header */}
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
             <div className="flex items-center justify-between">
-              <Link href="/">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200"
-                >
-                  <Navigation className="w-5 h-5" />
-                </Button>
-              </Link>
-              <h1 className="text-lg font-bold text-awqaf-primary font-comfortaa">
-                {t("feature.doa")}{" "}
-                {/* Pastikan ada key ini di i18n atau hardcode "Doa & Dzikir" */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/")}
+                className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+              >
+                <ArrowLeft
+                  className={`w-5 h-5 text-awqaf-primary ${
+                    isRtl ? "rotate-180" : ""
+                  }`}
+                />
+              </Button>
+
+              {/* Menggunakan lt('title') untuk mengganti feature.doa */}
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center flex-1">
+                {lt("title")}
               </h1>
-              <div className="w-10 h-10"></div>
+
+              <div className="w-10 h-10" />
             </div>
+
+            <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
+              {lt("subtitle")}
+            </p>
           </div>
         </div>
       </header>
@@ -392,7 +488,7 @@ export default function DoaDzikirPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-comfortaa flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-awqaf-primary" />
-                Doa Pilihan
+                {lt("dailyDoa")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -400,7 +496,6 @@ export default function DoaDzikirPage() {
                 <h3 className="font-bold text-center mb-2 text-awqaf-primary">
                   {doaOfTheDay.title}
                 </h3>
-                {/* Gunakan Helper untuk konten */}
                 {(() => {
                   const content = getDoaContent(doaOfTheDay);
                   return (
@@ -420,13 +515,12 @@ export default function DoaDzikirPage() {
                 })()}
               </div>
 
-              {/* Audio Player for Doa of the Day */}
               {doaOfTheDay.audio && (
                 <div className="bg-white/90 p-3 rounded-lg border border-awqaf-border-light">
                   <div className="flex items-center gap-2">
                     <Volume2 className="w-4 h-4 text-awqaf-primary" />
                     <span className="text-xs font-semibold text-awqaf-primary font-comfortaa flex-1">
-                      Audio Panduan
+                      {lt("audioGuide")}
                     </span>
                     <div className="flex items-center gap-1">
                       {playingDoaId === doaOfTheDay.id && isPlaying ? (
@@ -442,8 +536,12 @@ export default function DoaDzikirPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handlePlayAudio(doaOfTheDay.id, doaOfTheDay.audio)}
-                          disabled={isLoading && playingDoaId === doaOfTheDay.id}
+                          onClick={() =>
+                            handlePlayAudio(doaOfTheDay.id, doaOfTheDay.audio)
+                          }
+                          disabled={
+                            isLoading && playingDoaId === doaOfTheDay.id
+                          }
                           className="h-8 px-3"
                         >
                           {isLoading && playingDoaId === doaOfTheDay.id ? (
@@ -453,7 +551,7 @@ export default function DoaDzikirPage() {
                           )}
                         </Button>
                       )}
-                      
+
                       {playingDoaId === doaOfTheDay.id && (
                         <Button
                           variant="outline"
@@ -466,17 +564,29 @@ export default function DoaDzikirPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   {playingDoaId === doaOfTheDay.id && isPlaying && (
                     <div className="mt-2 flex items-center gap-2">
                       <div className="flex gap-1 items-end">
-                        <div className="w-1 h-2 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "0ms" }}></div>
-                        <div className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "150ms" }}></div>
-                        <div className="w-1 h-4 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "300ms" }}></div>
-                        <div className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "450ms" }}></div>
+                        <div
+                          className="w-1 h-2 bg-awqaf-primary rounded-full animate-pulse"
+                          style={{ animationDelay: "0ms" }}
+                        ></div>
+                        <div
+                          className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse"
+                          style={{ animationDelay: "150ms" }}
+                        ></div>
+                        <div
+                          className="w-1 h-4 bg-awqaf-primary rounded-full animate-pulse"
+                          style={{ animationDelay: "300ms" }}
+                        ></div>
+                        <div
+                          className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse"
+                          style={{ animationDelay: "450ms" }}
+                        ></div>
                       </div>
                       <span className="text-xs text-awqaf-primary font-comfortaa animate-pulse">
-                        Sedang diputar...
+                        {lt("playing")}
                       </span>
                     </div>
                   )}
@@ -497,7 +607,9 @@ export default function DoaDzikirPage() {
                         : ""
                     }`}
                   />
-                  {favorites.has(doaOfTheDay.id) ? "Favorit" : "Tambah Favorit"}
+                  {favorites.has(doaOfTheDay.id)
+                    ? lt("favorite")
+                    : lt("addFavorite")}
                 </Button>
                 <Button
                   variant="outline"
@@ -512,20 +624,22 @@ export default function DoaDzikirPage() {
         )}
 
         {/* Search + Sticky chips */}
-        <Card className="border-awqaf-border-light sticky top-[68px] z-20">
+        <Card className="border-awqaf-border-light sticky top-[80px] z-20">
           <CardContent className="p-3 space-y-3">
-            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-awqaf-foreground-secondary" />
+              <Search
+                className={`absolute top-1/2 transform -translate-y-1/2 w-4 h-4 text-awqaf-foreground-secondary ${
+                  isRtl ? "right-3" : "left-3"
+                }`}
+              />
               <Input
-                placeholder="Cari doa..."
+                placeholder={lt("searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 font-comfortaa"
+                className={`font-comfortaa ${isRtl ? "pr-10" : "pl-10"}`}
               />
             </div>
 
-            {/* Category Chips */}
             {isLoadingCategories ? (
               <div className="flex gap-2 overflow-hidden">
                 {[1, 2, 3].map((i) => (
@@ -537,26 +651,27 @@ export default function DoaDzikirPage() {
               </div>
             ) : (
               <div className="flex gap-2 overflow-x-auto pb-1 mobile-scroll items-center">
-                {/* Drawer for all categories */}
                 <Drawer open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <DrawerTrigger asChild>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-shrink-0 gap-1"
+                      className="flex-shrink-0 gap-1 rounded-full"
                     >
-                      <Filter className="w-3 h-3" /> Kategori
+                      <Filter className="w-3 h-3" /> {lt("category")}
                     </Button>
                   </DrawerTrigger>
                   <DrawerContent className="border-awqaf-border-light max-h-[80vh]">
                     <DrawerHeader>
-                      <DrawerTitle className="font-comfortaa">
-                        Pilih Kategori Doa
+                      <DrawerTitle className="font-comfortaa text-center">
+                        {lt("selectCategory")}
                       </DrawerTitle>
                     </DrawerHeader>
-                    <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto">
+                    <div
+                      className="p-4 grid grid-cols-2 gap-3 overflow-y-auto"
+                      dir={isRtl ? "rtl" : "ltr"}
+                    >
                       {categoriesData?.data.map((cat) => {
-                        // Localize category name in drawer
                         const content = getCategoryContent(cat);
                         return (
                           <Button
@@ -566,7 +681,7 @@ export default function DoaDzikirPage() {
                                 ? "default"
                                 : "outline"
                             }
-                            className="justify-start h-auto py-2 px-3 text-left"
+                            className="justify-start h-auto py-2 px-3 text-start"
                             onClick={() => {
                               setSelectedCategoryId(cat.id);
                               setIsFilterOpen(false);
@@ -583,9 +698,7 @@ export default function DoaDzikirPage() {
                   </DrawerContent>
                 </Drawer>
 
-                {/* Quick Access Categories */}
-                {categoriesData?.data.map((cat) => {
-                  // Localize category name in chips
+                {categoriesData?.data.slice(0, 5).map((cat) => {
                   const content = getCategoryContent(cat);
                   return (
                     <Button
@@ -594,7 +707,7 @@ export default function DoaDzikirPage() {
                         selectedCategoryId === cat.id ? "default" : "outline"
                       }
                       size="sm"
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 rounded-full"
                       onClick={() => {
                         setSelectedCategoryId(cat.id);
                         setPage(1);
@@ -605,25 +718,23 @@ export default function DoaDzikirPage() {
                   );
                 })}
 
-                {/* Favorites Toggle */}
                 <Button
                   variant={favoritesOnly ? "default" : "outline"}
                   size="sm"
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 rounded-full"
                   onClick={() => setFavoritesOnly((v) => !v)}
                 >
-                  <Heart className="w-4 h-4 mr-1" /> Favorit
+                  <Heart className="w-4 h-4 mr-1" /> {lt("favorite")}
                 </Button>
               </div>
             )}
 
-            {/* Active filter summary */}
             {(selectedCategoryId || favoritesOnly || debouncedQuery) && (
               <div className="flex items-center justify-between">
                 <div className="flex flex-wrap gap-2">
                   {debouncedQuery && (
                     <Badge variant="secondary" className="text-xs">
-                      Cari: “{debouncedQuery}”
+                      {lt("searchResult")}: “{debouncedQuery}”
                     </Badge>
                   )}
                   {selectedCategoryId && (
@@ -633,25 +744,28 @@ export default function DoaDzikirPage() {
                   )}
                   {favoritesOnly && (
                     <Badge variant="secondary" className="text-xs">
-                      Favorit
+                      {lt("favorite")}
                     </Badge>
                   )}
                 </div>
-                <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                  <RefreshCw className="w-4 h-4 mr-1" /> Reset
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="text-xs"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" /> {lt("reset")}
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Doa List */}
         <div className="space-y-4">
           <div className="flex flex-col gap-1">
             <h2 className="text-lg font-semibold text-awqaf-primary font-comfortaa">
               {selectedCategoryData.name}
             </h2>
-            {/* Tampilkan deskripsi kategori jika ada */}
             {selectedCategoryData.description && (
               <div
                 className="text-xs text-awqaf-foreground-secondary"
@@ -669,20 +783,16 @@ export default function DoaDzikirPage() {
           ) : (
             <div className="space-y-4">
               {filteredDoaDzikir.map((item) => {
-                // Ambil konten doa yang sudah disesuaikan bahasanya
                 const content = getDoaContent(item);
-
                 return (
                   <Card key={item.id} className="border-awqaf-border-light">
                     <CardContent className="p-4 space-y-4">
-                      {/* Title */}
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-card-foreground font-comfortaa">
                           {content.title}
                         </h3>
                       </div>
 
-                      {/* Arabic Text (HTML) */}
                       <div className="bg-accent-50 p-4 rounded-lg">
                         <div
                           className="text-lg font-tajawal text-awqaf-primary text-center leading-relaxed"
@@ -690,7 +800,6 @@ export default function DoaDzikirPage() {
                         />
                       </div>
 
-                      {/* Latin (HTML) */}
                       <div className="bg-accent-100/50 p-3 rounded-lg">
                         <div
                           className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center leading-relaxed italic"
@@ -700,7 +809,6 @@ export default function DoaDzikirPage() {
                         />
                       </div>
 
-                      {/* Translation (HTML) - Localized */}
                       <div>
                         <div
                           className="text-sm text-awqaf-foreground-secondary font-comfortaa leading-relaxed"
@@ -710,16 +818,14 @@ export default function DoaDzikirPage() {
                         />
                       </div>
 
-                      {/* Audio Player - Show only if audio URL exists */}
                       {item.audio && (
                         <div className="bg-gradient-to-r from-accent-50 to-accent-100 p-3 rounded-lg border border-awqaf-border-light">
                           <div className="flex items-center gap-2">
                             <Volume2 className="w-4 h-4 text-awqaf-primary" />
                             <span className="text-xs font-semibold text-awqaf-primary font-comfortaa flex-1">
-                              Audio Panduan
+                              {lt("audioGuide")}
                             </span>
                             <div className="flex items-center gap-1">
-                              {/* Play/Pause Button */}
                               {playingDoaId === item.id && isPlaying ? (
                                 <Button
                                   variant="outline"
@@ -733,8 +839,12 @@ export default function DoaDzikirPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handlePlayAudio(item.id, item.audio)}
-                                  disabled={isLoading && playingDoaId === item.id}
+                                  onClick={() =>
+                                    handlePlayAudio(item.id, item.audio)
+                                  }
+                                  disabled={
+                                    isLoading && playingDoaId === item.id
+                                  }
                                   className="h-8 px-3"
                                 >
                                   {isLoading && playingDoaId === item.id ? (
@@ -744,8 +854,7 @@ export default function DoaDzikirPage() {
                                   )}
                                 </Button>
                               )}
-                              
-                              {/* Stop Button - Show only when this audio is playing */}
+
                               {playingDoaId === item.id && (
                                 <Button
                                   variant="outline"
@@ -758,25 +867,35 @@ export default function DoaDzikirPage() {
                               )}
                             </div>
                           </div>
-                          
-                          {/* Playing indicator */}
+
                           {playingDoaId === item.id && isPlaying && (
                             <div className="mt-2 flex items-center gap-2">
                               <div className="flex gap-1 items-end">
-                                <div className="w-1 h-2 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "0ms" }}></div>
-                                <div className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "150ms" }}></div>
-                                <div className="w-1 h-4 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "300ms" }}></div>
-                                <div className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse" style={{ animationDelay: "450ms" }}></div>
+                                <div
+                                  className="w-1 h-2 bg-awqaf-primary rounded-full animate-pulse"
+                                  style={{ animationDelay: "0ms" }}
+                                ></div>
+                                <div
+                                  className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse"
+                                  style={{ animationDelay: "150ms" }}
+                                ></div>
+                                <div
+                                  className="w-1 h-4 bg-awqaf-primary rounded-full animate-pulse"
+                                  style={{ animationDelay: "300ms" }}
+                                ></div>
+                                <div
+                                  className="w-1 h-3 bg-awqaf-primary rounded-full animate-pulse"
+                                  style={{ animationDelay: "450ms" }}
+                                ></div>
                               </div>
                               <span className="text-xs text-awqaf-primary font-comfortaa animate-pulse">
-                                Sedang diputar...
+                                {lt("playing")}
                               </span>
                             </div>
                           )}
                         </div>
                       )}
 
-                      {/* Actions */}
                       <div className="flex items-center gap-2 pt-2 border-t">
                         <Button
                           variant="outline"
@@ -791,7 +910,9 @@ export default function DoaDzikirPage() {
                                 : ""
                             }`}
                           />
-                          {favorites.has(item.id) ? "Favorit" : "Favorit"}
+                          {favorites.has(item.id)
+                            ? lt("favorite")
+                            : lt("addFavorite")}
                         </Button>
                         <Button
                           variant="outline"
@@ -824,16 +945,15 @@ export default function DoaDzikirPage() {
               <CardContent className="p-8 text-center">
                 <BookOpen className="w-12 h-12 text-awqaf-foreground-secondary mx-auto mb-4" />
                 <h3 className="font-semibold text-card-foreground font-comfortaa mb-2">
-                  Tidak ada doa ditemukan
+                  {lt("noDoa")}
                 </h3>
                 <p className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                  Coba pilih kategori lain atau ubah kata kunci
+                  {lt("noDoaDesc")}
                 </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Simple Pagination */}
           {!isLoadingDoa && filteredDoaDzikir.length > 0 && (
             <div className="flex justify-center gap-4 pt-4">
               <Button
@@ -841,15 +961,17 @@ export default function DoaDzikirPage() {
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                Sebelumnya
+                {lt("prev")}
               </Button>
-              <span className="self-center text-sm font-bold">Hal. {page}</span>
+              <span className="self-center text-sm font-bold">
+                {lt("page")} {page}
+              </span>
               <Button
                 variant="outline"
                 disabled={page === doaListData?.last_page}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Selanjutnya
+                {lt("next")}
               </Button>
             </div>
           )}

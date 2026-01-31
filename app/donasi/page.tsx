@@ -16,10 +16,13 @@ import {
   Loader2,
   Clock,
   MapPin,
+  ArrowLeft, // Ditambahkan agar sesuai dengan UI KajianPage
 } from "lucide-react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-import DonationCarousel, { CarouselDonation } from "./components/DonationCarousel";
+import DonationCarousel, {
+  CarouselDonation,
+} from "./components/DonationCarousel";
 import DonationNavigation from "./components/DonationNavigation";
 import {
   popularDonations,
@@ -140,6 +143,9 @@ export default function DonasiPage() {
   const { t, locale } = useI18n();
   const router = useRouter();
   const { data: session } = useSession();
+
+  // Tambahkan deteksi RTL seperti di KajianPage
+  const isRtl = locale === "ar";
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -379,25 +385,43 @@ export default function DonasiPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 relative">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-awqaf-primary to-awqaf-primary/80 text-white">
-        <div className="max-w-md mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Gift className="w-8 h-8" />
-              <h1 className="text-2xl font-bold font-comfortaa">
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
+      {/* Header Baru (Glassmorphism seperti KajianPage) */}
+      <header className="sticky top-0 z-30">
+        <div className="max-w-md mx-auto px-4 py-4">
+          <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/")}
+                className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+              >
+                <ArrowLeft
+                  className={`w-5 h-5 text-awqaf-primary ${isRtl ? "rotate-180" : ""}`}
+                />
+              </Button>
+
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center flex-1">
                 {t("donation.title")}
               </h1>
+
+              {/* Spacer untuk menyeimbangkan layout header */}
+              <div className="w-10 h-10" />
             </div>
-            <p className="text-white/90 font-comfortaa max-w-2xl mx-auto">
+
+            <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
               {t("donation.subtitle")}
             </p>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-8">
+      {/* Main Content */}
+      <main className="max-w-md mx-auto px-4 py-6 space-y-8">
         <section>
           <DonationCarousel
             // donations={popularDonations}
@@ -640,7 +664,7 @@ export default function DonasiPage() {
             </CardContent>
           </Card>
         </section>
-      </div>
+      </main>
 
       {/* --- DONATION FORM MODAL --- */}
       {isModalOpen && selectedDonation && (

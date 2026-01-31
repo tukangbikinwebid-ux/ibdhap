@@ -19,6 +19,7 @@ import {
   Circle,
   CheckCircle2,
   Award,
+  ArrowLeft,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { useI18n } from "@/app/hooks/useI18n";
 import { LocaleCode } from "@/lib/i18n";
+import { useRouter } from "next/navigation";
 
 // --- TYPES ---
 interface Location {
@@ -453,6 +455,7 @@ const SHOLAT_TEXT: Record<LocaleCode, SholatTranslations> = {
 };
 
 export default function SholatPage() {
+  const router = useRouter();
   const { locale } = useI18n();
   // Safe Locale Access with correct type
   const safeLocale = (
@@ -854,13 +857,23 @@ export default function SholatPage() {
       {/* Header */}
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
-          <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
-            <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
-              {t_sholat.title}
-            </h1>
-            <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
-              {t_sholat.subtitle}
-            </p>
+          <div className="relative flex gap-2 items-center bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/")}
+              className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+            >
+              <ArrowLeft className="w-5 h-5 text-awqaf-primary" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
+                {t_sholat.title}
+              </h1>
+              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
+                {t_sholat.subtitle}
+              </p>
+            </div>
           </div>
         </div>
       </header>

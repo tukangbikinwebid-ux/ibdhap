@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, BookOpen, Bookmark, Clock, Loader2, GraduationCap, CheckCircle2, Plus } from "lucide-react";
+import {
+  Search,
+  BookOpen,
+  Bookmark,
+  Clock,
+  Loader2,
+  GraduationCap,
+  CheckCircle2,
+  Plus,
+  ArrowLeft,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,15 +39,15 @@ const getSurahJuz = (surahId: number): number => {
   // Mapping berdasarkan juz di mana surah dimulai
   // Format: [surahId]: juz pertama
   const juzMap: Record<number, number> = {
-    1: 1,   // Al-Fatihah - Juz 1
-    2: 1,   // Al-Baqarah - Juz 1 (berlanjut ke juz 2-3)
-    3: 4,   // Ali 'Imran - Juz 3-4
-    4: 4,   // An-Nisa - Juz 4-6
-    5: 6,   // Al-Ma'idah - Juz 6-7
-    6: 7,   // Al-An'am - Juz 7-8
-    7: 8,   // Al-A'raf - Juz 8-9
-    8: 9,   // Al-Anfal - Juz 9-10
-    9: 10,  // At-Tawbah - Juz 10-11
+    1: 1, // Al-Fatihah - Juz 1
+    2: 1, // Al-Baqarah - Juz 1 (berlanjut ke juz 2-3)
+    3: 4, // Ali 'Imran - Juz 3-4
+    4: 4, // An-Nisa - Juz 4-6
+    5: 6, // Al-Ma'idah - Juz 6-7
+    6: 7, // Al-An'am - Juz 7-8
+    7: 8, // Al-A'raf - Juz 8-9
+    8: 9, // Al-Anfal - Juz 9-10
+    9: 10, // At-Tawbah - Juz 10-11
     10: 11, // Yunus - Juz 11
     11: 12, // Hud - Juz 12
     12: 12, // Yusuf - Juz 12-13
@@ -160,9 +170,11 @@ export default function QuranPage() {
   const [recentSurahs, setRecentSurahs] = useState<number[]>([]);
   const [isBookmarkOpen, setIsBookmarkOpen] = useState(false);
   const [isMemorizationOpen, setIsMemorizationOpen] = useState(false);
-  const [memorizedVerses, setMemorizedVerses] = useState<Record<number, number[]>>({});
+  const [memorizedVerses, setMemorizedVerses] = useState<
+    Record<number, number[]>
+  >({});
   const [isBulkMemorizationOpen, setIsBulkMemorizationOpen] = useState(false);
-  
+
   // Bulk memorization form state
   const [startSurah, setStartSurah] = useState<string>("1");
   const [startVerse, setStartVerse] = useState<string>("1");
@@ -203,13 +215,17 @@ export default function QuranPage() {
 
   // Calculate memorization statistics
   const memorizationStats = useMemo(() => {
-    const totalVerses = allSurahs.reduce((sum, surah) => sum + surah.total_verses, 0);
+    const totalVerses = allSurahs.reduce(
+      (sum, surah) => sum + surah.total_verses,
+      0,
+    );
     const memorizedCount = Object.values(memorizedVerses).reduce(
       (sum, verses) => sum + verses.length,
-      0
+      0,
     );
-    const percentage = totalVerses > 0 ? Math.round((memorizedCount / totalVerses) * 100) : 0;
-    
+    const percentage =
+      totalVerses > 0 ? Math.round((memorizedCount / totalVerses) * 100) : 0;
+
     // Count fully memorized surahs
     const fullyMemorizedSurahs = allSurahs.filter((surah) => {
       const verses = memorizedVerses[surah.id] || [];
@@ -226,9 +242,14 @@ export default function QuranPage() {
   }, [memorizedVerses, allSurahs]);
 
   // Get memorization progress for a surah
-  const getSurahMemorizationProgress = (surahId: number, totalVerses: number): number => {
+  const getSurahMemorizationProgress = (
+    surahId: number,
+    totalVerses: number,
+  ): number => {
     const verses = memorizedVerses[surahId] || [];
-    return totalVerses > 0 ? Math.round((verses.length / totalVerses) * 100) : 0;
+    return totalVerses > 0
+      ? Math.round((verses.length / totalVerses) * 100)
+      : 0;
   };
 
   // Handle bulk memorization (range input)
@@ -240,14 +261,21 @@ export default function QuranPage() {
 
     // Validation
     if (
-      isNaN(startSurahNum) || isNaN(startVerseNum) ||
-      isNaN(endSurahNum) || isNaN(endVerseNum)
+      isNaN(startSurahNum) ||
+      isNaN(startVerseNum) ||
+      isNaN(endSurahNum) ||
+      isNaN(endVerseNum)
     ) {
       alert("Mohon masukkan nomor yang valid");
       return;
     }
 
-    if (startSurahNum < 1 || startSurahNum > 114 || endSurahNum < 1 || endSurahNum > 114) {
+    if (
+      startSurahNum < 1 ||
+      startSurahNum > 114 ||
+      endSurahNum < 1 ||
+      endSurahNum > 114
+    ) {
       alert("Nomor surah harus antara 1-114");
       return;
     }
@@ -258,8 +286,8 @@ export default function QuranPage() {
     }
 
     // Get surah details for validation
-    const startSurahData = allSurahs.find(s => s.id === startSurahNum);
-    const endSurahData = allSurahs.find(s => s.id === endSurahNum);
+    const startSurahData = allSurahs.find((s) => s.id === startSurahNum);
+    const endSurahData = allSurahs.find((s) => s.id === endSurahNum);
 
     if (!startSurahData || !endSurahData) {
       alert("Surah tidak ditemukan");
@@ -267,12 +295,16 @@ export default function QuranPage() {
     }
 
     if (startVerseNum < 1 || startVerseNum > startSurahData.total_verses) {
-      alert(`Ayat awal harus antara 1-${startSurahData.total_verses} untuk ${startSurahData.transliteration}`);
+      alert(
+        `Ayat awal harus antara 1-${startSurahData.total_verses} untuk ${startSurahData.transliteration}`,
+      );
       return;
     }
 
     if (endVerseNum < 1 || endVerseNum > endSurahData.total_verses) {
-      alert(`Ayat akhir harus antara 1-${endSurahData.total_verses} untuk ${endSurahData.transliteration}`);
+      alert(
+        `Ayat akhir harus antara 1-${endSurahData.total_verses} untuk ${endSurahData.transliteration}`,
+      );
       return;
     }
 
@@ -286,7 +318,7 @@ export default function QuranPage() {
 
     // Mark verses in range
     for (let surahId = startSurahNum; surahId <= endSurahNum; surahId++) {
-      const surahData = allSurahs.find(s => s.id === surahId);
+      const surahData = allSurahs.find((s) => s.id === surahId);
       if (!surahData) continue;
 
       const existingVerses = newMemorized[surahId] || [];
@@ -294,7 +326,8 @@ export default function QuranPage() {
 
       // Determine verse range for this surah
       const firstVerse = surahId === startSurahNum ? startVerseNum : 1;
-      const lastVerse = surahId === endSurahNum ? endVerseNum : surahData.total_verses;
+      const lastVerse =
+        surahId === endSurahNum ? endVerseNum : surahData.total_verses;
 
       // Add all verses in range
       for (let verseId = firstVerse; verseId <= lastVerse; verseId++) {
@@ -310,11 +343,18 @@ export default function QuranPage() {
 
     // Close dialog and show success
     setIsBulkMemorizationOpen(false);
-    
+
     // Calculate added verses
-    const addedCount = Object.values(newMemorized).reduce((sum, verses) => sum + verses.length, 0) -
-                       Object.values(memorizedVerses).reduce((sum, verses) => sum + verses.length, 0);
-    
+    const addedCount =
+      Object.values(newMemorized).reduce(
+        (sum, verses) => sum + verses.length,
+        0,
+      ) -
+      Object.values(memorizedVerses).reduce(
+        (sum, verses) => sum + verses.length,
+        0,
+      );
+
     alert(`Berhasil menambahkan ${addedCount} ayat ke hafalan!`);
   };
 
@@ -343,7 +383,8 @@ export default function QuranPage() {
         const filterType = selectedRevelation.toLowerCase();
         // Handle berbagai variasi penulisan: meccan/makkiyah, medinan/madaniyah
         if (filterType === "meccan") {
-          matchesRevelation = surahType === "meccan" || surahType === "makkiyah";
+          matchesRevelation =
+            surahType === "meccan" || surahType === "makkiyah";
         } else if (filterType === "medinan") {
           matchesRevelation =
             surahType === "medinan" || surahType === "madaniyah";
@@ -401,13 +442,23 @@ export default function QuranPage() {
       {/* Header */}
       <header className="sticky top-0 z-30">
         <div className="max-w-md mx-auto px-4 py-4">
-          <div className="relative bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
-            <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
-              {t("quran.title")}
-            </h1>
-            <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
-              {t("quran.subtitle")}
-            </p>
+          <div className="relative flex gap-20 items-center bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/")}
+              className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+            >
+              <ArrowLeft className="w-5 h-5 text-awqaf-primary" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
+                {t("quran.title")}
+              </h1>
+              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
+                {t("quran.subtitle")}
+              </p>
+            </div>
           </div>
         </div>
       </header>
@@ -516,7 +567,8 @@ export default function QuranPage() {
                           {surah.id}. {surah.transliteration}
                         </p>
                         <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                          {surah.name} • {surah.total_verses} {t("quran.verses")}
+                          {surah.name} • {surah.total_verses}{" "}
+                          {t("quran.verses")}
                         </p>
                       </div>
                     </div>
@@ -528,7 +580,10 @@ export default function QuranPage() {
         </Dialog>
 
         {/* Bulk Memorization Input Dialog */}
-        <Dialog open={isBulkMemorizationOpen} onOpenChange={setIsBulkMemorizationOpen}>
+        <Dialog
+          open={isBulkMemorizationOpen}
+          onOpenChange={setIsBulkMemorizationOpen}
+        >
           <DialogContent className="border-awqaf-border-light p-0 max-w-md">
             <DialogHeader className="p-4 border-b border-awqaf-border-light">
               <DialogTitle className="font-comfortaa flex items-center gap-2">
@@ -538,7 +593,8 @@ export default function QuranPage() {
             </DialogHeader>
             <div className="px-4 pb-4 pt-4">
               <p className="text-sm text-awqaf-foreground-secondary font-comfortaa mb-4">
-                Tandai hafalan dari surah dan ayat tertentu hingga surah dan ayat tertentu
+                Tandai hafalan dari surah dan ayat tertentu hingga surah dan
+                ayat tertentu
               </p>
 
               <div className="space-y-4">
@@ -561,9 +617,12 @@ export default function QuranPage() {
                         placeholder="1"
                         className="border-awqaf-border-light font-comfortaa"
                       />
-                      {allSurahs.find(s => s.id === parseInt(startSurah)) && (
+                      {allSurahs.find((s) => s.id === parseInt(startSurah)) && (
                         <p className="text-xs text-awqaf-primary font-comfortaa mt-1">
-                          {allSurahs.find(s => s.id === parseInt(startSurah))?.transliteration}
+                          {
+                            allSurahs.find((s) => s.id === parseInt(startSurah))
+                              ?.transliteration
+                          }
                         </p>
                       )}
                     </div>
@@ -579,9 +638,13 @@ export default function QuranPage() {
                         placeholder="1"
                         className="border-awqaf-border-light font-comfortaa"
                       />
-                      {allSurahs.find(s => s.id === parseInt(startSurah)) && (
+                      {allSurahs.find((s) => s.id === parseInt(startSurah)) && (
                         <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mt-1">
-                          Max: {allSurahs.find(s => s.id === parseInt(startSurah))?.total_verses}
+                          Max:{" "}
+                          {
+                            allSurahs.find((s) => s.id === parseInt(startSurah))
+                              ?.total_verses
+                          }
                         </p>
                       )}
                     </div>
@@ -607,9 +670,12 @@ export default function QuranPage() {
                         placeholder="1"
                         className="border-awqaf-border-light font-comfortaa"
                       />
-                      {allSurahs.find(s => s.id === parseInt(endSurah)) && (
+                      {allSurahs.find((s) => s.id === parseInt(endSurah)) && (
                         <p className="text-xs text-awqaf-primary font-comfortaa mt-1">
-                          {allSurahs.find(s => s.id === parseInt(endSurah))?.transliteration}
+                          {
+                            allSurahs.find((s) => s.id === parseInt(endSurah))
+                              ?.transliteration
+                          }
                         </p>
                       )}
                     </div>
@@ -625,9 +691,13 @@ export default function QuranPage() {
                         placeholder="1"
                         className="border-awqaf-border-light font-comfortaa"
                       />
-                      {allSurahs.find(s => s.id === parseInt(endSurah)) && (
+                      {allSurahs.find((s) => s.id === parseInt(endSurah)) && (
                         <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mt-1">
-                          Max: {allSurahs.find(s => s.id === parseInt(endSurah))?.total_verses}
+                          Max:{" "}
+                          {
+                            allSurahs.find((s) => s.id === parseInt(endSurah))
+                              ?.total_verses
+                          }
                         </p>
                       )}
                     </div>
@@ -680,8 +750,8 @@ export default function QuranPage() {
                     <p className="text-sm font-semibold text-card-foreground font-comfortaa mb-2">
                       Total Progress Hafalan
                     </p>
-                    <Progress 
-                      value={memorizationStats.percentage} 
+                    <Progress
+                      value={memorizationStats.percentage}
                       className="h-2 bg-accent-200"
                     />
                   </div>
@@ -725,11 +795,15 @@ export default function QuranPage() {
                   Progress per Surah
                 </p>
                 {allSurahs.map((surah) => {
-                  const progress = getSurahMemorizationProgress(surah.id, surah.total_verses);
-                  const memorizedCount = (memorizedVerses[surah.id] || []).length;
-                  
+                  const progress = getSurahMemorizationProgress(
+                    surah.id,
+                    surah.total_verses,
+                  );
+                  const memorizedCount = (memorizedVerses[surah.id] || [])
+                    .length;
+
                   if (progress === 0) return null;
-                  
+
                   return (
                     <div
                       key={surah.id}
@@ -752,7 +826,10 @@ export default function QuranPage() {
                           <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 ml-2" />
                         )}
                       </div>
-                      <Progress value={progress} className="h-1.5 bg-accent-100" />
+                      <Progress
+                        value={progress}
+                        className="h-1.5 bg-accent-100"
+                      />
                     </div>
                   );
                 })}
@@ -803,7 +880,9 @@ export default function QuranPage() {
                 {t("quran.allSurahs")}
               </h3>
               <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                {isLoading ? t("quran.loading") : `${filteredSurahs.length} ${t("quran.surah")}`}
+                {isLoading
+                  ? t("quran.loading")
+                  : `${filteredSurahs.length} ${t("quran.surah")}`}
               </span>
             </div>
 
@@ -814,9 +893,13 @@ export default function QuranPage() {
             ) : (
               <div className="space-y-3 max-h-[600px] overflow-y-auto mobile-scroll">
                 {filteredSurahs.map((surah) => {
-                  const memProgress = getSurahMemorizationProgress(surah.id, surah.total_verses);
-                  const memorizedCount = (memorizedVerses[surah.id] || []).length;
-                  
+                  const memProgress = getSurahMemorizationProgress(
+                    surah.id,
+                    surah.total_verses,
+                  );
+                  const memorizedCount = (memorizedVerses[surah.id] || [])
+                    .length;
+
                   return (
                     <div
                       key={surah.id}
@@ -832,7 +915,9 @@ export default function QuranPage() {
                       {memProgress > 0 && (
                         <div className="absolute top-2 right-2 flex items-center gap-1 bg-success/90 text-white px-2 py-1 rounded-full text-xs font-comfortaa">
                           <GraduationCap className="w-3 h-3" />
-                          <span>{memorizedCount}/{surah.total_verses}</span>
+                          <span>
+                            {memorizedCount}/{surah.total_verses}
+                          </span>
                         </div>
                       )}
                     </div>
