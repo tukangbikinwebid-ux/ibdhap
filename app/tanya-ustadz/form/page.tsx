@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Lightbulb, Info } from "lucide-react"; // Added icons
 import QuestionForm from "../components/QuestionForm";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // For router back
 import { useCreateQnAMutation } from "@/services/public/kajian.service";
 import { useI18n } from "@/app/hooks/useI18n";
 import { CreateQnABody } from "@/services/public/kajian.service";
-import Swal from "sweetalert2"; // Import SweetAlert2
+import Swal from "sweetalert2";
 
 // --- TRANSLATION DICTIONARY ---
 type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
@@ -30,31 +31,31 @@ interface PageTranslations {
   tips: string[];
   quote: string;
   quoteSource: string;
-  errorTitle: string; // New
-  errorMessage: string; // New
+  errorTitle: string;
+  errorMessage: string;
 }
 
 const PAGE_TEXT: Record<LocaleCode, PageTranslations> = {
   id: {
     headerTitle: "Ajukan Pertanyaan",
     headerDesc:
-      "Sampaikan pertanyaan Anda tentang Islam kepada ustadz yang berkompeten. Dapatkan jawaban yang tepat dan terpercaya.",
-    backBtn: "Kembali ke Tanya Ustadz",
-    successTitle: "Pertanyaan Berhasil Dikirim!",
+      "Sampaikan pertanyaan Anda tentang Islam kepada ustadz yang berkompeten.",
+    backBtn: "Kembali",
+    successTitle: "Berhasil Dikirim!",
     successDesc:
-      "Pertanyaan Anda telah diterima dan akan diproses oleh tim ustadz. Anda akan mendapat notifikasi ketika pertanyaan sudah dijawab.",
-    submitAnother: "Ajukan Pertanyaan Lain",
-    guidelinesTitle: "Panduan Bertanya",
-    guideline1: "Tuliskan pertanyaan dengan jelas dan spesifik",
-    guideline2: "Pilih ustadz yang sesuai dengan topik pertanyaan",
-    guideline3: "Gunakan bahasa yang sopan dan santun",
-    guideline4: "Berikan konteks yang cukup untuk pertanyaan Anda",
-    tipsTitle: "Tips Bertanya",
+      "Pertanyaan Anda telah diterima dan akan diproses. Anda akan mendapat notifikasi ketika dijawab.",
+    submitAnother: "Tanya Lagi",
+    guidelinesTitle: "Panduan",
+    guideline1: "Tuliskan pertanyaan dengan jelas",
+    guideline2: "Pilih ustadz yang sesuai topik",
+    guideline3: "Gunakan bahasa yang sopan",
+    guideline4: "Berikan konteks yang cukup",
+    tipsTitle: "Tips",
     tips: [
-      "Hindari pertanyaan yang terlalu umum",
-      "Sertakan situasi atau kondisi spesifik",
-      "Jangan ragu untuk memberikan detail yang relevan",
-      "Pastikan pertanyaan belum pernah ditanyakan sebelumnya",
+      "Hindari pertanyaan terlalu umum",
+      "Sertakan situasi spesifik",
+      "Berikan detail relevan",
+      "Cek pertanyaan serupa dahulu",
     ],
     quote:
       "Barangsiapa yang menempuh jalan untuk mencari ilmu, maka Allah akan memudahkan baginya jalan menuju surga",
@@ -64,24 +65,23 @@ const PAGE_TEXT: Record<LocaleCode, PageTranslations> = {
   },
   en: {
     headerTitle: "Ask a Question",
-    headerDesc:
-      "Submit your questions about Islam to competent scholars. Get accurate and reliable answers.",
-    backBtn: "Back to Ask Ustadz",
-    successTitle: "Question Submitted Successfully!",
+    headerDesc: "Submit your questions about Islam to competent scholars.",
+    backBtn: "Back",
+    successTitle: "Submitted Successfully!",
     successDesc:
-      "Your question has been received and will be processed by our team. You will be notified when it's answered.",
-    submitAnother: "Submit Another Question",
+      "Your question has been received and will be processed. You will be notified when answered.",
+    submitAnother: "Ask Another",
     guidelinesTitle: "Guidelines",
-    guideline1: "Write your question clearly and specifically",
-    guideline2: "Choose an Ustadz relevant to the topic",
-    guideline3: "Use polite and respectful language",
-    guideline4: "Provide enough context for your question",
+    guideline1: "Write clearly and specifically",
+    guideline2: "Choose relevant Ustadz",
+    guideline3: "Use polite language",
+    guideline4: "Provide enough context",
     tipsTitle: "Tips",
     tips: [
       "Avoid overly general questions",
-      "Include specific situations or conditions",
-      "Don't hesitate to provide relevant details",
-      "Ensure the question hasn't been asked before",
+      "Include specific situations",
+      "Provide relevant details",
+      "Check similar questions first",
     ],
     quote:
       "Whoever follows a path to seek knowledge, Allah will make the path to Paradise easy for him.",
@@ -91,115 +91,109 @@ const PAGE_TEXT: Record<LocaleCode, PageTranslations> = {
   },
   ar: {
     headerTitle: "طرح سؤال",
-    headerDesc:
-      "اطرح أسئلتك حول الإسلام على علماء أكفاء. احصل على إجابات دقيقة وموثوقة.",
-    backBtn: "العودة إلى اسأل الأستاذ",
-    successTitle: "تم إرسال السؤال بنجاح!",
-    successDesc:
-      "تم استلام سؤالك وسيتم معالجته من قبل فريقنا. سيتم إشعارك عند الرد عليه.",
-    submitAnother: "طرح سؤال آخر",
+    headerDesc: "اطرح أسئلتك حول الإسلام على علماء أكفاء.",
+    backBtn: "عودة",
+    successTitle: "تم الإرسال بنجاح!",
+    successDesc: "تم استلام سؤالك وجاري معالجته. سيتم إشعارك عند الرد.",
+    submitAnother: "سؤال آخر",
     guidelinesTitle: "إرشادات",
-    guideline1: "اكتب سؤالك بوضوح وتحديد",
-    guideline2: "اختر أستاذًا ذا صلة بالموضوع",
-    guideline3: "استخدم لغة مهذبة ومحترمة",
-    guideline4: "قدم سياقًا كافيًا لسؤالك",
+    guideline1: "اكتب بوضوح",
+    guideline2: "اختر الأستاذ المناسب",
+    guideline3: "استخدم لغة مهذبة",
+    guideline4: "وفر سياقًا كافيًا",
     tipsTitle: "نصائح",
     tips: [
-      "تجنب الأسئلة العامة جدًا",
-      "قم بتضمين مواقف أو ظروف محددة",
-      "لا تتردد في تقديم التفاصيل ذات الصلة",
-      "تأكد من عدم طرح السؤال من قبل",
+      "تجنب العموميات",
+      "اذكر تفاصيل محددة",
+      "لا تتردد في التوضيح",
+      "تأكد من عدم التكرار",
     ],
     quote:
-      "مَنْ سَلَكَ طَرِيقًا يَلْتَمِسُ فِيهِ عِلْمًا، سَهَّلَ اللهُ لَهُ بِهِ طَرِيقًا إِلَى الْجَنَّةِ",
+      "مَنْ سَلَكَ طَرِيقًا يَلْتَمِسُ فِيهِ عِلْمًا، سَهَّلَ اللهُ لَهُ بِهِ طَرِيقًا إِلَى الْجَنَّةِ",
     quoteSource: "- رواه مسلم",
     errorTitle: "فشل",
-    errorMessage: "فشل إرسال السؤال. يرجى المحاولة مرة أخرى.",
+    errorMessage: "فشل الإرسال. حاول مرة أخرى.",
   },
   fr: {
     headerTitle: "Poser une Question",
-    headerDesc:
-      "Posez vos questions sur l'Islam à des érudits compétents. Obtenez des réponses précises et fiables.",
-    backBtn: "Retour à Demander à l'Oustaz",
-    successTitle: "Question Envoyée avec Succès !",
+    headerDesc: "Posez vos questions sur l'Islam à des érudits compétents.",
+    backBtn: "Retour",
+    successTitle: "Envoyé avec Succès !",
     successDesc:
-      "Votre question a été reçue et sera traitée par notre équipe. Vous serez notifié lorsqu'elle sera répondue.",
-    submitAnother: "Poser une Autre Question",
+      "Votre question a été reçue. Vous serez notifié lors de la réponse.",
+    submitAnother: "Autre Question",
     guidelinesTitle: "Directives",
-    guideline1: "Écrivez votre question clairement et spécifiquement",
-    guideline2: "Choisissez un Oustaz pertinent pour le sujet",
-    guideline3: "Utilisez un langage poli et respectueux",
-    guideline4: "Fournissez suffisamment de contexte pour votre question",
+    guideline1: "Écrivez clairement",
+    guideline2: "Choisissez l'Oustaz pertinent",
+    guideline3: "Soyez poli",
+    guideline4: "Donnez du contexte",
     tipsTitle: "Conseils",
     tips: [
-      "Évitez les questions trop générales",
-      "Incluez des situations ou conditions spécifiques",
-      "N'hésitez pas à fournir des détails pertinents",
-      "Assurez-vous que la question n'a pas déjà été posée",
+      "Évitez les généralités",
+      "Incluez des détails spécifiques",
+      "Fournissez des infos pertinentes",
+      "Vérifiez les questions similaires",
     ],
     quote:
       "Celui qui emprunte un chemin à la recherche du savoir, Allah lui facilite un chemin vers le Paradis.",
     quoteSource: "- Sahih Muslim",
     errorTitle: "Échec",
-    errorMessage: "Échec de l'envoi de la question. Veuillez réessayer.",
+    errorMessage: "Échec de l'envoi. Réessayez.",
   },
   kr: {
     headerTitle: "질문하기",
-    headerDesc:
-      "이슬람에 대한 질문을 유능한 학자들에게 제출하세요. 정확하고 신뢰할 수 있는 답변을 받으세요.",
-    backBtn: "우스타즈에게 질문하기로 돌아가기",
-    successTitle: "질문이 성공적으로 제출되었습니다!",
-    successDesc:
-      "귀하의 질문이 접수되었으며 우리 팀에 의해 처리될 것입니다. 답변이 완료되면 알림을 받게 됩니다.",
-    submitAnother: "다른 질문 제출하기",
+    headerDesc: "이슬람에 대한 질문을 유능한 학자들에게 제출하세요.",
+    backBtn: "돌아가기",
+    successTitle: "제출 성공!",
+    successDesc: "질문이 접수되었습니다. 답변이 완료되면 알림을 드립니다.",
+    submitAnother: "다른 질문",
     guidelinesTitle: "지침",
-    guideline1: "질문을 명확하고 구체적으로 작성하세요",
-    guideline2: "주제와 관련된 우스타즈를 선택하세요",
-    guideline3: "공손하고 존중하는 언어를 사용하세요",
-    guideline4: "질문에 대한 충분한 맥락을 제공하세요",
+    guideline1: "명확하게 작성하세요",
+    guideline2: "관련 우스타즈 선택",
+    guideline3: "공손한 언어 사용",
+    guideline4: "충분한 맥락 제공",
     tipsTitle: "팁",
     tips: [
-      "너무 일반적인 질문은 피하세요",
-      "구체적인 상황이나 조건을 포함하세요",
-      "관련 세부 정보를 제공하는 것을 주저하지 마세요",
-      "이전에 질문되지 않았는지 확인하세요",
+      "너무 일반적인 질문 피하기",
+      "구체적인 상황 포함",
+      "관련 세부 정보 제공",
+      "중복 확인",
     ],
     quote:
-      "지식을 구하기 위해 길을 나서는 자, 알라께서 그를 위해 천국으로 가는 길을 쉽게 해주실 것이다.",
+      "지식을 구하기 위해 길을 나서는 자, 알라께서 천국으로 가는 길을 쉽게 해주실 것이다.",
     quoteSource: "- 사히 무슬림",
     errorTitle: "실패",
-    errorMessage: "질문을 제출하지 못했습니다. 다시 시도해 주세요.",
+    errorMessage: "제출 실패. 다시 시도해 주세요.",
   },
   jp: {
     headerTitle: "質問する",
-    headerDesc:
-      "イスラム教に関する質問を有能な学者に提出してください。正確で信頼できる回答を得られます。",
-    backBtn: "ウスタズに質問するに戻る",
-    successTitle: "質問が正常に送信されました！",
-    successDesc:
-      "あなたの質問は受理され、私たちのチームによって処理されます。回答が得られ次第通知されます。",
-    submitAnother: "別の質問を送信",
+    headerDesc: "イスラム教に関する質問を有能な学者に提出してください。",
+    backBtn: "戻る",
+    successTitle: "送信成功！",
+    successDesc: "質問を受理しました。回答があり次第通知されます。",
+    submitAnother: "別の質問",
     guidelinesTitle: "ガイドライン",
-    guideline1: "質問は明確かつ具体的に書いてください",
-    guideline2: "トピックに関連するウスタズを選択してください",
-    guideline3: "丁寧で敬意のある言葉遣いをしてください",
-    guideline4: "質問に十分な文脈を提供してください",
+    guideline1: "明確に書いてください",
+    guideline2: "適切なウスタズを選択",
+    guideline3: "丁寧な言葉遣い",
+    guideline4: "文脈を提供する",
     tipsTitle: "ヒント",
     tips: [
-      "一般的すぎる質問は避けてください",
-      "具体的な状況や条件を含めてください",
-      "関連する詳細を提供することを躊躇しないでください",
-      "以前に質問されていないことを確認してください",
+      "一般的すぎる質問は避ける",
+      "具体的な状況を含める",
+      "詳細を提供する",
+      "類似質問を確認",
     ],
     quote:
       "知識を求めて道を歩む者には、アッラーが天国への道を容易にしてくださるだろう。",
     quoteSource: "- サヒーフ・ムスリム",
     errorTitle: "失敗",
-    errorMessage: "質問の送信に失敗しました。もう一度お試しください。",
+    errorMessage: "送信に失敗しました。再試行してください。",
   },
 };
 
 export default function QuestionFormPage() {
+  const router = useRouter();
   const { locale } = useI18n();
   // Safe Locale Access
   const safeLocale = (
@@ -217,12 +211,11 @@ export default function QuestionFormPage() {
       setIsSubmitted(true);
     } catch (error) {
       console.error("Failed to submit question:", error);
-      // IMPLEMENTASI SWEETALERT
       Swal.fire({
         icon: "error",
         title: t.errorTitle,
         text: t.errorMessage,
-        confirmButtonColor: "#0d9488", // Teal
+        confirmButtonColor: "#0d9488",
         confirmButtonText: "OK",
         customClass: {
           popup: "font-comfortaa",
@@ -234,177 +227,140 @@ export default function QuestionFormPage() {
   if (isSubmitted) {
     return (
       <div
-        className="min-h-screen bg-background pb-20"
+        className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 flex items-center justify-center p-4"
         dir={isRtl ? "rtl" : "ltr"}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-awqaf-primary to-awqaf-primary/80 text-white py-12">
-          <div className="container mx-auto px-4">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold font-comfortaa mb-4">
-                {t.headerTitle}
-              </h1>
-              <p className="text-lg text-white/90 font-comfortaa mb-6 max-w-2xl mx-auto">
-                {t.headerDesc}
-              </p>
+        <Card className="w-full max-w-md border-green-200 bg-white/90 backdrop-blur-sm shadow-lg">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+              <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-          </div>
-        </div>
-
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-2xl mx-auto">
-            <Card className="border-green-200 bg-green-50">
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-green-800 font-comfortaa mb-4">
-                  {t.successTitle}
-                </h2>
-                <p className="text-green-700 font-comfortaa mb-6 leading-relaxed">
-                  {t.successDesc}
-                </p>
-                <div className="space-y-4">
-                  <Link href="/tanya-ustadz">
-                    <Button className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white font-comfortaa">
-                      <ArrowLeft
-                        className={`w-4 h-4 ${isRtl ? "ml-2" : "mr-2"} ${isRtl ? "rotate-180" : ""}`}
-                      />
-                      {t.backBtn}
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsSubmitted(false)}
-                    className="w-full font-comfortaa"
-                  >
-                    {t.submitAnother}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+            <h2 className="text-xl font-bold text-green-800 font-comfortaa mb-2">
+              {t.successTitle}
+            </h2>
+            <p className="text-sm text-green-700 font-comfortaa mb-6 leading-relaxed">
+              {t.successDesc}
+            </p>
+            <div className="flex flex-col gap-2">
+              <Link href="/tanya-ustadz">
+                <Button className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white font-comfortaa h-10">
+                  <ArrowLeft
+                    className={`w-4 h-4 ${isRtl ? "ml-2" : "mr-2"} ${isRtl ? "rotate-180" : ""}`}
+                  />
+                  {t.backBtn}
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={() => setIsSubmitted(false)}
+                className="w-full font-comfortaa h-10 border-awqaf-primary text-awqaf-primary hover:bg-awqaf-primary/5"
+              >
+                {t.submitAnother}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div
-      className="min-h-screen bg-background pb-20"
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
       dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Header */}
-      <div className="bg-gradient-to-r from-awqaf-primary to-awqaf-primary/80 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold font-comfortaa mb-4">
-              {t.headerTitle}
-            </h1>
-            <p className="text-lg text-white/90 font-comfortaa mb-6 max-w-2xl mx-auto">
-              {t.headerDesc}
+      <header className="sticky top-0 z-30">
+        <div className="max-w-md mx-auto px-4 py-4">
+          <div className="relative flex gap-2 items-center bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+            >
+              <ArrowLeft
+                className={`w-5 h-5 text-awqaf-primary ${isRtl ? "rotate-180" : ""}`}
+              />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
+                {t.headerTitle}
+              </h1>
+              <p className="text-xs text-awqaf-foreground-secondary font-comfortaa text-center mt-0.5 line-clamp-1">
+                {t.headerDesc}
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
+        {/* Main Form */}
+        <div className="bg-white p-4 rounded-2xl border border-awqaf-border-light shadow-sm">
+          <QuestionForm onSubmit={handleQuestionSubmit} />
+        </div>
+
+        {/* Guidelines (Stacked) */}
+        <Card className="border-awqaf-border-light bg-white/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-awqaf-primary font-comfortaa flex items-center gap-2">
+              <Info className="w-4 h-4" />
+              {t.guidelinesTitle}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-xs font-comfortaa">
+              {[t.guideline1, t.guideline2, t.guideline3, t.guideline4].map(
+                (text, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full bg-awqaf-primary/10 text-awqaf-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {idx + 1}
+                    </div>
+                    <p className="text-awqaf-foreground-secondary leading-relaxed">
+                      {text}
+                    </p>
+                  </div>
+                ),
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tips (Stacked) */}
+        <Card className="border-awqaf-border-light bg-gradient-to-br from-accent-50 to-accent-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-awqaf-primary font-comfortaa flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-orange-500" />
+              {t.tipsTitle}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-xs font-comfortaa">
+              {t.tips.map((tip: string, idx: number) => (
+                <p
+                  key={idx}
+                  className="text-awqaf-foreground-secondary flex items-start gap-2"
+                >
+                  <span className="text-orange-500 mt-0.5">•</span> {tip}
+                </p>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Motivational Quote */}
+        <Card className="border-awqaf-border-light bg-white/80">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-awqaf-primary font-comfortaa mb-2 italic leading-relaxed">
+              &quot;{t.quote}&quot;
             </p>
-            <Link href="/tanya-ustadz">
-              <Button
-                variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 font-comfortaa"
-              >
-                <ArrowLeft
-                  className={`w-4 h-4 ${isRtl ? "ml-2" : "mr-2"} ${isRtl ? "rotate-180" : ""}`}
-                />
-                {t.backBtn}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Form */}
-            <div className="lg:col-span-2">
-              <QuestionForm onSubmit={handleQuestionSubmit} />
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Guidelines */}
-              <Card className="border-awqaf-border-light">
-                <CardHeader>
-                  <CardTitle className="text-awqaf-primary font-comfortaa">
-                    {t.guidelinesTitle}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 text-sm font-comfortaa">
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-awqaf-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                        1
-                      </div>
-                      <p className="text-awqaf-foreground-secondary">
-                        {t.guideline1}
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-awqaf-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                        2
-                      </div>
-                      <p className="text-awqaf-foreground-secondary">
-                        {t.guideline2}
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-awqaf-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                        3
-                      </div>
-                      <p className="text-awqaf-foreground-secondary">
-                        {t.guideline3}
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-awqaf-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                        4
-                      </div>
-                      <p className="text-awqaf-foreground-secondary">
-                        {t.guideline4}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Tips */}
-              <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
-                <CardHeader>
-                  <CardTitle className="text-awqaf-primary font-comfortaa">
-                    {t.tipsTitle}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 text-sm font-comfortaa">
-                    {t.tips.map((tip: string, idx: number) => (
-                      <p key={idx} className="text-awqaf-foreground-secondary">
-                        • {tip}
-                      </p>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Motivational Quote */}
-              <Card className="border-awqaf-border-light bg-gradient-to-r from-awqaf-primary/5 to-awqaf-primary/10">
-                <CardContent className="p-4 text-center">
-                  <p className="text-sm text-awqaf-primary font-comfortaa mb-1">
-                    &quot;{t.quote}&quot;
-                  </p>
-                  <p className="text-xs text-awqaf-foreground-secondary font-tajawal">
-                    {t.quoteSource}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
+            <p className="text-[10px] text-awqaf-foreground-secondary font-tajawal font-bold">
+              {t.quoteSource}
+            </p>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }

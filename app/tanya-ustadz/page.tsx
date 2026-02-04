@@ -10,8 +10,11 @@ import {
   BookOpen,
   TrendingUp,
   Loader2,
+  ArrowLeft,
+  PlusCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Added for back button
 import QuestionFilter, { SortOption } from "./components/QuestionFilter";
 import QuestionList from "./components/QuestionList";
 import PopularQuestions from "./components/PopularQuestions";
@@ -22,9 +25,13 @@ import {
 } from "@/services/public/kajian.service";
 import { QnAUstadz } from "@/types/public/kajian";
 import { useI18n } from "@/app/hooks/useI18n";
+import { LocaleCode } from "@/lib/i18n"; // Ensure type import
 
 export default function TanyaUstadzPage() {
-  const { t } = useI18n();
+  const router = useRouter();
+  const { t, locale } = useI18n();
+  const isRtl = locale === "ar"; // Determine direction
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUstadzId, setSelectedUstadzId] = useState<string>(""); // Filter by Ustadz
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -50,8 +57,7 @@ export default function TanyaUstadzPage() {
   // Kategori di sini diasumsikan sebagai Ustadz karena API belum punya endpoint kategori khusus QnA
   const totalCategories = ustadzData?.data.length || 0;
 
-  // Popular Questions Logic (Simulasi: Ambil 5 teratas berdasarkan kriteria tertentu, misal yang sudah dijawab)
-  // Karena API belum ada field 'views' atau 'likes', kita anggap yang sudah dijawab adalah yang populer/bermanfaat.
+  // Popular Questions Logic
   const popularQuestions = useMemo(() => {
     if (!qnaData?.data) return [];
     return qnaData.data.filter((q) => q.answer !== null).slice(0, 5);
@@ -70,14 +76,14 @@ export default function TanyaUstadzPage() {
         (item) =>
           item.question.toLowerCase().includes(q) ||
           item.name.toLowerCase().includes(q) ||
-          item.ustadz.name.toLowerCase().includes(q)
+          item.ustadz.name.toLowerCase().includes(q),
       );
     }
 
     // Filter Ustadz (Category replacement)
     if (selectedUstadzId) {
       questions = questions.filter(
-        (q) => q.ustadz_id === parseInt(selectedUstadzId)
+        (q) => q.ustadz_id === parseInt(selectedUstadzId),
       );
     }
 
@@ -119,83 +125,121 @@ export default function TanyaUstadzPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-awqaf-primary to-awqaf-primary/80 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold font-comfortaa mb-4">
-              {t("askUstadz.title")}
-            </h1>
-            <p className="text-lg text-white/90 font-comfortaa mb-6 max-w-2xl mx-auto">
-              {t("askUstadz.subtitle")}
-            </p>
-            <Link href="/tanya-ustadz/form">
-              <Button className="bg-white text-awqaf-primary hover:bg-white/90 font-comfortaa">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                {t("askUstadz.askQuestion")}
-              </Button>
-            </Link>
+    <div
+      className="min-h-screen bg-gradient-to-br from-accent-50 to-accent-100 pb-20"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
+      {/* Header (Adapted from SholatPage) */}
+      <header className="sticky top-0 z-30">
+        <div className="max-w-md mx-auto px-4 py-4">
+          <div className="relative flex gap-2 items-center bg-background/90 backdrop-blur-md rounded-2xl border border-awqaf-border-light/50 shadow-lg px-4 py-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/")}
+              className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+            >
+              <ArrowLeft className="w-5 h-5 text-awqaf-primary" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-awqaf-primary font-comfortaa text-center">
+                {t("askUstadz.title")}
+              </h1>
+              <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center mt-1">
+                {t("askUstadz.subtitle")}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-awqaf-border-light">
-                <CardContent className="p-4 text-center">
-                  <MessageCircle className="w-8 h-8 text-awqaf-primary mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-card-foreground font-comfortaa">
-                    {totalQuestions}
-                  </p>
-                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    {t("askUstadz.totalQuestions")}
-                  </p>
-                </CardContent>
-              </Card>
+      {/* Main Content (Max-w-md) */}
+      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
+        {/* Call to Action: Ask Question */}
+        <Link href="/tanya-ustadz/form">
+          <Button className="w-full bg-awqaf-primary hover:bg-awqaf-primary/90 text-white font-comfortaa h-12 rounded-xl shadow-md">
+            <PlusCircle className="w-5 h-5 mr-2" />
+            {t("askUstadz.askQuestion")}
+          </Button>
+        </Link>
 
-              <Card className="border-awqaf-border-light">
-                <CardContent className="p-4 text-center">
-                  <Users className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-card-foreground font-comfortaa">
-                    {answeredCount}
-                  </p>
-                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    {t("askUstadz.answered")}
-                  </p>
-                </CardContent>
-              </Card>
+        {/* Stats Grid (2x2 Layout) */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Card className="border-awqaf-border-light bg-white/50 backdrop-blur-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 bg-accent-100 rounded-full flex items-center justify-center mb-2">
+                <MessageCircle className="w-5 h-5 text-awqaf-primary" />
+              </div>
+              <p className="text-xl font-bold text-card-foreground font-comfortaa">
+                {totalQuestions}
+              </p>
+              <p className="text-[10px] text-awqaf-foreground-secondary font-comfortaa uppercase tracking-wider">
+                {t("askUstadz.totalQuestions")}
+              </p>
+            </CardContent>
+          </Card>
 
-              <Card className="border-awqaf-border-light">
-                <CardContent className="p-4 text-center">
-                  <BookOpen className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-card-foreground font-comfortaa">
-                    {totalCategories}
-                  </p>
-                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    {t("askUstadz.activeUstadz")}
-                  </p>
-                </CardContent>
-              </Card>
+          <Card className="border-awqaf-border-light bg-white/50 backdrop-blur-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mb-2">
+                <Users className="w-5 h-5 text-green-600" />
+              </div>
+              <p className="text-xl font-bold text-card-foreground font-comfortaa">
+                {answeredCount}
+              </p>
+              <p className="text-[10px] text-awqaf-foreground-secondary font-comfortaa uppercase tracking-wider">
+                {t("askUstadz.answered")}
+              </p>
+            </CardContent>
+          </Card>
 
-              <Card className="border-awqaf-border-light">
-                <CardContent className="p-4 text-center">
-                  <TrendingUp className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-card-foreground font-comfortaa">
-                    {popularQuestions.length}
-                  </p>
-                  <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                    {t("askUstadz.popular")}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+          <Card className="border-awqaf-border-light bg-white/50 backdrop-blur-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                <BookOpen className="w-5 h-5 text-blue-600" />
+              </div>
+              <p className="text-xl font-bold text-card-foreground font-comfortaa">
+                {totalCategories}
+              </p>
+              <p className="text-[10px] text-awqaf-foreground-secondary font-comfortaa uppercase tracking-wider">
+                {t("askUstadz.activeUstadz")}
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Filter */}
+          <Card className="border-awqaf-border-light bg-white/50 backdrop-blur-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-2">
+                <TrendingUp className="w-5 h-5 text-orange-600" />
+              </div>
+              <p className="text-xl font-bold text-card-foreground font-comfortaa">
+                {popularQuestions.length}
+              </p>
+              <p className="text-[10px] text-awqaf-foreground-secondary font-comfortaa uppercase tracking-wider">
+                {t("askUstadz.popular")}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Popular Questions (Stacked) */}
+        <section>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <TrendingUp className="w-4 h-4 text-orange-600" />
+            <h3 className="font-semibold text-card-foreground text-sm font-comfortaa">
+              {t("askUstadz.popular")}
+            </h3>
+          </div>
+          <PopularQuestions
+            questions={popularQuestions}
+            onQuestionClick={handleQuestionClick}
+            onViewAllClick={handleViewAllQuestions}
+          />
+        </section>
+
+        {/* Filters & List */}
+        <section id="questions-list" className="space-y-4">
+          <div className="bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-awqaf-border-light shadow-sm">
             <QuestionFilter
               searchQuery={searchQuery}
               selectedCategory={selectedUstadzId}
@@ -204,57 +248,43 @@ export default function TanyaUstadzPage() {
               onCategoryChange={setSelectedUstadzId}
               onSortChange={setSortBy}
               onClearFilters={handleClearFilters}
-              // Pass list ustadz untuk dropdown filter kategori
               ustadzList={ustadzData?.data || []}
             />
+          </div>
 
-            {/* Questions List */}
-            <div id="questions-list">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-card-foreground font-comfortaa">
-                  {t("askUstadz.questionList")}
-                </h2>
-                <Badge className="bg-awqaf-primary/10 text-awqaf-primary border-awqaf-primary/20 font-comfortaa">
-                  {isLoadingQnA ? "..." : filteredQuestions.length} {t("askUstadz.questions")}
-                </Badge>
-              </div>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-lg font-semibold text-card-foreground font-comfortaa">
+              {t("askUstadz.questionList")}
+            </h2>
+            <Badge className="bg-awqaf-primary/10 text-awqaf-primary border-awqaf-primary/20 font-comfortaa">
+              {isLoadingQnA ? "..." : filteredQuestions.length}
+            </Badge>
+          </div>
 
-              {isLoadingQnA ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary" />
-                </div>
-              ) : (
-                <QuestionList
-                  questions={filteredQuestions}
-                  onQuestionClick={handleQuestionClick}
-                />
-              )}
+          {isLoadingQnA ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-8 h-8 animate-spin text-awqaf-primary" />
             </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Popular Questions */}
-            <PopularQuestions
-              questions={popularQuestions}
+          ) : (
+            <QuestionList
+              questions={filteredQuestions}
               onQuestionClick={handleQuestionClick}
-              onViewAllClick={handleViewAllQuestions}
             />
+          )}
+        </section>
 
-            {/* Motivational Quote */}
-            <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
-              <CardContent className="p-4 text-center">
-                <p className="text-sm text-awqaf-primary font-comfortaa mb-1">
-                  &quot;{t("askUstadz.motivationalQuote")}&quot;
-                </p>
-                <p className="text-xs text-awqaf-foreground-secondary font-tajawal">
-                  - HR. Ibnu Majah
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+        {/* Motivational Quote (Stacked at bottom) */}
+        <Card className="border-awqaf-border-light bg-gradient-to-r from-accent-100 to-accent-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-sm text-awqaf-primary font-comfortaa mb-2 italic">
+              &quot;{t("askUstadz.motivationalQuote")}&quot;
+            </p>
+            <p className="text-xs text-awqaf-foreground-secondary font-tajawal">
+              - HR. Ibnu Majah
+            </p>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }
