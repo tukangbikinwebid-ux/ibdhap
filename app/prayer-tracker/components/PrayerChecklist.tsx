@@ -15,7 +15,7 @@ interface ChecklistTranslations {
   status: {
     completed: string;
     current: string;
-    passed: string; // Tambahan status 'Lewat' jika mau, atau pakai 'Pending'
+    passed: string;
     pending: string;
   };
   instructionTitle: string;
@@ -247,7 +247,7 @@ export default function PrayerChecklist({
 
     if (isCompleted) return "completed";
     if (isCurrent) return "current";
-    if (hasPassed) return "passed"; // Status baru untuk yang sudah lewat tapi belum dikerjakan
+    if (hasPassed) return "passed";
     return "pending";
   };
 
@@ -266,7 +266,7 @@ export default function PrayerChecklist({
         return <CheckCircle className="w-5 h-5 text-success" />;
       case "current":
         return <Clock className="w-5 h-5 text-warning" />;
-      case "passed": // Icon untuk yang terlewat tapi belum dikerjakan
+      case "passed":
         return <AlertCircle className="w-5 h-5 text-red-400" />;
       default:
         return <Clock className="w-5 h-5 text-gray-300" />;
@@ -293,7 +293,7 @@ export default function PrayerChecklist({
       case "current":
         return t.status.current;
       case "passed":
-        return t.status.passed || "Lewat"; // Fallback text
+        return t.status.passed || "Lewat";
       default:
         return t.status.pending;
     }
@@ -378,7 +378,9 @@ export default function PrayerChecklist({
                       <CheckCircle className="w-4 h-4" />
                     ) : (
                       <div
-                        className={`w-4 h-4 rounded-full border-2 ${canCheck ? "border-current" : "border-gray-300"}`}
+                        className={`w-4 h-4 rounded-full border-2 ${
+                          canCheck ? "border-current" : "border-gray-300"
+                        }`}
                       />
                     )}
                   </Button>

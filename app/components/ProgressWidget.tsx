@@ -1,28 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Clock, Target } from "lucide-react";
-import { usePrayerTracker } from "@/app/prayer-tracker/hooks/usePrayerTracker";
+// Hapus hook lokal lama
+// import { usePrayerTracker } from "@/app/prayer-tracker/hooks/usePrayerTracker";
 import { useGetSurahsQuery } from "@/services/public/quran.service";
-import { useI18n } from "@/app/hooks/useI18n"; // Import Hook
+import { useI18n } from "@/app/hooks/useI18n";
+// Import Service Baru
+import { useGetUserSholatListQuery } from "@/services/sholat-track.service"; // Sesuaikan path jika berbeda
 
 export default function ProgressWidget() {
-  const { locale } = useI18n(); // Ambil locale
+  const { locale } = useI18n();
 
-  // 1. Get Prayer Progress
-  const { todayData, isLoading: isPrayerLoading } = usePrayerTracker();
+  // 1. Get Prayer Data from API
+  const { data: sholatData, isLoading: isPrayerLoading } =
+    useGetUserSholatListQuery({ page: 1 });
 
   // 2. Get Surah Data
   const { data: surahList } = useGetSurahsQuery({ lang: "id" });
 
-  // 3. State for Quran Progress
+  // 3. Calculate Prayer Progress (Logic Baru)
+  const prayerStats = useMemo(() => {
+    // Default values
+    let completed = 0;
+    const total = 5;
+
+    // Generate tanggal hari ini YYYY-MM-DD
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const todayDate = `${year}-${month}-${day}`;
+
+    // Cari record hari ini dari data API
+    const todayRecord = sholatData?.data?.find(
+      (record) => record.date === todayDate,
+    );
+
+    // Hitung sholat yang sudah dikerjakan (boolean === true)
+    if (todayRecord) {
+      if (todayRecord.fajr) completed++;
+      if (todayRecord.dhuhr) completed++;
+      if (todayRecord.asr) completed++;
+      if (todayRecord.maghrib) completed++;
+      if (todayRecord.isha) completed++;
+    }
+
+    return {
+      completed,
+      total,
+      percentage: Math.round((completed / total) * 100),
+    };
+  }, [sholatData]);
+
+  // 4. State for Quran Progress
   const [quranProgress, setQuranProgress] = useState({
     completed: 0,
     total: 604,
     percentage: 0,
-    lastRead: "", // String kosong dulu, nanti diisi useEffect
+    lastRead: "",
   });
 
   // --- Inline Translations ---
@@ -89,7 +127,7 @@ export default function ProgressWidget() {
     },
   };
 
-  const t = TEXTS[locale] || TEXTS.id;
+  const t = TEXTS[locale as keyof typeof TEXTS] || TEXTS.id;
 
   // Load Quran progress from localStorage
   useEffect(() => {
@@ -124,12 +162,7 @@ export default function ProgressWidget() {
     } else {
       setQuranProgress((prev) => ({ ...prev, lastRead: t.notRead }));
     }
-  }, [surahList, locale]); // Update saat locale berubah
-
-  // Calculate Prayer Progress
-  const prayerCompleted = todayData?.completedPrayers || 0;
-  const prayerTotal = 5;
-  const prayerPercentage = Math.round((prayerCompleted / prayerTotal) * 100);
+  }, [surahList, locale, t.verse, t.surah, t.notRead]);
 
   return (
     <Card className="border-awqaf-border-light hover:shadow-md transition-all duration-200 col-span-2">
@@ -159,14 +192,19 @@ export default function ProgressWidget() {
                 </span>
               </div>
               <span className="text-sm text-awqaf-foreground-secondary font-comfortaa">
-                {isPrayerLoading ? "..." : `${prayerCompleted}/${prayerTotal}`}
+                {isPrayerLoading
+                  ? "..."
+                  : `${prayerStats.completed}/${prayerStats.total}`}
               </span>
             </div>
-            <Progress value={prayerPercentage} className="h-2 bg-accent-100" />
+            <Progress
+              value={prayerStats.percentage}
+              className="h-2 bg-accent-100"
+            />
             <div className="flex justify-between text-xs text-awqaf-foreground-secondary font-comfortaa">
               <span>0%</span>
               <span className="font-medium text-awqaf-primary">
-                {prayerPercentage}%
+                {prayerStats.percentage}%
               </span>
               <span>100%</span>
             </div>

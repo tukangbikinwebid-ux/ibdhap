@@ -35,6 +35,12 @@ import { useI18n } from "@/app/hooks/useI18n";
 import { LocaleCode } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 
+// --- SERVICES IMPORT ---
+import {
+  useGetUserSholatListQuery,
+  useToggleSholatMutation,
+} from "@/services/sholat-track.service";
+
 // --- TYPES ---
 interface Location {
   latitude: number;
@@ -44,7 +50,8 @@ interface Location {
 }
 
 interface PrayerTime {
-  name: string;
+  originalKey: string; // Add stable key for backend mapping (e.g., "Fajr")
+  name: string; // Translated name for UI
   arabic: string;
   time: string;
   status: "completed" | "current" | "upcoming";
@@ -454,6 +461,8 @@ const SHOLAT_TEXT: Record<LocaleCode, SholatTranslations> = {
   },
 };
 
+type PrayerStatusKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+
 export default function SholatPage() {
   const router = useRouter();
   const { locale } = useI18n();
@@ -463,6 +472,26 @@ export default function SholatPage() {
   ) as LocaleCode;
   const t_sholat = SHOLAT_TEXT[safeLocale];
   const isRtl = safeLocale === "ar";
+
+  // --- API INTEGRATION (New) ---
+  // 1. Get Today's Date in YYYY-MM-DD
+  const todayDate = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  // 2. Fetch User History
+  const { data: sholatData } = useGetUserSholatListQuery({ page: 1 });
+  const [toggleSholat] = useToggleSholatMutation();
+
+  // 3. Find Today's Record from Backend
+  const todayRecord = useMemo(() => {
+    if (!sholatData?.data) return null;
+    return sholatData.data.find((record) => record.date === todayDate);
+  }, [sholatData, todayDate]);
 
   // State
   const [location, setLocation] = useState<Location | null>(null);
@@ -483,10 +512,23 @@ export default function SholatPage() {
     null,
   );
 
-  // Prayer Checklist
-  const [prayerChecklist, setPrayerChecklist] = useState<
-    Record<string, boolean>
-  >({});
+  // Prayer Checklist (DERIVED from Backend Data now, not local state)
+  const prayerChecklist = useMemo<Record<string, boolean>>(() => {
+    const checklist: Record<string, boolean> = {};
+    if (prayerTimes.length > 0) {
+      prayerTimes.forEach((p) => {
+        // Casting string ke tipe union PrayerStatusKey
+        const backendKey = p.originalKey.toLowerCase() as PrayerStatusKey;
+
+        // TypeScript sekarang tahu bahwa todayRecord[backendKey] adalah boolean
+        const isChecked = todayRecord ? todayRecord[backendKey] : false;
+
+        checklist[p.name] = isChecked;
+      });
+    }
+    return checklist;
+  }, [prayerTimes, todayRecord]);
+
   const [showMotivationDialog, setShowMotivationDialog] = useState(false);
   const [completedPrayerName, setCompletedPrayerName] = useState<string>("");
 
@@ -542,6 +584,7 @@ export default function SholatPage() {
       const timings = data.data.timings;
 
       // Use raw names first, map later for translation
+      // Added 'originalKey' for backend mapping
       const rawPrayers = [
         { name: "Fajr", arabic: "الفجر", time: timings.Fajr },
         { name: "Dhuhr", arabic: "الظهر", time: timings.Dhuhr },
@@ -560,7 +603,7 @@ export default function SholatPage() {
         // Translate name immediately based on current locale
         const translatedName = getPrayerName(p.name, safeLocale);
 
-        return { ...p, name: translatedName, status };
+        return { ...p, originalKey: p.name, name: translatedName, status };
       });
 
       setPrayerTimes(processedPrayers);
@@ -617,26 +660,8 @@ export default function SholatPage() {
     return maps[key]?.[loc] || key;
   };
 
-  // Load Checklist
-  useEffect(() => {
-    try {
-      const today = new Date().toDateString();
-      const savedChecklist = localStorage.getItem(`prayer-checklist-${today}`);
-      if (savedChecklist) setPrayerChecklist(JSON.parse(savedChecklist) || {});
-      else setPrayerChecklist({});
-    } catch (e) {
-      setPrayerChecklist({});
-    }
-  }, []);
-
-  // Save Checklist
-  useEffect(() => {
-    const today = new Date().toDateString();
-    localStorage.setItem(
-      `prayer-checklist-${today}`,
-      JSON.stringify(prayerChecklist),
-    );
-  }, [prayerChecklist]);
+  // REMOVED: Load Checklist useEffect
+  // REMOVED: Save Checklist useEffect
 
   // Update prayer names on locale change
   useEffect(() => {
@@ -652,17 +677,41 @@ export default function SholatPage() {
     return Math.round((checkedCount / prayerTimes.length) * 100);
   }, [prayerChecklist, prayerTimes]);
 
-  // Toggle Check
-  const togglePrayerCheck = (prayerName: string) => {
-    const newChecklist = { ...prayerChecklist };
-    if (!newChecklist[prayerName]) {
-      newChecklist[prayerName] = true;
-      setCompletedPrayerName(prayerName);
-      setShowMotivationDialog(true);
-    } else {
-      newChecklist[prayerName] = false;
+  // Toggle Check (UPDATED: Uses Mutation)
+  const togglePrayerCheck = async (prayerTranslatedName: string) => {
+    // 1. Find the original English key (e.g., "Fajr")
+    const prayerObj = prayerTimes.find((p) => p.name === prayerTranslatedName);
+    if (!prayerObj) return;
+
+    // Casting ke tipe union PrayerStatusKey
+    const backendKey = prayerObj.originalKey.toLowerCase() as PrayerStatusKey; // "fajr"
+
+    // 2. Determine new state
+    // Tidak perlu 'as any', TypeScript tahu backendKey adalah key yang valid
+    const currentStatus = todayRecord ? todayRecord[backendKey] : false;
+    const newStatus = !currentStatus;
+
+    // 3. Construct Payload
+    const payload = {
+      date: todayDate,
+      fajr: todayRecord?.fajr || false,
+      dhuhr: todayRecord?.dhuhr || false,
+      asr: todayRecord?.asr || false,
+      maghrib: todayRecord?.maghrib || false,
+      isha: todayRecord?.isha || false,
+      [backendKey]: newStatus, // Update dynamic key aman
+    };
+
+    try {
+      await toggleSholat(payload).unwrap();
+
+      if (newStatus) {
+        setCompletedPrayerName(prayerTranslatedName);
+        setShowMotivationDialog(true);
+      }
+    } catch (error) {
+      console.error("Failed to toggle prayer:", error);
     }
-    setPrayerChecklist(newChecklist);
   };
 
   // Geolocation
@@ -1101,15 +1150,37 @@ export default function SholatPage() {
               <div className="space-y-3">
                 {prayerTimes.map((prayer) => {
                   const isChecked = prayerChecklist[prayer.name] || false;
+
+                  // LOGIC BARU: Cek apakah sholat belum masuk waktunya
+                  const isUpcoming = prayer.status === "upcoming";
+
                   return (
                     <div
                       key={prayer.name}
-                      className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all duration-200 ${isChecked ? "bg-green-50/50 border-2 border-green-200" : prayer.status === "current" ? "bg-accent-100 border border-accent-200" : "hover:bg-accent-50 border border-transparent"}`}
+                      className={`flex items-center justify-between py-3 px-4 rounded-xl transition-all duration-200 ${
+                        isChecked
+                          ? "bg-green-50/50 border-2 border-green-200"
+                          : prayer.status === "current"
+                            ? "bg-accent-100 border border-accent-200"
+                            : "hover:bg-accent-50 border border-transparent"
+                      }`}
                     >
                       <div className="flex items-center gap-4 flex-1">
                         <button
                           onClick={() => togglePrayerCheck(prayer.name)}
-                          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isChecked ? "bg-green-500 text-white" : prayer.status === "current" ? "bg-awqaf-primary text-white hover:bg-awqaf-primary/90" : "bg-accent-100 text-awqaf-primary hover:bg-accent-200"}`}
+                          // 1. DISABLE tombol jika statusnya "upcoming"
+                          disabled={isUpcoming}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all 
+            ${
+              // 2. STYLING: Ubah warna jika upcoming (abu-abu) vs active
+              isUpcoming
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed" // Style saat belum waktunya
+                : isChecked
+                  ? "bg-green-500 text-white hover:bg-green-600"
+                  : prayer.status === "current"
+                    ? "bg-awqaf-primary text-white hover:bg-awqaf-primary/90"
+                    : "bg-accent-100 text-awqaf-primary hover:bg-accent-200"
+            }`}
                         >
                           {isChecked ? (
                             <CheckCircle2 className="w-6 h-6" />
@@ -1120,7 +1191,9 @@ export default function SholatPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span
-                              className={`text-card-foreground font-comfortaa font-semibold text-lg ${isChecked ? "line-through opacity-70" : ""}`}
+                              className={`text-card-foreground font-comfortaa font-semibold text-lg ${
+                                isChecked ? "line-through opacity-70" : ""
+                              } ${isUpcoming ? "opacity-50" : ""}`} // Opsional: Memudarkan teks jika belum waktunya
                             >
                               {prayer.name}
                             </span>
@@ -1128,17 +1201,35 @@ export default function SholatPage() {
                               <CheckCircle className="w-4 h-4 text-green-500" />
                             )}
                           </div>
-                          <p className="text-sm text-awqaf-primary font-tajawal">
+                          <p
+                            className={`text-sm font-tajawal ${isUpcoming ? "text-gray-400" : "text-awqaf-primary"}`}
+                          >
                             {prayer.arabic}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span
-                          className={`font-comfortaa font-bold text-xl ${isChecked ? "text-green-600" : prayer.status === "current" ? "text-awqaf-primary" : "text-awqaf-foreground-secondary"}`}
+                          className={`font-comfortaa font-bold text-xl ${
+                            isUpcoming
+                              ? "text-gray-400"
+                              : isChecked
+                                ? "text-green-600"
+                                : prayer.status === "current"
+                                  ? "text-awqaf-primary"
+                                  : "text-awqaf-foreground-secondary"
+                          }`}
                         >
                           {prayer.time}
                         </span>
+
+                        {/* Pesan Status Tambahan */}
+                        {isUpcoming && (
+                          <p className="text-xs text-gray-400 font-comfortaa mt-1">
+                            Belum Waktunya
+                          </p>
+                        )}
+
                         {isChecked && (
                           <p className="text-xs text-green-600 font-comfortaa mt-1 font-semibold">
                             {t_sholat.alreadyPrayed}

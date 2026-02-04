@@ -51,6 +51,7 @@ export const apiSlice = createApi({
     "UserDailyTargets",
     "AsmaulHusna",
     "HadithList",
+    "UserSholat",
   ],
   refetchOnFocus: false,
   refetchOnReconnect: false,
