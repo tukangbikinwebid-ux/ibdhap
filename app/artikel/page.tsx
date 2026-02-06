@@ -302,7 +302,7 @@ export default function ArtikelPage() {
         </div>
 
         {/* Article List */}
-        <div className="space-y-3">
+        <div className="flex flex-col gap-y-3">
           {isLoadingArticles ? (
             <ArticleSkeleton />
           ) : filteredArtikelData.length > 0 ? (
@@ -312,9 +312,9 @@ export default function ArtikelPage() {
 
               return (
                 <Link key={artikel.id} href={`/artikel/${artikel.id}`}>
-                  <Card className="border-awqaf-border-light hover:border-awqaf-primary/30 shadow-sm hover:shadow-md transition-all duration-300 bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden group">
-                    <CardContent className="p-0">
-                      <div className="flex gap-4 p-4">
+                  <Card className="border-awqaf-border-light hover:border-awqaf-primary/30 shadow-sm hover:shadow-md transition-all duration-300 bg-white/95 backdrop-blur-sm rounded-2xl overflow-hidden group h-42">
+                    <CardContent className="p-0 h-full">
+                      <div className="flex gap-4 p-4 h-full">
                         {/* Thumbnail */}
                         <div className="w-24 h-24 rounded-xl bg-accent-50 flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-accent-100">
                           {artikel.image ? (
@@ -330,28 +330,27 @@ export default function ArtikelPage() {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 h-full">
                           <div>
                             <div className="flex justify-between items-start">
                               <Badge
                                 variant="secondary"
-                                className="mb-2 text-[10px] bg-accent-50 text-awqaf-primary border border-accent-100 px-2 h-5"
+                                className="mb-1.5 text-[10px] bg-accent-50 text-awqaf-primary border border-accent-100 px-2 h-5"
                               >
                                 {categoryContent.name}
                               </Badge>
                             </div>
-                            <h3 className="font-bold text-sm text-awqaf-primary line-clamp-2 mb-1 font-comfortaa leading-snug">
+                            <h3 className="font-bold text-sm text-awqaf-primary line-clamp-2 mb-1 font-comfortaa leading-snug min-h-[2.5rem] flex items-center">
                               {content.title}
                             </h3>
-                            <p className="text-[10px] text-awqaf-foreground-secondary line-clamp-2 font-comfortaa leading-relaxed">
+                            <p className="text-[10px] text-awqaf-foreground-secondary line-clamp-1 font-comfortaa leading-relaxed">
                               {content.content
                                 .replace(/<[^>]*>/g, "")
                                 .substring(0, 80)}
-                              ...
                             </p>
                           </div>
 
-                          <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center justify-between mt-auto">
                             <div className="flex items-center gap-3 text-[10px] text-awqaf-foreground-secondary/70 font-comfortaa">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />{" "}

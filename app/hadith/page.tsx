@@ -23,6 +23,7 @@ import {
   Loader2,
   Filter,
   Calendar,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -337,7 +338,7 @@ export default function HadithPage() {
                     isRtl ? "rotate-180" : ""
                   }`}
                 >
-                  <Navigation className="w-5 h-5" />
+                  <ArrowLeft className="w-10 h-10" />
                 </Button>
               </Link>
               <div className="text-center">

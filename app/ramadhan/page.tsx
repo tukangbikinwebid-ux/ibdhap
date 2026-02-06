@@ -39,6 +39,8 @@ import {
   TrendingUp,
   Heart,
   CheckCircle2,
+  ChevronLeft,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/app/hooks/useI18n";
@@ -49,6 +51,7 @@ import {
   useGetUserDailyTargetsQuery,
   useToggleDailyTargetMutation,
 } from "@/services/daily-target.service";
+import { useRouter } from "next/navigation";
 
 // --- TYPES ---
 type LocaleCode = "id" | "en" | "ar" | "fr" | "kr" | "jp";
@@ -292,6 +295,7 @@ const RAMADHAN_TEXT: Record<
 };
 
 export default function RamadhanPage() {
+  const router = useRouter();
   const { locale } = useI18n();
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -477,11 +481,11 @@ export default function RamadhanPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-10 h-10 p-0 rounded-full hover:bg-accent-100 transition-colors duration-200"
+                  className={`w-10 h-10 p-0 rounded-full hover:bg-accent-100 hover:text-awqaf-primary transition-colors duration-200 ${
+                    isRtl ? "rotate-180" : ""
+                  }`}
                 >
-                  <Navigation
-                    className={`w-5 h-5 text-awqaf-primary ${isRtl ? "rotate-180" : ""}`}
-                  />
+                  <ArrowLeft className="w-10 h-10" />
                 </Button>
               </Link>
               <div className="flex items-center gap-2">

@@ -9,6 +9,7 @@ import {
   User,
   Clock,
   BookOpen,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -142,21 +143,21 @@ export default function Home() {
   }, []);
 
   // --- Logic Logout ---
-const handleLogout = async () => {
-  try {
-    await logout().unwrap();
-  } catch (error) {
-    console.error(
-      "Logout backend gagal, melanjutkan logout frontend...",
-      error,
-    );
-  } finally {
-    await signOut({
-      callbackUrl: "/auth/login", 
-      redirect: true,
-    });
-  }
-};
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap();
+    } catch (error) {
+      console.error(
+        "Logout backend gagal, melanjutkan logout frontend...",
+        error,
+      );
+    } finally {
+      await signOut({
+        callbackUrl: "/auth/login",
+        redirect: true,
+      });
+    }
+  };
 
   // --- 1. Sapaan Berdasarkan Waktu ---
   const getGreeting = () => {
@@ -537,6 +538,9 @@ const handleLogout = async () => {
                 className="text-awqaf-foreground-secondary hover:text-awqaf-primary hover:bg-accent-100 font-comfortaa"
               >
                 {uiText.viewAll}
+                <ChevronRight
+                  className={`w-4 h-4 ${locale === "ar" ? "mr-1 rotate-180" : "ml-1"}`}
+                />
               </Button>
             </Link>
           </div>
