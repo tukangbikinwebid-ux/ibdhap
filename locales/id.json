@@ -150,5 +150,35 @@
     "kalkulator": "Kalkulator",
     "haji_umrah": "Haji & Umrah",
     "lainnya": "Lainnya"
+  },
+
+  "quran": {
+    "title": "Al-Quran Digital",
+    "subtitle": "Baca, Pelajari, dan Hafalkan",
+    "searchPlaceholder": "Cari surah...",
+    "readQuran": "Baca Al-Quran",
+    "startFromFatihah": "Mulai dari Al-Fatihah",
+    "bookmark": "Penanda",
+    "savedSurahs": "Surah Tersimpan",
+    "noBookmarks": "Belum ada penanda.",
+    "verses": "ayat",
+    "addMemorizationRange": "Tambah Hafalan (Range)",
+    "memorizationRangeDesc": "Tandai hafalan dari surah dan ayat tertentu hingga surah dan ayat tertentu",
+    "from": "Dari:",
+    "to": "Sampai:",
+    "surah": "Surah",
+    "verse": "Ayat",
+    "max": "Maks:",
+    "cancel": "Batal",
+    "add": "Tambah",
+    "memorizationProgress": "Progress Hafalan Al-Quran",
+    "totalMemorizationProgress": "Total Progress Hafalan",
+    "versesMemorized": "Ayat Dihafal",
+    "surahsCompleted": "Surah Selesai",
+    "progressPerSurah": "Progress per Surah",
+    "noMemorizationYet": "Belum ada hafalan. Mulai menandai ayat!",
+    "recentlyRead": "Terakhir Dibaca",
+    "allSurahs": "Semua Surah",
+    "loading": "Memuat..."
   }
 }

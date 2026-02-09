@@ -578,7 +578,7 @@ export default function QuranPage() {
             </div>
           </DialogContent>
         </Dialog>
-
+        
         {/* Bulk Memorization Input Dialog */}
         <Dialog
           open={isBulkMemorizationOpen}
@@ -588,25 +588,24 @@ export default function QuranPage() {
             <DialogHeader className="p-4 border-b border-awqaf-border-light">
               <DialogTitle className="font-comfortaa flex items-center gap-2">
                 <Plus className="w-5 h-5 text-success" />
-                Tambah Hafalan (Range)
+                {t("quran.addMemorizationRange")}
               </DialogTitle>
             </DialogHeader>
             <div className="px-4 pb-4 pt-4">
               <p className="text-sm text-awqaf-foreground-secondary font-comfortaa mb-4">
-                Tandai hafalan dari surah dan ayat tertentu hingga surah dan
-                ayat tertentu
+                {t("quran.memorizationRangeDesc")}
               </p>
 
               <div className="space-y-4">
                 {/* Start Range */}
                 <div className="border border-awqaf-border-light rounded-lg p-4 bg-accent-50">
                   <Label className="text-sm font-semibold text-card-foreground font-comfortaa mb-3 block">
-                    Dari:
+                    {t("quran.from")}
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-1 block">
-                        Surah
+                        {t("quran.surah")}
                       </Label>
                       <Input
                         type="number"
@@ -628,7 +627,7 @@ export default function QuranPage() {
                     </div>
                     <div>
                       <Label className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-1 block">
-                        Ayat
+                        {t("quran.verse")}
                       </Label>
                       <Input
                         type="number"
@@ -640,7 +639,7 @@ export default function QuranPage() {
                       />
                       {allSurahs.find((s) => s.id === parseInt(startSurah)) && (
                         <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mt-1">
-                          Max:{" "}
+                          {t("quran.max")}{" "}
                           {
                             allSurahs.find((s) => s.id === parseInt(startSurah))
                               ?.total_verses
@@ -654,12 +653,12 @@ export default function QuranPage() {
                 {/* End Range */}
                 <div className="border border-awqaf-border-light rounded-lg p-4 bg-accent-50">
                   <Label className="text-sm font-semibold text-card-foreground font-comfortaa mb-3 block">
-                    Sampai:
+                    {t("quran.to")}
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-1 block">
-                        Surah
+                        {t("quran.surah")}
                       </Label>
                       <Input
                         type="number"
@@ -681,7 +680,7 @@ export default function QuranPage() {
                     </div>
                     <div>
                       <Label className="text-xs text-awqaf-foreground-secondary font-comfortaa mb-1 block">
-                        Ayat
+                        {t("quran.verse")}
                       </Label>
                       <Input
                         type="number"
@@ -693,7 +692,7 @@ export default function QuranPage() {
                       />
                       {allSurahs.find((s) => s.id === parseInt(endSurah)) && (
                         <p className="text-xs text-awqaf-foreground-secondary font-comfortaa mt-1">
-                          Max:{" "}
+                          {t("quran.max")}{" "}
                           {
                             allSurahs.find((s) => s.id === parseInt(endSurah))
                               ?.total_verses
@@ -711,14 +710,14 @@ export default function QuranPage() {
                     onClick={() => setIsBulkMemorizationOpen(false)}
                     className="flex-1 font-comfortaa"
                   >
-                    Batal
+                    {t("quran.cancel")}
                   </Button>
                   <Button
                     onClick={handleBulkMemorization}
                     className="flex-1 bg-success hover:bg-success/90 text-white font-comfortaa"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Tambah Hafalan
+                    {t("quran.add")}
                   </Button>
                 </div>
               </div>
@@ -732,7 +731,7 @@ export default function QuranPage() {
             <DialogHeader className="p-4 border-b border-awqaf-border-light">
               <DialogTitle className="font-comfortaa flex items-center gap-2">
                 <GraduationCap className="w-5 h-5 text-success" />
-                Progress Hafalan Al-Quran
+                {t("quran.memorizationProgress")}
               </DialogTitle>
             </DialogHeader>
             <div className="px-4 pb-4 pt-4">
@@ -748,7 +747,7 @@ export default function QuranPage() {
                       </div>
                     </div>
                     <p className="text-sm font-semibold text-card-foreground font-comfortaa mb-2">
-                      Total Progress Hafalan
+                      {t("quran.totalMemorizationProgress")}
                     </p>
                     <Progress
                       value={memorizationStats.percentage}
@@ -762,7 +761,7 @@ export default function QuranPage() {
                         {memorizationStats.memorizedCount}
                       </p>
                       <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                        Ayat Dihafal
+                        {t("quran.versesMemorized")}
                       </p>
                     </div>
                     <div className="bg-background/60 rounded-lg p-3">
@@ -770,7 +769,7 @@ export default function QuranPage() {
                         {memorizationStats.fullyMemorizedSurahs}
                       </p>
                       <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                        Surah Selesai
+                        {t("quran.surahsCompleted")}
                       </p>
                     </div>
                   </div>
@@ -786,13 +785,13 @@ export default function QuranPage() {
                 className="w-full bg-success hover:bg-success/90 text-white font-comfortaa mb-4"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Tambah Hafalan (Range)
+                {t("quran.addMemorizationRange")}
               </Button>
 
               {/* Surahs with memorization progress */}
               <div className="space-y-2 max-h-96 overflow-y-auto mobile-scroll">
                 <p className="text-sm font-semibold text-card-foreground font-comfortaa mb-2">
-                  Progress per Surah
+                  {t("quran.progressPerSurah")}
                 </p>
                 {allSurahs.map((surah) => {
                   const progress = getSurahMemorizationProgress(
@@ -819,7 +818,8 @@ export default function QuranPage() {
                             {surah.id}. {surah.transliteration}
                           </p>
                           <p className="text-xs text-awqaf-foreground-secondary font-comfortaa">
-                            {memorizedCount} / {surah.total_verses} ayat
+                            {memorizedCount} / {surah.total_verses}{" "}
+                            {t("quran.verses")}
                           </p>
                         </div>
                         {progress === 100 && (
@@ -835,7 +835,7 @@ export default function QuranPage() {
                 })}
                 {Object.keys(memorizedVerses).length === 0 && (
                   <p className="text-sm text-awqaf-foreground-secondary font-comfortaa text-center py-6">
-                    Belum ada hafalan. Mulai menandai ayat yang sudah dihafal!
+                    {t("quran.noMemorizationYet")}
                   </p>
                 )}
               </div>
